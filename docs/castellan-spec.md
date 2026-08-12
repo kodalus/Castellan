@@ -267,7 +267,7 @@ Przy konflikcie reguł wygrywa **najdłuższy** `Pattern`; przy równej długoś
 | `ParseStatus` | `Parsed` \| `Unparsed` \| `Ignored` |
 | `TransactionId` | `TransactionId?` |
 
-Przechowywane zawsze, łącznie z nierozpoznanymi. To materiał do doskonalenia parserów i zabezpieczenie przed utratą danych.
+Przechowywane po redakcji tekstu wyłącznie dla powiadomień z białej listy pakietów, łącznie z nierozpoznanymi. Powiadomienia spoza białej listy nie są nigdy zapisywane. To materiał do doskonalenia parserów i zabezpieczenie przed utratą danych.
 
 ### 5.9 Fund (agregat) — etap 4
 
@@ -420,8 +420,12 @@ Platforms/Android/Services/CastellanNotificationListenerService.cs
 
 - Dziedzic `Android.Service.Notification.NotificationListenerService`, zarejestrowany przez `[Service]` z `Permission = "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"` i intent-filter `android.service.notification.NotificationListenerService`.
 - Uprawnienia **nie można poprosić zwykłym dialogiem**: użytkownika trzeba skierować do `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS` i sprawdzać `NotificationManagerCompat.getEnabledListenerPackages()` przy każdym starcie.
-- `OnNotificationPosted` filtruje według `PackageName` (lista pakietów banków w ustawieniach), wyciąga `EXTRA_TITLE` i `EXTRA_TEXT`, zapisuje `RawNotification` i wywołuje `IngestNotificationUseCase`. Pakiet `com.google.android.apps.walletnfcrel` (Google Portfel) — zawsze `Ignored`: przy płatnościach NFC duplikuje powiadomienie bankowe, ale nie zawiera potrzebnych danych.
+- **Pierwsza linia `OnNotificationPosted` to filtr po `PackageName`** — sprawdzenie białej listy banków z ustawień. Wszystko spoza listy jest odrzucane bez czytania, parsowania, logowania ani zapisu. `PackageName` jest nadawany przez system i nie może być sfałszowany; tytuł powiadomienia — może.
+- Pakiet `com.google.android.apps.walletnfcrel` (Google Portfel) — zawsze `Ignored`: przy płatnościach NFC duplikuje powiadomienie bankowe, ale nie zawiera potrzebnych danych.
+- Przed zapisem do `RawNotifications` tekst przechodzi przez maskę redakcyjną usuwającą sekwencje 4–8 cyfr niepodobne do kwoty (kody 3D-Secure, hasła BLIK, OTP). Powiadomienia rozpoznane jako żądanie autoryzacji (nie zrealizowana operacja) są odrzucane w całości.
+- Cały blok parsowania opakowany w `try/catch` — nieobsłużony wyjątek powoduje wyłączenie serwisu przez Androida bez komunikatu. Błąd = zapis surowego powiadomienia, bez propagacji wyjątku.
 - Serwis działa poza cyklem życia UI: własny scope DI i własne połączenie z BD. Nie wykonywać długiej pracy w `OnNotificationPosted` — tylko zapis i przekazanie do kolejki.
+- Szczegółowe zasady bezpieczeństwa — sekcja 15.
 
 ### 9.3 Parsery banków
 
@@ -583,7 +587,7 @@ Pokazywać trzy liczby według trzech poziomów płynności, nie jedną uśredni
 
 ### Etap 0 — szkielet
 
-**Prace:** struktura rozwiązania według 4.1; `CastellanDbContext` i pierwsza migracja; rejestracja DI; MAUI Shell z zaślepkami nawigacji; projekty xUnit; GitHub Actions — build, testy, artefakt APK; `.gitignore`, `.editorconfig`, licencja.
+**Prace:** struktura rozwiązania według 4.1; `CastellanDbContext` i pierwsza migracja; rejestracja DI; MAUI Shell z zaślepkami nawigacji; projekty xUnit; GitHub Actions — build, testy, artefakt APK; `.gitignore`, `.editorconfig`, licencja; `android:allowBackup="false"` i `android:dataExtractionRules` z jawnym zakazem backupu w chmurze; `network_security_config.xml` blokujący wszystkie połączenia sieciowe; `android:usesCleartextTraffic="false"` w manifeście; `FLAG_SECURE` na oknie głównej aktywności.
 
 **Gotowe, gdy:** APK instaluje się na telefonie i uruchamia; `dotnet test` jest zielony w CI; migracja tworzy pustą BD na urządzeniu.
 
@@ -658,7 +662,67 @@ Obowiązkowe testy negatywne: planowanie powyżej środków; uzgodnienie z dodat
 
 ---
 
-## 15. Ryzyka
+## 15. Bezpieczeństwo
+
+### 15.1 Przechwytywanie powiadomień
+
+`BIND_NOTIFICATION_LISTENER_SERVICE` daje dostęp do **wszystkich** powiadomień na telefonie — wiadomości, poczty, kodów dwuskładnikowych. Android nie umie zawęzić tego dostępu wyborowo.
+
+Trzy obowiązkowe reguły:
+
+- **Filtr po `PackageName` jako pierwsza operacja w `OnNotificationPosted`.** Wszystko spoza białej listy banków jest odrzucane bez czytania, parsowania, logowania ani zapisu. `PackageName` nadaje system i nie może być sfałszowany; tytuł powiadomienia — może.
+- **Redakcja tekstu przed zapisem.** Powiadomienia bankowe zawierają kody 3D-Secure, hasła BLIK i jednorazowe OTP. Przed zapisem do `RawNotifications` tekst przechodzi przez maskę usuwającą sekwencje 4–8 cyfr niepodobne do kwoty. Powiadomienia rozpoznane jako żądanie autoryzacji (nie zrealizowana operacja) są odrzucane w całości.
+- **Sformułowanie „przechowywane zawsze" w sekcji 5.8** odnosi się wyłącznie do powiadomień z białej listy po redakcji. Powiadomienia spoza listy nie są nigdy zapisywane ani logowane.
+
+### 15.2 Izolacja sieciowa
+
+Aplikacja z dostępem do wszystkich powiadomień i z dostępem do sieci to gotowe narzędzie szpiegowskie. Brak sieci w Castellan musi być wymuszony strukturalnie, nie tylko „niezaimplementowany":
+
+- Zero klientów HTTP w zależemnościach.
+- `android:usesCleartextTraffic="false"` w manifeście.
+- `network_security_config.xml` bez żadnych `<domain-config>` i bez wyjątków — blokuje wyjście nawet bibliotece z telemetrią dodanej przez nieuwagę.
+
+Konfiguracja sieciowa jest częścią **Etapu 0**.
+
+### 15.3 Dane na urządzeniu
+
+**`android:allowBackup="false"` — ustawić na Etapie 0.** Domyślnie Android automatycznie backupuje dane aplikacji do Google Drive użytkownika. Bez tego flagi baza z transakcjami, saldami i nazwami sprzedawców trafia do chmury bez wiedzy użytkownika. Uzupełnić `android:dataExtractionRules` z jawnym zakazem cloud-backup i device-transfer.
+
+**Szyfrowanie bazy — opcjonalne.** Android szyfruje storage aplikacji przez file-based encryption (FBE) pod warunkiem, że telefon ma włączoną blokadę ekranu — pokrywa scenariusz „zgubiony telefon". SQLCipher dodaje ochronę przed wydobyciem z urządzenia z rootem lub narzędziami forensics — scenariusze mało prawdopodobne w tym kontekście. Jeśli SQLCipher: `SQLitePCLRaw.bundle_e_sqlcipher`, klucz generowany raz i przechowywany w Android Keystore (nie w kodzie, nie w SharedPreferences). Uwaga: klucz z Keystore jest nieprzenośny — backup musi być szyfrowany osobno hasłem. Rozważyć na **Etapie 6**, nie wcześniej.
+
+### 15.4 Eksport i backup
+
+Plik eksportu to niezaszyfrowana kopia bazy leżąca poza piaskownicą aplikacji:
+
+- Zapis wyłącznie przez **Storage Access Framework** — użytkownik sam wybiera miejsce; aplikacja nie pisze do wspólnych folderów.
+- Szyfrowanie eksportu hasłem: AES-GCM, klucz wyprowadzany z PBKDF2 lub Argon2.
+- Wyraźne ostrzeżenie na ekranie eksportu: „Ten plik zawiera wszystkie Twoje dane finansowe".
+
+### 15.5 Ekran i dostęp fizyczny
+
+- **`FLAG_SECURE`** na oknie głównej aktywności — blokuje zrzuty ekranu i ukrywa zawartość w liście ostatnich aplikacji. Standardowa praktyka dla aplikacji finansowych; ustawić na Etapie 0.
+- **Biometria przy otwarciu aplikacji** — opcjonalna, z zastrzeżeniem: widget szybkiego wprowadzania nie może wymagać odcisku palca, bo cel „trzy dotknięcia" przestaje działać. Kompromis: biometria chroni podgląd (pełna aplikacja), widget pozwala zapisać transakcję bez wyświetlania salda.
+
+### 15.6 Logowanie
+
+- Do logów trafiają wyłącznie identyfikatory i kody zdarzeń — nigdy wartości: `Transaction {Id} categorized by rule {RuleId}`, a nie `Biedronka 87,40 → Jedzenie`.
+- Tekst powiadomienia nie może trafić do logu przy żadnym błędzie parsowania. Niezapisane powiadomienie ląduje w tabeli `RawNotifications` (zarządzanej jak baza), nie w pliku logów. Plik logów nie jest chroniony piaskownicą — przy dołączaniu do raportu o błędzie jedzie razem z nim.
+
+### 15.7 Zależności
+
+Każdy pakiet NuGet obok danych o wszystkich powiadomieniach to cudzy kod przy bardzo wrażliwych danych:
+
+- Lista zależności minimalna (w specyfikacji już krótka).
+- Wersje przypięte; Dependabot włączony.
+- Zero pakietów analityki, crash reportingu i reklam — żadnego, nawet „darmowego i niegroźnego".
+
+### 15.8 Aspekty prawne
+
+GDPR nie ma zastosowania: przetwarzanie danych osobowych i rodzinnych na własnym urządzeniu podlega wyjątkowi domowemu (art. 2 ust. 2 lit. c). Żadnych polityk prywatności ani formularzy zgody pisać nie trzeba. Zmienia się to natychmiast, gdy aplikacja trafi do Google Play lub zacznie z niej korzystać ktoś inny — publikacja nie jest jednak planowana (sekcja 16.3).
+
+---
+
+## 16. Ryzyka
 
 | Ryzyko | Prawdopodobieństwo | Co robić |
 |---|---|---|
@@ -667,15 +731,15 @@ Obowiązkowe testy negatywne: planowanie powyżej środków; uzgodnienie z dodat
 | Bank zmienia format powiadomień | średnie | surowe powiadomienia przechowywane zawsze; reguły w konfigu; testy na przykładach |
 | Płatności online dają tylko nazwę agregatora | wysokie | przyjąć jako ograniczenie; takie transakcje zostają w skrzynce |
 | Etapy 1–2 przeciągają się, zainteresowanie opada | **wysokie** | ściśle ograniczyć zakres etapów 1–2; nic nie dodawać ponad listę |
-| Projekt powtarza losy Bastion: napisany, ale nieużywany | średnie | kryterium sukcesu to eksploatacja, a nie obecność kodu (sekcja 16) |
+| Projekt powtarza losy Bastion: napisany, ale nieużywany | średnie | kryterium sukcesu to eksploatacja, a nie obecność kodu (sekcja 17) |
 
-### 15.3 O publikacji
+### 16.3 O publikacji
 
 Google Play surowo ogranicza aplikacje żądające dostępu do powiadomień i wymaga uzasadnienia przeznaczenia. Aplikacja jest osobista, publikacja nie jest planowana; dystrybucja — instalacja podpisanego APK na własnym urządzeniu. Jeśli kiedyś publikacja będzie potrzebna, to osobna praca z polityką dostępu i deklaracją.
 
 ---
 
-## 16. Kryterium sukcesu
+## 17. Kryterium sukcesu
 
 Nie „napisane", lecz dwa miesiące po etapie 3:
 
@@ -689,7 +753,7 @@ Jeśli „Niezidentyfikowane" trwale powyżej 25% — mechanizm przechwytywania 
 
 ---
 
-## 17. Metoda pracy
+## 18. Metoda pracy
 
 Wniosek z retrospektywy po Bastion: aplikacja powstała, umiejętność — nie.
 
@@ -697,7 +761,7 @@ Weryfikacja na każdym etapie: czy da się wyjaśnić głośno, dlaczego zrobion
 
 ---
 
-## 18. Otwarte pytania
+## 19. Otwarte pytania
 
 1. Nazwy pakietów aplikacji obu banków i rzeczywiste przykłady powiadomień — **blokuje etap 3**, zebrać wcześniej.
 2. ~~Czy chociaż jeden bank przysyła osobne powiadomienia o autoryzacji i obciążeniu, czy tylko jedno.~~ **Rozwiązane:** bank przysyła tylko powiadomienie o obciążeniu. Przy płatności telefonem (NFC) przychodzą dwa powiadomienia: od banku (parsować) i od Google Portfel (ignorować po `PackageName`).
