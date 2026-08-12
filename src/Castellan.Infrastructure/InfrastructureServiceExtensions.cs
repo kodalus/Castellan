@@ -14,4 +14,10 @@ public static class InfrastructureServiceExtensions
 
         return services;
     }
+
+    public static void ApplyMigrations(this IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        scope.ServiceProvider.GetRequiredService<CastellanDbContext>().Database.Migrate();
+    }
 }

@@ -1,6 +1,5 @@
 using Castellan.App.Views;
 using Castellan.Infrastructure;
-using Castellan.Infrastructure.Data;
 using Microsoft.Extensions.Logging;
 
 namespace Castellan.App;
@@ -32,8 +31,7 @@ public static class MauiProgram
 
         var app = builder.Build();
 
-        using var scope = app.Services.CreateScope();
-        scope.ServiceProvider.GetRequiredService<CastellanDbContext>().Database.Migrate();
+        app.Services.ApplyMigrations();
 
         return app;
     }
