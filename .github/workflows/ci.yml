@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build (non-MAUI)
+        run: |
+          dotnet build src/Castellan.Domain/Castellan.Domain.csproj --no-restore
+          dotnet build src/Castellan.Application/Castellan.Application.csproj --no-restore
+          dotnet build src/Castellan.Infrastructure/Castellan.Infrastructure.csproj --no-restore
+
+      - name: Test
+        run: dotnet test --no-restore --logger "console;verbosity=minimal"
+
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui-android
+
+      - name: Restore
+        run: dotnet restore src/Castellan.App/Castellan.App.csproj
+
+      - name: Build APK (debug)
+        run: >
+          dotnet build src/Castellan.App/Castellan.App.csproj
+          -f net10.0-android35.0
+          -c Debug
+          --no-restore
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: castellan-debug
+          path: src/Castellan.App/bin/Debug/net10.0-android35.0/*.apk
+          retention-days: 14
