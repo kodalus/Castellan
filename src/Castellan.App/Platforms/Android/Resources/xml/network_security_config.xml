@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Castellan has no network functionality. This config blocks all outbound
+    connections as defense-in-depth (primary protection is the absent INTERNET
+    permission, but this stops any library with embedded telemetry as well).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors />
+    </base-config>
+</network-security-config>
