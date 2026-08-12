@@ -1,135 +1,135 @@
-# Castellan — техническая спецификация
+# Castellan — specyfikacja techniczna
 
-Приложение домашнего бюджета. Android, офлайн, один пользователь, без серверной части.
+Aplikacja do zarządzania budżetem domowym. Android, offline, jeden użytkownik, bez backendu.
 
-Документ рабочий, на русском. Публичный README пишется отдельно.
-
----
-
-## 1. Обзор
-
-### 1.1 Задача
-
-Перенести на телефон метод конвертного бюджета, распределяемого от располагаемых средств (проверен на практике в экселе, работал), и устранить единственную причину, по которой метод был заброшен: **трение при вводе операций**.
-
-Формулировка проблемы дословно: вечером не вспоминается, на что ушли деньги. Значит, задача не «напомнить записать», а «не требовать памяти».
-
-### 1.2 Ключевой принцип
-
-> Приложение не должно полагаться на память пользователя.
-
-Все траты проходят картой, BLIK-ом или онлайн, наличных нет. Каждая порождает уведомление банка, содержащее сумму и мерчанта. Мерчант помнит за пользователя. Из этого следует архитектура: **основной источник данных — перехват уведомлений, ручной ввод аварийный**.
-
-### 1.3 Второй принцип
-
-> Пропуск данных не должен ломать систему.
-
-Единственный источник истины по остатку — сверка с фактическим балансом счёта, а не сумма записанных операций. Всё незаписанное автоматически становится категорией «Неопознанное». Забывчивость увеличивает одну цифру, а не обесценивает месяц.
-
-### 1.4 Границы
-
-Не входит никогда: серверная часть, аккаунты, облачная синхронизация, второй пользователь, мультивалютность, интеграция с банковскими API, публикация в Google Play (см. 15.3).
+Dokument roboczy, po polsku. Publiczne README pisane osobno.
 
 ---
 
-## 2. Этапы
+## 1. Przegląd
 
-| Этап | Содержание | Результат |
+### 1.1 Zadanie
+
+Przenieść na telefon metodę budżetu kopertowego opartego na dostępnych środkach (sprawdzona w praktyce w Excelu, działała) i wyeliminować jedyną przyczynę, dla której metoda została porzucona: **tarcie przy wprowadzaniu transakcji**.
+
+Sformułowanie problemu dosłownie: wieczorem nie pamięta się, na co poszły pieniądze. Zadanie to nie „przypominaj o zapisaniu", lecz „nie wymagaj pamięci".
+
+### 1.2 Kluczowa zasada
+
+> Aplikacja nie powinna polegać na pamięci użytkownika.
+
+Wszystkie wydatki są płacone kartą, BLIK-iem lub online — gotówki nie ma. Każda transakcja generuje powiadomienie bankowe zawierające kwotę i nazwę sprzedawcy. Sprzedawca pamięta za użytkownika. Z tego wynika architektura: **głównym źródłem danych jest przechwytywanie powiadomień, ręczne wprowadzanie jest awaryjne**.
+
+### 1.3 Druga zasada
+
+> Pominięcie danych nie powinno psuć systemu.
+
+Jedynym źródłem prawdy o saldzie jest uzgodnienie z faktycznym stanem konta, a nie suma zapisanych transakcji. Wszystko niezapisane automatycznie trafia do kategorii „Niezidentyfikowane". Zapominalstwo zwiększa jedną liczbę, ale nie przekreśla miesiąca.
+
+### 1.4 Ograniczenia
+
+Nigdy nie wchodzi w zakres: backend, konta użytkowników, synchronizacja w chmurze, drugi użytkownik, wielowalutowość, integracja z API banków, publikacja w Google Play (zob. 15.3).
+
+---
+
+## 2. Etapy
+
+| Etap | Zawartość | Rezultat |
 |---|---|---|
-| 0 | Каркас решения, БД, тесты, CI | Пустое приложение запускается на телефоне |
-| 1 | Счета, категории, операции, бюджет месяца | Работающий ручной учёт |
-| 2 | Сверка, «Неопознанное», быстрый ввод, виджет | Учёт, переживающий пропуски |
-| 3 | Перехват уведомлений, инбокс, дедупликация, автокатегоризация | Учёт без ручного ввода — целевое состояние |
-| 4 | Фонды нерегулярных платежей | Страховка, налоги, отпуск |
-| 5 | Активы, ликвидность, запас прочности | Ответ на вопрос «на сколько хватит» |
-| 6 | Бэкап, экспорт, публичный README | Проект пригоден для портфолио |
+| 0 | Szkielet rozwiązania, BD, testy, CI | Pusta aplikacja uruchamia się na telefonie |
+| 1 | Konta, kategorie, transakcje, budżet miesiąca | Działające ręczne prowadzenie budżetu |
+| 2 | Uzgodnienie, „Niezidentyfikowane", szybkie wprowadzanie, widget | Budżet przeżywający pominięcia |
+| 3 | Przechwytywanie powiadomień, skrzynka odbiorcza, deduplikacja, autokategoryzacja | Budżet bez ręcznego wprowadzania — stan docelowy |
+| 4 | Fundusze nieregularnych płatności | Ubezpieczenie, podatki, urlop |
+| 5 | Aktywa, płynność, poduszka finansowa | Odpowiedź na pytanie „na ile wystarczy" |
+| 6 | Backup, eksport, publiczne README | Projekt nadaje się do portfolio |
 
-**Важное предупреждение по этапам 1–2.** Они дают ручной ввод — тот самый инструмент, который уже был заброшен. Их надо пройти быстро и не пытаться на них «пожить»: реальная ежедневная эксплуатация начинается с этапа 3. Если между этапом 2 и этапом 3 образуется пауза в месяц, есть риск разочароваться в проекте раньше, чем он заработает по назначению.
+**Ważne ostrzeżenie dotyczące etapów 1–2.** Dają ręczne wprowadzanie — to samo narzędzie, które zostało już porzucone. Trzeba je przejść szybko i nie próbować „żyć" z nimi: prawdziwa codzienna eksploatacja zaczyna się od etapu 3. Jeśli między etapem 2 a etapem 3 powstanie przerwa miesięczna, istnieje ryzyko rozczarowania projektem zanim zacznie działać zgodnie z przeznaczeniem.
 
 ---
 
-## 3. Технические решения
+## 3. Decyzje techniczne
 
-### 3.1 Платформа
+### 3.1 Platforma
 
 **.NET MAUI, .NET 10 (LTS), target Android 16 (API 36), minimum Android 10 (API 29).**
 
-Обоснование:
+Uzasadnienie:
 
-- C# + XAML + MVVM — родная территория с 2013 года.
-- Прямой доступ к Android API через биндинги .NET for Android — обязательное условие для `NotificationListenerService` (этап 3).
-- Единственная целевая платформа — Android. Кроссплатформенность не нужна, но и не мешает.
+- C# + XAML + MVVM — znane środowisko od 2013 roku.
+- Bezpośredni dostęp do Android API przez bindingi .NET for Android — warunek konieczny dla `NotificationListenerService` (etap 3).
+- Jedyna docelowa platforma to Android. Wieloplatformowość nie jest potrzebna, ale nie przeszkadza.
 
-Отклонено:
+Odrzucone:
 
-- **Avalonia** — сопоставима по UI, но платформенные сервисы Android требуют больше ручной обвязки; выигрыша нет.
-- **Angular + Capacitor** (стек Bastion) — доступ к уведомлениям через плагин, то есть чужой код в самом важном месте проекта. Противоречит цели.
-- **Kotlin / нативный Android** — лучший доступ к платформе, но обучение языку и экосистеме съест проект.
+- **Avalonia** — porównywalny UI, ale platformowe serwisy Androida wymagają więcej ręcznego opakowania; brak zysku.
+- **Angular + Capacitor** — dostęp do powiadomień przez plugin, czyli cudzy kod w najważniejszym miejscu projektu. Sprzeczne z celem.
+- **Kotlin / natywny Android** — lepszy dostęp do platformy, ale nauka języka i ekosystemu pochłonie projekt.
 
-### 3.2 Хранилище
+### 3.2 Przechowywanie danych
 
-**EF Core 10 + SQLite**, файл БД в `FileSystem.AppDataDirectory`.
+**EF Core 10 + SQLite**, plik BD w `FileSystem.AppDataDirectory`.
 
-- Миграции EF Core применяются при старте (`Database.Migrate()`).
-- Отклонён `sqlite-net-pcl`: легче на старте, но нет миграций и нет переноса опыта на рабочий стек.
+- Migracje EF Core stosowane przy starcie (`Database.Migrate()`).
+- Odrzucono `sqlite-net-pcl`: łatwiejszy na początku, ale brak migracji i brak przeniesienia wiedzy na roboczy stos.
 
-### 3.3 Деньги
+### 3.3 Pieniądze
 
-**Хранить целыми числами в грошах (`long`).** SQLite не имеет типа `decimal`, EF Core преобразует его в `TEXT` или `REAL`; второе даёт ошибки округления в суммах.
+**Przechowywać jako liczby całkowite w groszach (`long`).** SQLite nie ma typu `decimal`, EF Core konwertuje go na `TEXT` lub `REAL`; drugie daje błędy zaokrąglenia w sumach.
 
-Тип `Money` — value object над `long Grosze`. Валюта одна (PLN), в модель не выносится.
+Typ `Money` — value object nad `long Grosze`. Waluta jedna (PLN), nie wynosić do modelu.
 
-### 3.4 Идентификаторы
+### 3.4 Identyfikatory
 
-`Guid` версии 7 (`Guid.CreateVersion7()`), монотонно возрастающие — не фрагментируют индексы SQLite, в отличие от v4.
+`Guid` wersji 7 (`Guid.CreateVersion7()`), monotonicznie rosnące — nie fragmentują indeksów SQLite, w przeciwieństwie do v4.
 
-### 3.5 Время
+### 3.5 Czas
 
-`DateTimeOffset` везде, хранение в ISO-8601 (`TEXT`). Локальная зона — Europe/Warsaw. Границы месяца считаются в локальной зоне, не в UTC (иначе операция 1 числа в 00:30 попадёт в прошлый месяц).
+`DateTimeOffset` wszędzie, przechowywanie w ISO-8601 (`TEXT`). Lokalna strefa — Europe/Warsaw. Granice miesiąca liczone w lokalnej strefie, nie w UTC (inaczej transakcja 1. dnia o 00:30 trafi do poprzedniego miesiąca).
 
-### 3.6 Библиотеки
+### 3.6 Biblioteki
 
-| Назначение | Выбор |
+| Przeznaczenie | Wybór |
 |---|---|
 | MVVM | `CommunityToolkit.Mvvm` (source generators) |
-| DI | встроенный `Microsoft.Extensions.DependencyInjection` |
-| Логирование | `Microsoft.Extensions.Logging` + файловый провайдер, ротация 7 дней |
-| Тесты | `xUnit`, `FluentAssertions` |
-| Сериализация | `System.Text.Json` |
+| DI | wbudowany `Microsoft.Extensions.DependencyInjection` |
+| Logowanie | `Microsoft.Extensions.Logging` + dostawca plikowy, rotacja 7 dni |
+| Testy | `xUnit`, `FluentAssertions` |
+| Serializacja | `System.Text.Json` |
 
-Медиатор (MediatR и аналоги) не используется: сценариев мало, лишний слой скрывает поток управления, а его нужно уметь объяснить.
+Mediator (MediatR i odpowiedniki) nie jest używany: scenariuszy jest mało, dodatkowa warstwa ukrywa przepływ sterowania, który trzeba umieć wyjaśnić.
 
 ---
 
-## 4. Архитектура
+## 4. Architektura
 
-### 4.1 Проекты
+### 4.1 Projekty
 
 ```
 Castellan.sln
 ├── src/
-│   ├── Castellan.Domain/           без внешних зависимостей
+│   ├── Castellan.Domain/           bez zewnętrznych zależności
 │   ├── Castellan.Application/      → Domain
-│   ├── Castellan.Infrastructure/   → Domain, Application (EF Core, парсеры)
-│   └── Castellan.App/              → всё (MAUI, XAML, ViewModels, Android-сервисы)
+│   ├── Castellan.Infrastructure/   → Domain, Application (EF Core, parsery)
+│   └── Castellan.App/              → wszystko (MAUI, XAML, ViewModels, serwisy Android)
 └── tests/
     ├── Castellan.Domain.Tests/
     ├── Castellan.Application.Tests/
     └── Castellan.Infrastructure.Tests/
 ```
 
-Правило зависимостей: строго внутрь. `Castellan.Domain` не ссылается ни на что, включая EF Core.
+Reguła zależności: ściśle do wewnątrz. `Castellan.Domain` nie odwołuje się do niczego, łącznie z EF Core.
 
-### 4.2 Слои
+### 4.2 Warstwy
 
-- **Domain** — агрегаты, value objects, инварианты, доменные сервисы (чистые вычисления). Здесь живёт всё, что интересно защищать на code review.
-- **Application** — сценарии (use cases), интерфейсы репозиториев, DTO. Один класс на сценарий, метод `ExecuteAsync`.
-- **Infrastructure** — `DbContext`, конфигурации, реализации репозиториев, парсеры уведомлений, файловый бэкап.
-- **App** — MAUI: страницы, ViewModel, конвертеры, платформенный код Android (`Platforms/Android/`).
+- **Domain** — agregaty, value objects, niezmienniki, serwisy domenowe (czyste obliczenia). Tu żyje wszystko, co warto chronić podczas code review.
+- **Application** — scenariusze (use cases), interfejsy repozytoriów, DTO. Jedna klasa na scenariusz, metoda `ExecuteAsync`.
+- **Infrastructure** — `DbContext`, konfiguracje, implementacje repozytoriów, parsery powiadomień, backup plikowy.
+- **App** — MAUI: strony, ViewModel, konwertery, kod platformowy Android (`Platforms/Android/`).
 
-### 4.3 Персистентность агрегатов
+### 4.3 Persystencja agregatów
 
-Репозиторий на агрегат, не на таблицу:
+Repozytorium na agregat, nie na tabelę:
 
 ```csharp
 public interface IAccountRepository
@@ -140,45 +140,45 @@ public interface IAccountRepository
 }
 ```
 
-`SaveChangesAsync` вызывается сценарием, не репозиторием (`IUnitOfWork`).
+`SaveChangesAsync` wywoływane przez scenariusz, nie przez repozytorium (`IUnitOfWork`).
 
 ---
 
-## 5. Доменная модель
+## 5. Model domenowy
 
 ### 5.1 Value objects
 
-| Тип | Содержание | Правила |
+| Typ | Zawartość | Zasady |
 |---|---|---|
-| `Money` | `long Grosze` | арифметика, сравнение, `Abs`, `IsNegative`; форматирование `#,##0.00 zł` |
-| `YearMonth` | `int Year, int Month` | `Contains(DateTimeOffset)`, `Next()`, `Previous()`, границы в локальной зоне |
-| `MerchantKey` | `string` | нормализованное имя мерчанта (см. 11.3) |
+| `Money` | `long Grosze` | arytmetyka, porównanie, `Abs`, `IsNegative`; formatowanie `#,##0.00 zł` |
+| `YearMonth` | `int Year, int Month` | `Contains(DateTimeOffset)`, `Next()`, `Previous()`, granice w strefie lokalnej |
+| `MerchantKey` | `string` | znormalizowana nazwa sprzedawcy (zob. 11.3) |
 | `Percentage` | `decimal` | 0..1 |
 
-Знак суммы: **расход отрицательный, доход положительный**. Единое правило по всей системе, без исключений в UI-слое.
+Znak kwoty: **wydatek ujemny, przychód dodatni**. Jednolita reguła w całym systemie, bez wyjątków w warstwie UI.
 
-### 5.2 Account (агрегат)
+### 5.2 Account (agregat)
 
-| Поле | Тип | Примечание |
+| Pole | Typ | Uwaga |
 |---|---|---|
 | `Id` | `AccountId` | |
 | `Name` | `string` | |
-| `BankKey` | `string` | ключ набора правил парсинга, этап 3 |
+| `BankKey` | `string` | klucz zestawu reguł parsowania, etap 3 |
 | `Kind` | `AccountKind` | `Checking`, `Savings` |
-| `LiquidityTier` | `LiquidityTier` | `Immediate`, `Month`, `Locked` — этап 5, по умолчанию `Immediate` |
+| `LiquidityTier` | `LiquidityTier` | `Immediate`, `Month`, `Locked` — etap 5, domyślnie `Immediate` |
 | `LastReconciledBalance` | `Money` | |
 | `LastReconciledAt` | `DateTimeOffset` | |
-| `IsArchived` | `bool` | счета не удаляются |
+| `IsArchived` | `bool` | konta nie są usuwane |
 
-Текущий остаток не хранится. Он вычисляется:
+Bieżące saldo nie jest przechowywane. Obliczane jest jako:
 
 ```
-CurrentBalance = LastReconciledBalance + Σ Transaction.Amount, где OccurredAt > LastReconciledAt
+CurrentBalance = LastReconciledBalance + Σ Transaction.Amount, gdzie OccurredAt > LastReconciledAt
 ```
 
-### 5.3 Category (агрегат)
+### 5.3 Category (agregat)
 
-| Поле | Тип |
+| Pole | Typ |
 |---|---|
 | `Id` | `CategoryId` |
 | `Name` | `string` |
@@ -186,52 +186,52 @@ CurrentBalance = LastReconciledBalance + Σ Transaction.Amount, где OccurredA
 | `IsSystem` | `bool` |
 | `IsArchived` | `bool` |
 
-Системные категории, создаются миграцией, не удаляются и не переименовываются:
+Kategorie systemowe, tworzone przez migrację, nie są usuwane ani zmieniane:
 
-- **`Unsorted`** — «Не разобрано»: операция захвачена, категория не назначена.
-- **`Unidentified`** — «Неопознанное»: расхождение, выявленное сверкой.
-- **`Transfer`** — «Перевод между счетами»: техническая, исключается из всех сумм.
+- **`Unsorted`** — „Nieprzypisane": transakcja przechwycona, kategoria nieprzypisana.
+- **`Unidentified`** — „Niezidentyfikowane": rozbieżność wykryta podczas uzgodnienia.
+- **`Transfer`** — „Przelew między kontami": techniczna, wykluczona ze wszystkich sum.
 
-### 5.4 Transaction (агрегат)
+### 5.4 Transaction (agregat)
 
-| Поле | Тип | Примечание |
+| Pole | Typ | Uwaga |
 |---|---|---|
 | `Id` | `TransactionId` | |
 | `AccountId` | `AccountId` | |
-| `Amount` | `Money` | знак по правилу 5.1 |
+| `Amount` | `Money` | znak według zasady 5.1 |
 | `OccurredAt` | `DateTimeOffset` | |
-| `CategoryId` | `CategoryId` | никогда не null; при захвате — `Unsorted` |
-| `RawMerchant` | `string?` | сырая строка из уведомления |
-| `MerchantKey` | `MerchantKey?` | нормализованная |
+| `CategoryId` | `CategoryId` | nigdy null; przy przechwyceniu — `Unsorted` |
+| `RawMerchant` | `string?` | surowy ciąg z powiadomienia |
+| `MerchantKey` | `MerchantKey?` | znormalizowany |
 | `Note` | `string?` | |
 | `Source` | `Manual` \| `Notification` \| `Reconciliation` | |
 | `Kind` | `Regular` \| `Authorization` \| `Transfer` \| `Unidentified` | |
-| `TransferGroupId` | `Guid?` | связывает две стороны перевода |
-| `SupersededById` | `TransactionId?` | авторизация, схлопнутая в списание |
-| `RawNotificationId` | `Guid?` | ссылка на исходное уведомление |
+| `TransferGroupId` | `Guid?` | łączy obie strony przelewu |
+| `SupersededById` | `TransactionId?` | autoryzacja scalona z obciążeniem |
+| `RawNotificationId` | `Guid?` | odniesienie do źródłowego powiadomienia |
 
-Операция неизменяема, кроме `CategoryId`, `Note`, `Kind`, `TransferGroupId`, `SupersededById`. Сумма и дата не редактируются — ошибочная операция удаляется и вводится заново, чтобы история сверок оставалась воспроизводимой.
+Transakcja jest niemodyfikowalna z wyjątkiem `CategoryId`, `Note`, `Kind`, `TransferGroupId`, `SupersededById`. Kwota i data nie są edytowane — błędna transakcja jest usuwana i wprowadzana ponownie, aby historia uzgodnień pozostała odtwarzalna.
 
-**Исключается из расчёта расходов:** `Kind == Transfer`, `SupersededById != null`.
+**Wykluczone z obliczenia wydatków:** `Kind == Transfer`, `SupersededById != null`.
 
-### 5.5 MonthBudget (агрегат)
+### 5.5 MonthBudget (agregat)
 
-| Поле | Тип |
+| Pole | Typ |
 |---|---|
 | `Id` | `MonthBudgetId` |
 | `Month` | `YearMonth` |
-| `AvailableFunds` | `Money` — снимок располагаемых средств на момент планирования |
+| `AvailableFunds` | `Money` — migawka dostępnych środków w momencie planowania |
 | `Envelopes` | `List<Envelope>` |
 | `PlannedAt` | `DateTimeOffset` |
 
-`Envelope` (сущность внутри агрегата): `CategoryId`, `PlannedAmount`.
+`Envelope` (encja wewnątrz agregatu): `CategoryId`, `PlannedAmount`.
 
-Методы агрегата: `Plan(categoryId, amount)`, `Remove(categoryId)`, `RefreshAvailableFunds(money)`.
-Все они проверяют инвариант И-1 и бросают `BudgetOverAllocatedException` при нарушении.
+Metody agregatu: `Plan(categoryId, amount)`, `Remove(categoryId)`, `RefreshAvailableFunds(money)`.
+Wszystkie sprawdzają niezmiennik N-1 i rzucają `BudgetOverAllocatedException` przy naruszeniu.
 
-### 5.6 Reconciliation (агрегат)
+### 5.6 Reconciliation (agregat)
 
-| Поле | Тип |
+| Pole | Typ |
 |---|---|
 | `Id` | `ReconciliationId` |
 | `AccountId` | `AccountId` |
@@ -239,26 +239,26 @@ CurrentBalance = LastReconciledBalance + Σ Transaction.Amount, где OccurredA
 | `ObservedAt` | `DateTimeOffset` |
 | `PreviousBalance` | `Money` |
 | `PreviousAt` | `DateTimeOffset` |
-| `RecordedDelta` | `Money` — сумма операций между сверками |
-| `Discrepancy` | `Money` — расхождение |
+| `RecordedDelta` | `Money` — suma transakcji między uzgodnieniami |
+| `Discrepancy` | `Money` — rozbieżność |
 | `GeneratedTransactionId` | `TransactionId?` |
 
-### 5.7 CategoryRule (агрегат) — этап 3
+### 5.7 CategoryRule (agregat) — etap 3
 
-| Поле | Тип |
+| Pole | Typ |
 |---|---|
 | `Id` | `Guid` |
-| `Pattern` | `string` — подстрока нормализованного мерчанта |
+| `Pattern` | `string` — podciąg znormalizowanej nazwy sprzedawcy |
 | `CategoryId` | `CategoryId` |
 | `Origin` | `Learned` \| `Manual` |
 | `HitCount` | `int` |
 | `LastUsedAt` | `DateTimeOffset?` |
 
-При конфликте правил выигрывает **самый длинный** `Pattern`; при равной длине — с большим `HitCount`.
+Przy konflikcie reguł wygrywa **najdłuższy** `Pattern`; przy równej długości — z większym `HitCount`.
 
-### 5.8 RawNotification — этап 3
+### 5.8 RawNotification — etap 3
 
-| Поле | Тип |
+| Pole | Typ |
 |---|---|
 | `Id` | `Guid` |
 | `PackageName` | `string` |
@@ -267,53 +267,53 @@ CurrentBalance = LastReconciledBalance + Σ Transaction.Amount, где OccurredA
 | `ParseStatus` | `Parsed` \| `Unparsed` \| `Ignored` |
 | `TransactionId` | `TransactionId?` |
 
-Хранится всегда, включая нераспознанные. Это материал для доработки парсеров и страховка от потери данных.
+Przechowywane zawsze, łącznie z nierozpoznanymi. To materiał do doskonalenia parserów i zabezpieczenie przed utratą danych.
 
-### 5.9 Fund (агрегат) — этап 4
+### 5.9 Fund (agregat) — etap 4
 
-| Поле | Тип | Примечание |
+| Pole | Typ | Uwaga |
 |---|---|---|
 | `Id` | `FundId` | |
-| `Name` | `string` | «OC+AC», «Podatek od nieruchomości», «Отпуск» |
-| `TargetAmount` | `Money` | сумма платежа |
+| `Name` | `string` | „OC+AC", „Podatek od nieruchomości", „Urlop" |
+| `TargetAmount` | `Money` | kwota płatności |
 | `Periodicity` | `Monthly` \| `Bimonthly` \| `Quarterly` \| `SemiAnnual` \| `Annual` | |
 | `NextDueDate` | `DateOnly` | |
-| `AccruedBalance` | `Money` | **накоплено** — то, чего не было в экселе |
-| `LinkedAccountId` | `AccountId?` | где физически лежат деньги |
+| `AccruedBalance` | `Money` | **zgromadzone** — czego nie było w Excelu |
+| `LinkedAccountId` | `AccountId?` | gdzie fizycznie leżą pieniądze |
 
-Операции: `Accrue(money)`, `Spend(money)` (сбрасывает накопленное и сдвигает `NextDueDate`).
+Operacje: `Accrue(money)`, `Spend(money)` (zeruje zgromadzone i przesuwa `NextDueDate`).
 
-### 5.10 Asset (агрегат) — этап 5
+### 5.10 Asset (agregat) — etap 5
 
-| Поле | Тип |
+| Pole | Typ |
 |---|---|
 | `Id` | `AssetId` |
 | `Name` | `string` |
 | `CurrentValue` | `Money` |
 | `ValuedAt` | `DateTimeOffset` |
 | `LiquidityTier` | `Immediate` \| `Month` \| `Locked` |
-| `IsInMonthlyBudget` | `bool` — всегда `false`, кроме особых случаев |
+| `IsInMonthlyBudget` | `bool` — zawsze `false`, z wyjątkiem szczególnych przypadków |
 
 ---
 
-## 6. Инварианты
+## 6. Niezmienniki
 
-| № | Формулировка | Где проверяется |
+| Nr | Sformułowanie | Gdzie sprawdzane |
 |---|---|---|
-| **И-1** | `Σ Envelope.PlannedAmount ≤ MonthBudget.AvailableFunds` | `MonthBudget.Plan()` |
-| **И-2** | У операции всегда есть категория; неразобранная получает `Unsorted` и **участвует** в суммах расхода | конструктор `Transaction` |
-| **И-3** | Обе стороны внутреннего перевода имеют общий `TransferGroupId` и исключаются из расходов и доходов | `TransferMatcher` |
-| **И-4** | Схлопнутая авторизация имеет `SupersededById` и не участвует в расчётах; выигрывает списание | `DuplicateMatcher` |
-| **И-5** | Отрицательное расхождение при сверке не создаёт доход автоматически — требует явного решения пользователя | `Reconciliation.Create()` |
-| **И-6** | Сверка не изменяет прошлые операции, только добавляет новую | `Reconciliation.Create()` |
-| **И-7** | `Fund.AccruedBalance ≥ 0` и не превышает `TargetAmount` без явного подтверждения | `Fund.Accrue()` |
-| **И-8** | Счета, категории и фонды не удаляются, а архивируются: у них есть история | репозитории |
+| **N-1** | `Σ Envelope.PlannedAmount ≤ MonthBudget.AvailableFunds` | `MonthBudget.Plan()` |
+| **N-2** | Transakcja zawsze ma kategorię; nieprzypisana otrzymuje `Unsorted` i **uczestniczy** w sumach wydatków | konstruktor `Transaction` |
+| **N-3** | Obie strony przelewu wewnętrznego mają wspólny `TransferGroupId` i są wykluczone z wydatków i przychodów | `TransferMatcher` |
+| **N-4** | Scalona autoryzacja ma `SupersededById` i nie uczestniczy w obliczeniach; wygrywa obciążenie | `DuplicateMatcher` |
+| **N-5** | Ujemna rozbieżność przy uzgodnieniu nie tworzy automatycznie przychodu — wymaga jawnej decyzji użytkownika | `Reconciliation.Create()` |
+| **N-6** | Uzgodnienie nie modyfikuje przeszłych transakcji, tylko dodaje nową | `Reconciliation.Create()` |
+| **N-7** | `Fund.AccruedBalance ≥ 0` i nie przekracza `TargetAmount` bez jawnego potwierdzenia | `Fund.Accrue()` |
+| **N-8** | Konta, kategorie i fundusze nie są usuwane, lecz archiwizowane: mają historię | repozytoria |
 
-Инвариант И-1 — центральный. Именно его отсутствие в экселе давало плановый дефицит, который можно было проигнорировать. В приложении нарушающая операция отклоняется.
+Niezmiennik N-1 jest centralny. Właśnie jego brak w Excelu pozwalał na planowy deficyt, który można było zignorować. W aplikacji operacja naruszająca zostaje odrzucona.
 
 ---
 
-## 7. Схема БД
+## 7. Schemat BD
 
 ```sql
 CREATE TABLE Accounts (
@@ -376,54 +376,54 @@ CREATE TABLE Assets (
     IsInMonthlyBudget INTEGER NOT NULL DEFAULT 0);
 ```
 
-Таблицы этапов 3–5 создаются миграциями соответствующих этапов, не заранее.
+Tabele etapów 3–5 tworzone są migracjami odpowiednich etapów, nie z wyprzedzeniem.
 
 ---
 
-## 8. Прикладной слой
+## 8. Warstwa aplikacji
 
-Один класс на сценарий. Именование: `<Глагол><Существительное>UseCase`.
+Jedna klasa na scenariusz. Nazewnictwo: `<Czasownik><Rzeczownik>UseCase`.
 
-| Сценарий | Этап | Вход → Выход |
+| Scenariusz | Etap | Wejście → Wyjście |
 |---|---|---|
-| `AddManualTransactionUseCase` | 1 | сумма, дата, счёт, категория → `TransactionId` |
+| `AddManualTransactionUseCase` | 1 | kwota, data, konto, kategoria → `TransactionId` |
 | `DeleteTransactionUseCase` | 1 | `TransactionId` → void |
-| `PlanMonthUseCase` | 1 | месяц, список (категория, сумма) → `MonthBudgetId`, может бросить `BudgetOverAllocatedException` |
-| `GetMonthOverviewUseCase` | 1 | месяц → располагаемые средства, осталось распределить, конверты с план/факт/остаток |
-| `ReconcileAccountUseCase` | 2 | счёт, наблюдаемый остаток, дата → `Discrepancy`, созданная операция |
-| `GetDashboardUseCase` | 2 | — → сводка главного экрана |
-| `IngestNotificationUseCase` | 3 | сырое уведомление → операция или `Unparsed` |
-| `AssignCategoryUseCase` | 3 | `TransactionId`, категория, флаг «создать правило» → void |
-| `GetInboxUseCase` | 3 | — → операции с категорией `Unsorted` |
-| `AccrueFundsForMonthUseCase` | 4 | месяц → начисления по всем фондам |
-| `GetRunwayUseCase` | 5 | — → месяцев автономии по уровням ликвидности |
-| `ExportBackupUseCase` / `ImportBackupUseCase` | 6 | → JSON-файл |
+| `PlanMonthUseCase` | 1 | miesiąc, lista (kategoria, kwota) → `MonthBudgetId`, może rzucić `BudgetOverAllocatedException` |
+| `GetMonthOverviewUseCase` | 1 | miesiąc → dostępne środki, pozostało do rozdzielenia, koperty z plan/fakt/pozostało |
+| `ReconcileAccountUseCase` | 2 | konto, obserwowane saldo, data → `Discrepancy`, utworzona transakcja |
+| `GetDashboardUseCase` | 2 | — → podsumowanie ekranu głównego |
+| `IngestNotificationUseCase` | 3 | surowe powiadomienie → transakcja lub `Unparsed` |
+| `AssignCategoryUseCase` | 3 | `TransactionId`, kategoria, flaga „utwórz regułę" → void |
+| `GetInboxUseCase` | 3 | — → transakcje z kategorią `Unsorted` |
+| `AccrueFundsForMonthUseCase` | 4 | miesiąc → naliczenia dla wszystkich funduszy |
+| `GetRunwayUseCase` | 5 | — → miesięcy autonomii według poziomów płynności |
+| `ExportBackupUseCase` / `ImportBackupUseCase` | 6 | → plik JSON |
 
 ---
 
-## 9. Инфраструктура
+## 9. Infrastruktura
 
 ### 9.1 EF Core
 
-- `CastellanDbContext`, конфигурации через `IEntityTypeConfiguration<T>`, отдельный класс на агрегат.
-- `Money` — конвертер значений `Money ↔ long`.
-- `YearMonth` — раскладывается на два столбца (`Year`, `Month`).
-- `DateTimeOffset` — конвертер в ISO-8601 строку (провайдер SQLite теряет смещение при стандартном маппинге).
-- Запросы на чтение — `AsNoTracking()`.
-- Прагмы при открытии соединения: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`.
+- `CastellanDbContext`, konfiguracje przez `IEntityTypeConfiguration<T>`, oddzielna klasa na agregat.
+- `Money` — konwerter wartości `Money ↔ long`.
+- `YearMonth` — rozkładany na dwie kolumny (`Year`, `Month`).
+- `DateTimeOffset` — konwerter do ciągu ISO-8601 (dostawca SQLite gubi offset przy standardowym mapowaniu).
+- Zapytania odczytu — `AsNoTracking()`.
+- Pragmy przy otwieraniu połączenia: `journal_mode=WAL`, `foreign_keys=ON`, `busy_timeout=5000`.
 
-### 9.2 Перехват уведомлений (этап 3)
+### 9.2 Przechwytywanie powiadomień (etap 3)
 
 ```
 Platforms/Android/Services/CastellanNotificationListenerService.cs
 ```
 
-- Наследник `Android.Service.Notification.NotificationListenerService`, зарегистрирован через `[Service]` с `Permission = "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"` и intent-filter `android.service.notification.NotificationListenerService`.
-- Разрешение **нельзя запросить обычным диалогом**: пользователя надо отправить в `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS` и проверять `NotificationManagerCompat.getEnabledListenerPackages()` при каждом старте.
-- `OnNotificationPosted` фильтрует по `PackageName` (список пакетов банков в настройках), извлекает `EXTRA_TITLE` и `EXTRA_TEXT`, пишет `RawNotification` и вызывает `IngestNotificationUseCase`. Пакет `com.google.android.apps.walletnfcrel` (Google Portfel) — всегда `Ignored`: при NFC-платежах он дублирует банковское уведомление, но не содержит нужных данных.
-- Сервис работает вне жизненного цикла UI: собственный scope DI и собственное подключение к БД. Долгую работу в `OnNotificationPosted` не делать — только запись и передача в очередь.
+- Dziedzic `Android.Service.Notification.NotificationListenerService`, zarejestrowany przez `[Service]` z `Permission = "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"` i intent-filter `android.service.notification.NotificationListenerService`.
+- Uprawnienia **nie można poprosić zwykłym dialogiem**: użytkownika trzeba skierować do `Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS` i sprawdzać `NotificationManagerCompat.getEnabledListenerPackages()` przy każdym starcie.
+- `OnNotificationPosted` filtruje według `PackageName` (lista pakietów banków w ustawieniach), wyciąga `EXTRA_TITLE` i `EXTRA_TEXT`, zapisuje `RawNotification` i wywołuje `IngestNotificationUseCase`. Pakiet `com.google.android.apps.walletnfcrel` (Google Portfel) — zawsze `Ignored`: przy płatnościach NFC duplikuje powiadomienie bankowe, ale nie zawiera potrzebnych danych.
+- Serwis działa poza cyklem życia UI: własny scope DI i własne połączenie z BD. Nie wykonywać długiej pracy w `OnNotificationPosted` — tylko zapis i przekazanie do kolejki.
 
-### 9.3 Парсеры банков
+### 9.3 Parsery banków
 
 ```csharp
 public interface IBankNotificationParser
@@ -437,272 +437,270 @@ public sealed record ParsedNotification(
     Money Amount, string? RawMerchant, bool IsAuthorization, string? AccountHint);
 ```
 
-Реализация на регулярных выражениях, вынесенных в конфигурационный JSON, чтобы правила правились без пересборки. Один парсер на банк; неизвестный пакет — `Ignored`.
+Implementacja na wyrażeniach regularnych wyniesionych do konfiguracyjnego JSON, żeby reguły można było poprawiać bez przebudowy. Jeden parser na bank; nieznany pakiet — `Ignored`.
 
-Формат уведомлений у каждого банка свой и меняется без предупреждения. Отсюда требование хранить сырой текст (5.8) и покрывать парсеры тестами на реальных примерах.
+Format powiadomień każdego banku jest inny i zmienia się bez ostrzeżenia. Stąd wymóg przechowywania surowego tekstu (5.8) i pokrycia parserów testami na rzeczywistych przykładach.
 
-### 9.4 Виджет и быстрый ввод (этап 2)
+### 9.4 Widget i szybkie wprowadzanie (etap 2)
 
-`AppWidgetProvider` с кнопкой, открывающей полупрозрачное `Activity` быстрого ввода: числовая клавиатура, сетка категорий, кнопка «Готово». Цель — три касания.
+`AppWidgetProvider` z przyciskiem otwierającym przezroczyste `Activity` szybkiego wprowadzania: klawiatura numeryczna, siatka kategorii, przycisk „Gotowe". Cel — trzy dotknięcia.
 
 ---
 
-## 10. Интерфейс
+## 10. Interfejs
 
-### 10.1 Экраны
+### 10.1 Ekrany
 
-| Экран | Этап | Содержание |
+| Ekran | Etap | Zawartość |
 |---|---|---|
-| Главный | 1 → 2 | располагаемые средства; осталось распределить; осталось потратить; счётчик инбокса; предупреждение о здоровье захвата |
-| Конверты месяца | 1 | категория, план, потрачено, остаток, полоса прогресса; красная при перерасходе |
-| Планирование | 1 | распределение по конвертам, живой счётчик «осталось распределить», блокировка сохранения при нарушении И-1 |
-| Операции | 1 | список по датам, фильтры по счёту и категории, поиск |
-| Счета | 1 → 2 | список счетов с вычисленным остатком, кнопка «сверить» |
-| Сверка | 2 | ввод фактического остатка, показ расхождения до подтверждения |
-| Быстрый ввод | 2 | сумма → категория → готово |
-| Инбокс | 3 | операции `Unsorted`, назначение категории в одно касание, переключатель «запомнить правило» |
-| Правила | 3 | список правил, редактирование, удаление |
-| Фонды | 4 | цель, срок, накоплено, «нужно в месяц», индикатор отставания |
-| Активы | 5 | список с уровнем ликвидности |
-| Запас прочности | 5 | месяцы автономии по трём уровням ликвидности |
-| Настройки | 6 | банки и пакеты, экспорт/импорт, доступ к уведомлениям |
+| Główny | 1 → 2 | dostępne środki; pozostało do rozdzielenia; pozostało do wydania; licznik skrzynki; ostrzeżenie o kondycji przechwytywania |
+| Koperty miesiąca | 1 | kategoria, plan, wydano, pozostało, pasek postępu; czerwony przy przekroczeniu |
+| Planowanie | 1 | rozdzielanie do kopert, żywy licznik „pozostało do rozdzielenia", blokada zapisu przy naruszeniu N-1 |
+| Transakcje | 1 | lista według dat, filtry po koncie i kategorii, wyszukiwanie |
+| Konta | 1 → 2 | lista kont z obliczonym saldem, przycisk „uzgodnij" |
+| Uzgodnienie | 2 | wprowadzenie faktycznego salda, wyświetlenie rozbieżności przed potwierdzeniem |
+| Szybkie wprowadzanie | 2 | kwota → kategoria → gotowe |
+| Skrzynka odbiorcza | 3 | transakcje `Unsorted`, przypisanie kategorii jednym dotknięciem, przełącznik „zapamiętaj regułę" |
+| Reguły | 3 | lista reguł, edycja, usuwanie |
+| Fundusze | 4 | cel, termin, zgromadzone, „potrzeba miesięcznie", wskaźnik opóźnienia |
+| Aktywa | 5 | lista z poziomem płynności |
+| Poduszka finansowa | 5 | miesięcy autonomii według trzech poziomów płynności |
+| Ustawienia | 6 | banki i pakiety, eksport/import, dostęp do powiadomień |
 
-### 10.2 Правила отображения
+### 10.2 Zasady wyświetlania
 
-- Расход всегда с минусом и в одном цвете; никаких «красное — плохо» на обычных тратах.
-- Перерасход конверта — единственное место, где допустим тревожный цвет.
-- «Неопознанное» показывается наравне с другими категориями, без выделения и без формулировок вины.
-- Ни одного экрана, требующего вспоминать прошлое.
+- Wydatek zawsze z minusem i w jednym kolorze; żadnych „czerwone — złe" przy zwykłych wydatkach.
+- Przekroczenie koperty — jedyne miejsce, gdzie dopuszczalny jest kolor alarmowy.
+- „Niezidentyfikowane" pokazywane na równi z innymi kategoriami, bez wyróżnienia i bez sformułowań winy.
+- Żadnego ekranu wymagającego przypominania sobie przeszłości.
 
-### 10.3 Язык и локализация
+### 10.3 Język i lokalizacja
 
-**Основной язык интерфейса — польский (pl-PL).** Приложение личное, польский — язык повседневного использования.
+**Głównym językiem interfejsu jest polski (pl-PL).** Aplikacja jest osobista, polski to język codziennego użytkowania.
 
-Реализация:
+Implementacja:
 
-- `CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL")` при старте.
-- Строки интерфейса в `Resources/Strings/AppResources.resx`; доступ через статическую обёртку `AppResources` и `{x:Static}` в XAML.
-- `<NeutralLanguage>pl-PL</NeutralLanguage>` в `Castellan.App.csproj`.
+- `CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL")` przy starcie.
+- Ciągi interfejsu w `Resources/Strings/AppResources.resx`; dostęp przez statyczną owijkę `AppResources` i `{x:Static}` w XAML.
+- `<NeutralLanguage>pl-PL</NeutralLanguage>` w `Castellan.App.csproj`.
 
-Добавление языка в будущем: создать `AppResources.{код}.resx` — без изменений в коде.
+Dodanie języka w przyszłości: utworzyć `AppResources.{kod}.resx` — bez zmian w kodzie.
 
 ---
 
-## 11. Алгоритмы
+## 11. Algorytmy
 
-### 11.1 Дедупликация (этап 3)
+### 11.1 Deduplikacja (etap 3)
 
-Кандидат в дубликаты для новой операции T:
+Kandydat na duplikat dla nowej transakcji T:
 
-- тот же `AccountId`;
-- `|T.OccurredAt − C.OccurredAt| ≤ 1 день`;
+- ten sam `AccountId`;
+- `|T.OccurredAt − C.OccurredAt| ≤ 1 dzień`;
 - `T.MerchantKey == C.MerchantKey`;
-- `|T.Amount| == |C.Amount|` или расхождение `≤ 2%` (конвертация валюты, чаевые).
+- `|T.Amount| == |C.Amount|` lub rozbieżność `≤ 2%` (przeliczenie waluty, napiwki).
 
-Если найден кандидат с `Kind == Authorization`, а новая операция `Regular` — проставить кандидату `SupersededById = T.Id`. Обратный порядок (списание пришло раньше авторизации) — новая помечается как схлопнутая.
+Jeśli znaleziono kandydata z `Kind == Authorization`, a nowa transakcja jest `Regular` — ustawić kandydatowi `SupersededById = T.Id`. Odwrotna kolejność (obciążenie przyszło przed autoryzacją) — nowa oznaczana jako scalona.
 
-Порог 2% и окно 1 день вынести в настройки: подобрать эмпирически по своим банкам.
+Próg 2% i okno 1 dzień wynieść do ustawień: dobrać empirycznie na podstawie własnych banków.
 
-### 11.2 Схлопывание переводов (этап 3)
+### 11.2 Scalanie przelewów (etap 3)
 
-Две операции A и B образуют перевод, если:
+Dwie transakcje A i B tworzą przelew, jeśli:
 
-- `A.AccountId != B.AccountId`, оба счёта свои;
+- `A.AccountId != B.AccountId`, oba konta własne;
 - `A.Amount == −B.Amount`;
-- `|A.OccurredAt − B.OccurredAt| ≤ 48 часов`;
-- ни одна ещё не входит в `TransferGroup`.
+- `|A.OccurredAt − B.OccurredAt| ≤ 48 godzin`;
+- żadna nie należy jeszcze do `TransferGroup`.
 
-Обеим присваивается общий `TransferGroupId`, `Kind = Transfer`, `CategoryId = Transfer`.
+Obu przypisywany jest wspólny `TransferGroupId`, `Kind = Transfer`, `CategoryId = Transfer`.
 
-Ложное срабатывание возможно при совпадении сумм — поэтому предлагать подтверждение, а не схлопывать молча.
+Fałszywe trafienie możliwe przy zbieżności kwot — dlatego proponować potwierdzenie, a nie scalać w ciszy.
 
-### 11.3 Нормализация мерчанта
+### 11.3 Normalizacja nazwy sprzedawcy
 
-1. Верхний регистр, замена не-буквенно-цифровых символов на пробел, схлопывание пробелов.
-2. Отсечение известных префиксов агрегаторов: `PAYU`, `PAYPAL`, `GOOGLE`, `APPLE PAY`, `TPAY`, `PRZELEWY24`, `BLIK`.
-3. Удаление номеров точек: хвостовые токены вида `Z1234`, `NR 12`, `#0345`.
-4. Обрезка до 40 символов.
+1. Wielkie litery, zastąpienie znaków niealfanumerycznych spacją, scalenie spacji.
+2. Odcięcie znanych prefiksów agregatorów: `PAYU`, `PAYPAL`, `GOOGLE`, `APPLE PAY`, `TPAY`, `PRZELEWY24`, `BLIK`.
+3. Usunięcie numerów punktów: końcowe tokeny w stylu `Z1234`, `NR 12`, `#0345`.
+4. Obcięcie do 40 znaków.
 
-Онлайн-платежи через агрегатор часто оставляют только имя агрегатора. Это ограничение метода: такие операции остаются в инбоксе и требуют ручного решения. Ожидаемая доля — оценить на реальных данных, это одна из проверяемых гипотез проекта.
+Płatności online przez agregatora często pozostawiają tylko nazwę agregatora. To ograniczenie metody: takie transakcje zostają w skrzynce i wymagają ręcznej decyzji. Oczekiwany udział — ocenić na rzeczywistych danych, to jedna ze sprawdzanych hipotez projektu.
 
-### 11.4 Автокатегоризация (этап 3)
+### 11.4 Autokategoryzacja (etap 3)
 
-При захвате: найти все `CategoryRule`, чей `Pattern` содержится в `MerchantKey`; выбрать с самым длинным `Pattern`; при равенстве — с большим `HitCount`; инкрементировать `HitCount`.
+Przy przechwyceniu: znaleźć wszystkie `CategoryRule`, których `Pattern` zawiera się w `MerchantKey`; wybrać z najdłuższym `Pattern`; przy równości — z większym `HitCount`; zinkrementować `HitCount`.
 
-При ручном назначении категории операции с непустым `MerchantKey` и включённом переключателе «запомнить» — создать правило `Origin = Learned` с `Pattern = MerchantKey`.
+Przy ręcznym przypisaniu kategorii transakcji z niepustym `MerchantKey` i włączonym przełączniku „zapamiętaj" — utworzyć regułę `Origin = Learned` z `Pattern = MerchantKey`.
 
-### 11.5 Сверка (этап 2)
+### 11.5 Uzgodnienie (etap 2)
 
 ```
-RecordedDelta = Σ Transaction.Amount, где AccountId = A
-                и PreviousAt < OccurredAt ≤ ObservedAt
-                и SupersededById IS NULL
+RecordedDelta = Σ Transaction.Amount, gdzie AccountId = A
+                i PreviousAt < OccurredAt ≤ ObservedAt
+                i SupersededById IS NULL
 
 Discrepancy = (ObservedBalance − PreviousBalance) − RecordedDelta
 ```
 
-- `Discrepancy < 0` — незаписанные расходы. Создать операцию `Kind = Unidentified`, `CategoryId = Unidentified`, `Amount = Discrepancy`.
-- `Discrepancy > 0` — незаписанный доход **или задвоенные расходы**. По И-5 автоматически не создавать: показать список операций периода и спросить, что делать.
-- `Discrepancy == 0` — обновить `LastReconciledBalance` и `LastReconciledAt`.
+- `Discrepancy < 0` — niezapisane wydatki. Utworzyć transakcję `Kind = Unidentified`, `CategoryId = Unidentified`, `Amount = Discrepancy`.
+- `Discrepancy > 0` — niezapisany przychód **lub** zduplikowane wydatki. Zgodnie z N-5 nie tworzyć automatycznie: pokazać listę transakcji okresu i zapytać, co zrobić.
+- `Discrepancy == 0` — zaktualizować `LastReconciledBalance` i `LastReconciledAt`.
 
-### 11.6 Здоровье захвата (этап 3)
+### 11.6 Kondycja przechwytywania (etap 3)
 
-Хранить `LastNotificationAt` в настройках. Если старше 1 дня — баннер на главном экране с проверкой `NotificationManagerCompat.getEnabledListenerPackages()`.
+Przechowywać `LastNotificationAt` w ustawieniach. Jeśli starsze niż 1 dzień — baner na ekranie głównym ze sprawdzeniem `NotificationManagerCompat.getEnabledListenerPackages()`.
 
-Android может убить фоновый сервис ради экономии батареи молча, без ошибки. Это самый вероятный отказ системы в эксплуатации. Второй рубеж защиты — сверка: рост «Неопознанного» обнаружит сбой независимо от баннера.
+Android może po cichu zabić serwis w tle dla oszczędzania baterii, bez błędu. To najbardziej prawdopodobna awaria systemu w eksploatacji. Drugi poziom ochrony — uzgodnienie: wzrost „Niezidentyfikowanego" wykryje awarię niezależnie od banera.
 
-### 11.7 Начисление в фонды (этап 4)
-
-```
-МесяцевДоПлатежа   = целых месяцев между сегодня и NextDueDate (минимум 1)
-НужноВМесяц        = (TargetAmount − AccruedBalance) / МесяцевДоПлатежа
-Отставание         = ОжидаемоНакоплено − AccruedBalance
-```
-
-Где `ОжидаемоНакоплено = TargetAmount × (пройдено месяцев периода / всего месяцев периода)`.
-
-Сумма `НужноВМесяц` по всем фондам добавляется в план месяца отдельной строкой и участвует в инварианте И-1 — иначе фонды остаются благим намерением.
-
-### 11.8 Запас прочности (этап 5)
+### 11.7 Naliczanie do funduszy (etap 4)
 
 ```
-НесрезаемыйРасход = Σ PlannedAmount по категориям с флагом «обязательная»
-                    + Σ НужноВМесяц по фондам
-
-Ликвидные(tier)   = Σ Account.CurrentBalance где LiquidityTier ≤ tier
-                    + Σ Asset.CurrentValue   где LiquidityTier ≤ tier
-
-Автономия(tier)   = Ликвидные(tier) / НесрезаемыйРасход   [месяцев]
+MiesięcyDoPłatności  = całych miesięcy między dziś a NextDueDate (minimum 1)
+PotrzebaWMiesiącu    = (TargetAmount − AccruedBalance) / MiesięcyDoPłatności
+Opóźnienie           = OczekiwaneNagromadzone − AccruedBalance
 ```
 
-Показывать три числа по трём уровням ликвидности, а не одно усреднённое: «доступно завтра» и «заморожено» — принципиально разные деньги.
+Gdzie `OczekiwaneNagromadzone = TargetAmount × (minione miesiące okresu / łączna liczba miesięcy okresu)`.
 
-Это тот же расчёт, что `ReadinessScore` в Bastion, в других единицах: запас, делённый на скорость расходования, даёт горизонт автономии.
+Suma `PotrzebaWMiesiącu` dla wszystkich funduszy dodawana jest do planu miesiąca jako osobna pozycja i uczestniczy w niezmienniku N-1 — inaczej fundusze pozostają pobożnym życzeniem.
+
+### 11.8 Poduszka finansowa (etap 5)
+
+```
+NiereduktowalnyWydatek = Σ PlannedAmount dla kategorii z flagą „obowiązkowa"
+                        + Σ PotrzebaWMiesiącu dla funduszy
+
+Płynne(tier)           = Σ Account.CurrentBalance gdzie LiquidityTier ≤ tier
+                        + Σ Asset.CurrentValue   gdzie LiquidityTier ≤ tier
+
+Autonomia(tier)        = Płynne(tier) / NiereduktowalnyWydatek   [miesiące]
+```
+
+Pokazywać trzy liczby według trzech poziomów płynności, nie jedną uśrednioną: „dostępne jutro" i „zamrożone" to zasadniczo różne pieniądze.
 
 ---
 
-## 12. Этапы подробно
+## 12. Etapy szczegółowo
 
-### Этап 0 — каркас
+### Etap 0 — szkielet
 
-**Работы:** структура решения по 4.1; `CastellanDbContext` и первая миграция; регистрация DI; MAUI Shell с заглушками навигации; xUnit-проекты; GitHub Actions — сборка, тесты, артефакт APK; `.gitignore`, `.editorconfig`, лицензия.
+**Prace:** struktura rozwiązania według 4.1; `CastellanDbContext` i pierwsza migracja; rejestracja DI; MAUI Shell z zaślepkami nawigacji; projekty xUnit; GitHub Actions — build, testy, artefakt APK; `.gitignore`, `.editorconfig`, licencja.
 
-**Готово, когда:** APK ставится на телефон и запускается; `dotnet test` зелёный в CI; миграция создаёт пустую БД на устройстве.
+**Gotowe, gdy:** APK instaluje się na telefonie i uruchamia; `dotnet test` jest zielony w CI; migracja tworzy pustą BD na urządzeniu.
 
-### Этап 1 — ручной учёт
+### Etap 1 — ręczne prowadzenie
 
-**Работы:** агрегаты `Account`, `Category`, `Transaction`, `MonthBudget` с инвариантами И-1, И-2, И-8; сценарии `AddManualTransaction`, `DeleteTransaction`, `PlanMonth`, `GetMonthOverview`; экраны «Главный», «Конверты», «Планирование», «Операции», «Счета»; сид системных категорий.
+**Prace:** agregaty `Account`, `Category`, `Transaction`, `MonthBudget` z niezmienniki N-1, N-2, N-8; scenariusze `AddManualTransaction`, `DeleteTransaction`, `PlanMonth`, `GetMonthOverview`; ekrany „Główny", „Koperty", „Planowanie", „Transakcje", „Konta"; seed kategorii systemowych.
 
-**Готово, когда:** можно завести счета, распланировать месяц (сверх располагаемых средств не пускает), записать траты руками и увидеть план/факт/остаток по конвертам.
+**Gotowe, gdy:** można założyć konta, zaplanować miesiąc (powyżej dostępnych środków nie przepuszcza), zapisać wydatki ręcznie i zobaczyć plan/fakt/pozostało dla kopert.
 
-**Не делать:** отчёты, графики, экспорт.
+**Nie robić:** raporty, wykresy, eksport.
 
-### Этап 2 — сверка и быстрый ввод
+### Etap 2 — uzgodnienie i szybkie wprowadzanie
 
-**Работы:** `Reconciliation`, инварианты И-5 и И-6; вычисляемый остаток счёта; сценарии `ReconcileAccount`, `GetDashboard`; экран сверки; экран быстрого ввода; виджет на домашний экран.
+**Prace:** `Reconciliation`, niezmienniki N-5 i N-6; obliczane saldo konta; scenariusze `ReconcileAccount`, `GetDashboard`; ekran uzgodnienia; ekran szybkiego wprowadzania; widget na ekran główny.
 
-**Готово, когда:** ввод фактического остатка порождает «Неопознанное»; пропуск нескольких дней не ломает картину; трата записывается в три касания.
+**Gotowe, gdy:** wprowadzenie faktycznego salda tworzy „Niezidentyfikowane"; pominięcie kilku dni nie psuje obrazu; wydatek zapisuje się w trzech dotknięciach.
 
-### Этап 3 — перехват уведомлений
+### Etap 3 — przechwytywanie powiadomień
 
-Ключевой этап. Ради него всё затевалось.
+Kluczowy etap. Dla niego to wszystko zostało zapoczątkowane.
 
-**Работы:** `NotificationListenerService` и обработка разрешения; `RawNotification`; парсеры двух банков на реальных примерах; `IngestNotificationUseCase`; дедупликация (11.1); схлопывание переводов (11.2); нормализация мерчанта (11.3); `CategoryRule` и автокатегоризация (11.4); экраны «Инбокс» и «Правила»; здоровье захвата (11.6).
+**Prace:** `NotificationListenerService` i obsługa uprawnień; `RawNotification`; parsery dwóch banków na rzeczywistych przykładach; `IngestNotificationUseCase`; deduplikacja (11.1); scalanie przelewów (11.2); normalizacja nazwy sprzedawcy (11.3); `CategoryRule` i autokategoryzacja (11.4); ekrany „Skrzynka odbiorcza" i „Reguły"; kondycja przechwytywania (11.6).
 
-**Порядок внутри этапа:** сначала сбор сырых уведомлений и экран их просмотра (без парсинга) — пусть накопятся реальные данные за неделю. Парсеры писать по накопленному, а не по воображаемому формату.
+**Kolejność wewnątrz etapu:** najpierw zbieranie surowych powiadomień i ekran ich podglądu (bez parsowania) — niech się zbierają rzeczywiste dane przez tydzień. Parsery pisać na zebranych danych, a nie na wyobrażonym formacie.
 
-**Готово, когда:** за неделю эксплуатации доля операций, потребовавших ручного ввода, ниже 20%, а инбокс разбирается меньше чем за минуту в день.
+**Gotowe, gdy:** przez tydzień eksploatacji udział transakcji wymagających ręcznego wprowadzenia jest poniżej 20%, a skrzynka rozgrywana jest w mniej niż minutę dziennie.
 
-### Этап 4 — фонды нерегулярных платежей
+### Etap 4 — fundusze nieregularnych płatności
 
-**Работы:** агрегат `Fund`, инвариант И-7; расчёты 11.7; включение `НужноВМесяц` в план месяца; экран «Фонды» с индикатором отставания.
+**Prace:** agregat `Fund`, niezmiennik N-7; obliczenia 11.7; włączenie `PotrzebaWMiesiącu` do planu miesiąca; ekran „Fundusze" ze wskaźnikiem opóźnienia.
 
-**Готово, когда:** страховка, налог и отпуск заведены, и приложение отвечает на вопрос «к декабрю хватит или отстаю».
+**Gotowe, gdy:** ubezpieczenie, podatek i urlop są założone, a aplikacja odpowiada na pytanie „czy do grudnia wystarczy, czy jestem w tyle".
 
-### Этап 5 — активы и запас прочности
+### Etap 5 — aktywa i poduszka finansowa
 
-**Работы:** агрегат `Asset`; уровни ликвидности на счетах и активах; флаг обязательности на категориях; расчёт 11.8; экран «Запас прочности».
+**Prace:** agregat `Asset`; poziomy płynności na kontach i aktywach; flaga obowiązkowości na kategoriach; obliczenie 11.8; ekran „Poduszka finansowa".
 
-**Готово, когда:** видно, на сколько месяцев хватит по трём уровням ликвидности, и как цифра меняется при отключении источника дохода.
+**Gotowe, gdy:** widać, na ile miesięcy wystarczy według trzech poziomów płynności, i jak liczba zmienia się po wyłączeniu źródła dochodu.
 
-### Этап 6 — эксплуатация и портфолио
+### Etap 6 — eksploatacja i portfolio
 
-**Работы:** экспорт и импорт JSON; напоминание о бэкапе раз в месяц; README (стек, архитектура, доменная модель, обоснование решений, тесты, ограничения); диаграммы; скриншоты; подписанный релизный APK в GitHub Releases.
+**Prace:** eksport i import JSON; przypomnienie o backupie raz w miesiącu; README (stos, architektura, model domenowy, uzasadnienie decyzji, testy, ograniczenia); diagramy; zrzuty ekranu; podpisany APK wydania w GitHub Releases.
 
-**Готово, когда:** приложение можно переставить на новый телефон без потери данных, а репозиторий читается посторонним человеком.
+**Gotowe, gdy:** aplikację można przeinstalować na nowym telefonie bez utraty danych, a repozytorium jest czytelne dla postronnej osoby.
 
 ---
 
-## 13. Тестирование
+## 13. Testowanie
 
-| Уровень | Что покрывается | Инструмент |
+| Poziom | Co pokrywane | Narzędzie |
 |---|---|---|
-| Domain | инварианты И-1…И-8, арифметика `Money`, границы `YearMonth`, начисление фондов, автономия | xUnit, чистые тесты без БД |
-| Application | сценарии на репозиториях-заглушках | xUnit |
-| Infrastructure | конфигурации EF, конвертеры, миграции | xUnit + SQLite in-memory |
-| Парсеры | реальные тексты уведомлений обоих банков: покупка, онлайн, перевод, авторизация, списание | xUnit, табличные тесты |
-| Алгоритмы | дедупликация и схлопывание переводов на сконструированных наборах, включая ложные срабатывания | xUnit |
+| Domain | niezmienniki N-1…N-8, arytmetyka `Money`, granice `YearMonth`, naliczanie funduszy, autonomia | xUnit, czyste testy bez BD |
+| Application | scenariusze na zaślepkach repozytoriów | xUnit |
+| Infrastructure | konfiguracje EF, konwertery, migracje | xUnit + SQLite in-memory |
+| Parsery | rzeczywiste teksty powiadomień obu banków: zakup, online, przelew, autoryzacja, obciążenie | xUnit, testy tabelaryczne |
+| Algorytmy | deduplikacja i scalanie przelewów na skonstruowanych zestawach, w tym fałszywe trafienia | xUnit |
 
-Testcontainers не нужен: внешних зависимостей нет.
+Testcontainers nie jest potrzebny: brak zewnętrznych zależności.
 
-Обязательные негативные тесты: планирование сверх средств; сверка с положительным расхождением; двойное уведомление; перевод между своими счетами с равными суммами; уведомление неизвестного формата.
-
----
-
-## 14. Нефункциональные требования
-
-- Холодный старт до интерактивного главного экрана — менее 2 секунд на среднем устройстве.
-- Обработка уведомления — менее 100 мс в `OnNotificationPosted`; всё тяжёлое асинхронно.
-- Размер БД за 5 лет — единицы мегабайт; оптимизация не требуется.
-- Расход батареи фоновым сервисом — на уровне погрешности: сервис событийный, без опроса.
-- Все данные только на устройстве. Никаких сетевых вызовов вообще — в проекте нет HTTP-клиента.
-- Приложение работает полностью офлайн, включая первый запуск.
+Obowiązkowe testy negatywne: planowanie powyżej środków; uzgodnienie z dodatnią rozbieżnością; podwójne powiadomienie; przelew między własnymi kontami z równymi kwotami; powiadomienie nieznanego formatu.
 
 ---
 
-## 15. Риски
+## 14. Wymagania niefunkcjonalne
 
-| Риск | Вероятность | Что делать |
+- Zimny start do interaktywnego ekranu głównego — poniżej 2 sekund na przeciętnym urządzeniu.
+- Przetwarzanie powiadomienia — poniżej 100 ms w `OnNotificationPosted`; wszystko ciężkie asynchronicznie.
+- Rozmiar BD przez 5 lat — kilka megabajtów; optymalizacja nie jest wymagana.
+- Zużycie baterii przez serwis w tle — na poziomie szumu: serwis jest zdarzeniowy, bez odpytywania.
+- Wszystkie dane tylko na urządzeniu. Żadnych wywołań sieciowych — w projekcie nie ma klienta HTTP.
+- Aplikacja działa w pełni offline, w tym przy pierwszym uruchomieniu.
+
+---
+
+## 15. Ryzyka
+
+| Ryzyko | Prawdopodobieństwo | Co robić |
 |---|---|---|
-| Уведомления банка не содержат мерчанта, только сумму | средняя | проверить **до** этапа 3 на реальных примерах; если так — часть замысла отпадает, останется «сумма + выбор категории», что всё равно лучше эксель |
-| Android убивает фоновый сервис | высокая | здоровье захвата (11.6) + сверка как второй рубеж; отключение оптимизации батареи для приложения |
-| Банк меняет формат уведомлений | средняя | сырые уведомления хранятся всегда; правила в конфиге; тесты на примерах |
-| Онлайн-платежи дают только имя агрегатора | высокая | принять как ограничение; такие операции остаются в инбоксе |
-| Этапы 1–2 затягиваются, интерес гаснет | **высокая** | жёстко ограничить объём этапов 1–2; не добавлять в них ничего сверх списка |
-| Проект повторяет судьбу Bastion: написан, но не используется | средняя | критерий успеха — эксплуатация, а не наличие кода (раздел 16) |
+| Powiadomienia banku nie zawierają nazwy sprzedawcy, tylko kwotę | średnie | sprawdzić **przed** etapem 3 na rzeczywistych przykładach; jeśli tak — część zamysłu odpada, zostanie „kwota + wybór kategorii", co i tak jest lepsze niż Excel |
+| Android zabija serwis w tle | wysokie | kondycja przechwytywania (11.6) + uzgodnienie jako drugi poziom; wyłączenie optymalizacji baterii dla aplikacji |
+| Bank zmienia format powiadomień | średnie | surowe powiadomienia przechowywane zawsze; reguły w konfigu; testy na przykładach |
+| Płatności online dają tylko nazwę agregatora | wysokie | przyjąć jako ograniczenie; takie transakcje zostają w skrzynce |
+| Etapy 1–2 przeciągają się, zainteresowanie opada | **wysokie** | ściśle ograniczyć zakres etapów 1–2; nic nie dodawać ponad listę |
+| Projekt powtarza losy Bastion: napisany, ale nieużywany | średnie | kryterium sukcesu to eksploatacja, a nie obecność kodu (sekcja 16) |
 
-### 15.3 О публикации
+### 15.3 O publikacji
 
-Google Play жёстко ограничивает приложения, запрашивающие доступ к уведомлениям, и требует обоснования назначения. Приложение личное, публикация не планируется; распространение — установка подписанного APK на своё устройство. Если публикация когда-нибудь понадобится, это отдельная работа с политикой доступа и декларацией.
-
----
-
-## 16. Критерий успеха
-
-Не «написано», а через два месяца после этапа 3:
-
-- доля «Неопознанного» в общем расходе — менее 10%;
-- ручного ввода — менее 20% операций;
-- разбор инбокса — менее минуты в день;
-- приложение открывается ежедневно без напоминаний;
-- бюджет на месяц планируется до его начала.
-
-Если «Неопознанное» устойчиво выше 25% — механизм захвата не работает; чинить его, а не добавлять функции.
+Google Play surowo ogranicza aplikacje żądające dostępu do powiadomień i wymaga uzasadnienia przeznaczenia. Aplikacja jest osobista, publikacja nie jest planowana; dystrybucja — instalacja podpisanego APK na własnym urządzeniu. Jeśli kiedyś publikacja będzie potrzebna, to osobna praca z polityką dostępu i deklaracją.
 
 ---
 
-## 17. Метод работы
+## 16. Kryterium sukcesu
 
-Следствие ретроспективы по Bastion: приложение получилось, навык — нет.
+Nie „napisane", lecz dwa miesiące po etapie 3:
 
-Проверка на каждом этапе: получится ли объяснить вслух, почему сделано именно так, и какие альтернативы отвергнуты. Если нет — этап не закрыт.
+- udział „Niezidentyfikowanego" w łącznych wydatkach — poniżej 10%;
+- ręczne wprowadzanie — poniżej 20% transakcji;
+- rozgrywanie skrzynki — poniżej minuty dziennie;
+- aplikacja otwierana codziennie bez przypomnień;
+- budżet na miesiąc planowany przed jego początkiem.
+
+Jeśli „Niezidentyfikowane" trwale powyżej 25% — mechanizm przechwytywania nie działa; naprawiać go, a nie dodawać funkcji.
 
 ---
 
-## 18. Открытые вопросы
+## 17. Metoda pracy
 
-1. Названия пакетов приложений обоих банков и реальные примеры уведомлений — **блокирует этап 3**, собрать заранее.
-2. ~~Присылает ли хотя бы один банк отдельные уведомления об авторизации и о списании, или только одно.~~ **Решено:** банк присылает только уведомление о списании. При оплате телефоном (NFC) приходит два уведомления: от банка (парсить) и от Google Portfel (игнорировать по `PackageName`).
-3. Список категорий: перенести из польского шаблона или составить заново под фактические траты.
-4. Признак «обязательная» на категориях — вводить на этапе 1 (дешевле) или на этапе 5 (когда понадобится).
-5. Нужна ли история планов по месяцам или достаточно текущего и прошлого.
+Wniosek z retrospektywy po Bastion: aplikacja powstała, umiejętność — nie.
+
+Weryfikacja na każdym etapie: czy da się wyjaśnić głośno, dlaczego zrobiono właśnie tak i jakie alternatywy odrzucono. Jeśli nie — etap nie jest zamknięty.
+
+---
+
+## 18. Otwarte pytania
+
+1. Nazwy pakietów aplikacji obu banków i rzeczywiste przykłady powiadomień — **blokuje etap 3**, zebrać wcześniej.
+2. ~~Czy chociaż jeden bank przysyła osobne powiadomienia o autoryzacji i obciążeniu, czy tylko jedno.~~ **Rozwiązane:** bank przysyła tylko powiadomienie o obciążeniu. Przy płatności telefonem (NFC) przychodzą dwa powiadomienia: od banku (parsować) i od Google Portfel (ignorować po `PackageName`).
+3. Lista kategorii: przenieść z polskiego szablonu czy ułożyć od nowa na podstawie rzeczywistych wydatków.
+4. Flaga „obowiązkowa" na kategoriach — wprowadzić na etapie 1 (taniej) czy na etapie 5 (gdy będzie potrzebna).
+5. Czy potrzebna jest historia planów miesięcznych, czy wystarczy bieżący i poprzedni.
