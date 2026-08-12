@@ -3,13 +3,14 @@
     x:Class="Castellan.App.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:views="clr-namespace:Castellan.App.Views">
+    xmlns:views="clr-namespace:Castellan.App.Views"
+    xmlns:strings="clr-namespace:Castellan.App.Resources.Strings">
 
     <TabBar>
-        <ShellContent Title="Главная"  Route="dashboard"    ContentTemplate="{DataTemplate views:DashboardPage}" />
-        <ShellContent Title="Счета"    Route="accounts"     ContentTemplate="{DataTemplate views:AccountsPage}" />
-        <ShellContent Title="Операции" Route="transactions" ContentTemplate="{DataTemplate views:TransactionsPage}" />
-        <ShellContent Title="Конверты" Route="envelopes"    ContentTemplate="{DataTemplate views:EnvelopesPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Dashboard}"    Route="dashboard"    ContentTemplate="{DataTemplate views:DashboardPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Accounts}"     Route="accounts"     ContentTemplate="{DataTemplate views:AccountsPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Transactions}" Route="transactions" ContentTemplate="{DataTemplate views:TransactionsPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Envelopes}"    Route="envelopes"    ContentTemplate="{DataTemplate views:EnvelopesPage}" />
     </TabBar>
 
 </Shell>

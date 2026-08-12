@@ -13,9 +13,14 @@
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
 
-    <!-- Android 10 (API 29) minimum, Android 15 (API 35) target -->
+    <!-- Android 10 (API 29) minimum, Android 16 (API 36) target -->
     <SupportedOSPlatformVersion>29.0</SupportedOSPlatformVersion>
+    <NeutralLanguage>pl-PL</NeutralLanguage>
   </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\Strings\AppResources.resx" />
+  </ItemGroup>
 
   <ItemGroup>
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />

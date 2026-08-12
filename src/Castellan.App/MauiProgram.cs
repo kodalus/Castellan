@@ -1,3 +1,4 @@
+using System.Globalization;
 using Castellan.App.Views;
 using Castellan.Infrastructure;
 using Microsoft.Extensions.Logging;
@@ -8,6 +9,10 @@ public static class MauiProgram
 {
     public static MauiApp CreateMauiApp()
     {
+        var polish = new CultureInfo("pl-PL");
+        CultureInfo.DefaultThreadCurrentCulture = polish;
+        CultureInfo.DefaultThreadCurrentUICulture = polish;
+
         var builder = MauiApp.CreateBuilder();
         builder
             .UseMauiApp<App>()

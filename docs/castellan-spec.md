@@ -474,6 +474,18 @@ public sealed record ParsedNotification(
 - «Неопознанное» показывается наравне с другими категориями, без выделения и без формулировок вины.
 - Ни одного экрана, требующего вспоминать прошлое.
 
+### 10.3 Язык и локализация
+
+**Основной язык интерфейса — польский (pl-PL).** Приложение личное, польский — язык повседневного использования.
+
+Реализация:
+
+- `CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("pl-PL")` при старте.
+- Строки интерфейса в `Resources/Strings/AppResources.resx`; доступ через статическую обёртку `AppResources` и `{x:Static}` в XAML.
+- `<NeutralLanguage>pl-PL</NeutralLanguage>` в `Castellan.App.csproj`.
+
+Добавление языка в будущем: создать `AppResources.{код}.resx` — без изменений в коде.
+
 ---
 
 ## 11. Алгоритмы
