@@ -50,7 +50,7 @@ jobs:
       - name: Build APK (debug)
         run: >
           dotnet build src/Castellan.App/Castellan.App.csproj
-          -f net10.0-android35.0
+          -f net10.0-android36.0
           -c Debug
           --no-restore
 
@@ -58,5 +58,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: castellan-debug
-          path: src/Castellan.App/bin/Debug/net10.0-android35.0/*.apk
+          path: src/Castellan.App/bin/Debug/net10.0-android36.0/*.apk
           retention-days: 14

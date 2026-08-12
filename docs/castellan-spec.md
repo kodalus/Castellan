@@ -52,7 +52,7 @@
 
 ### 3.1 Платформа
 
-**.NET MAUI, .NET 10 (LTS), target Android 15 (API 35), minimum Android 10 (API 29).**
+**.NET MAUI, .NET 10 (LTS), target Android 16 (API 36), minimum Android 10 (API 29).**
 
 Обоснование:
 
