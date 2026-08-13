@@ -1,4 +1,7 @@
+using Castellan.Application;
+using Castellan.Application.Repositories;
 using Castellan.Infrastructure.Data;
+using Castellan.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -11,6 +14,12 @@ public static class InfrastructureServiceExtensions
         services.AddDbContext<CastellanDbContext>(opts =>
             opts.UseSqlite($"Data Source={dbPath}")
                 .AddInterceptors(new SqlitePragmaInterceptor()));
+
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<ITransactionRepository, TransactionRepository>();
+        services.AddScoped<IMonthBudgetRepository, MonthBudgetRepository>();
 
         return services;
     }

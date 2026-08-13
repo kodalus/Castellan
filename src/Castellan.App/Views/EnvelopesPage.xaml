@@ -2,7 +2,63 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
              x:Class="Castellan.App.Views.EnvelopesPage"
+             x:DataType="vm:EnvelopesViewModel"
              Title="{x:Static strings:AppResources.Tab_Envelopes}">
-    <Label Text="{x:Static strings:AppResources.Tab_Envelopes}" HorizontalOptions="Center" VerticalOptions="Center" />
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{x:Static strings:AppResources.Envelopes_Plan}" Command="{Binding PlanMonthCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <HorizontalStackLayout Grid.Row="0" HorizontalOptions="Center" Margin="0,12,0,4" Spacing="12">
+            <Button Text="‹" Command="{Binding PreviousMonthCommand}" WidthRequest="40" />
+            <Label Text="{Binding CurrentMonthDisplay}" VerticalOptions="Center" FontSize="16" FontAttributes="Bold" />
+            <Button Text="›" Command="{Binding NextMonthCommand}" WidthRequest="40" />
+        </HorizontalStackLayout>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Margin="12,4" ColumnSpacing="8" IsVisible="{Binding HasData}">
+            <VerticalStackLayout Grid.Column="0" HorizontalOptions="Center">
+                <Label Text="{x:Static strings:AppResources.Dashboard_AvailableFunds}" FontSize="11" TextColor="Gray" HorizontalOptions="Center" />
+                <Label Text="{Binding MonthData.AvailableFunds}" FontSize="13" FontAttributes="Bold" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+            <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center">
+                <Label Text="{x:Static strings:AppResources.Dashboard_TotalPlanned}" FontSize="11" TextColor="Gray" HorizontalOptions="Center" />
+                <Label Text="{Binding MonthData.TotalPlanned}" FontSize="13" FontAttributes="Bold" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+            <VerticalStackLayout Grid.Column="2" HorizontalOptions="Center">
+                <Label Text="{x:Static strings:AppResources.Dashboard_RemainingToAllocate}" FontSize="11" TextColor="Gray" HorizontalOptions="Center" />
+                <Label Text="{Binding MonthData.RemainingToAllocate}" FontSize="13" FontAttributes="Bold" HorizontalOptions="Center" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding MonthData.Envelopes}" Margin="12,4">
+            <CollectionView.EmptyView>
+                <Label Text="{x:Static strings:AppResources.Envelopes_Empty}"
+                       HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="0,40" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" Padding="4,10" ColumnSpacing="8">
+                        <Label Grid.Column="0" Text="{Binding CategoryName}" FontSize="14" VerticalOptions="Center" />
+                        <VerticalStackLayout Grid.Column="1" HorizontalOptions="End">
+                            <Label Text="{x:Static strings:AppResources.Envelopes_Planned}" FontSize="10" TextColor="Gray" HorizontalOptions="End" />
+                            <Label Text="{Binding PlannedDisplay}" FontSize="13" HorizontalOptions="End" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="2" HorizontalOptions="End">
+                            <Label Text="{x:Static strings:AppResources.Envelopes_Actual}" FontSize="10" TextColor="Gray" HorizontalOptions="End" />
+                            <Label Text="{Binding ActualDisplay}" FontSize="13" HorizontalOptions="End" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="3" HorizontalOptions="End">
+                            <Label Text="{x:Static strings:AppResources.Envelopes_Remaining}" FontSize="10" TextColor="Gray" HorizontalOptions="End" />
+                            <Label Text="{Binding RemainingDisplay}" FontSize="13" FontAttributes="Bold" HorizontalOptions="End" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
 </ContentPage>

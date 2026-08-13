@@ -2,7 +2,53 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
              x:Class="Castellan.App.Views.TransactionsPage"
+             x:DataType="vm:TransactionsViewModel"
              Title="{x:Static strings:AppResources.Tab_Transactions}">
-    <Label Text="{x:Static strings:AppResources.Tab_Transactions}" HorizontalOptions="Center" VerticalOptions="Center" />
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="+" Command="{Binding AddTransactionCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,*">
+
+        <HorizontalStackLayout Grid.Row="0" HorizontalOptions="Center" Margin="0,12,0,4" Spacing="12">
+            <Button Text="‹" Command="{Binding PreviousMonthCommand}" WidthRequest="40" />
+            <Label Text="{Binding CurrentMonthDisplay}" VerticalOptions="Center" FontSize="16" FontAttributes="Bold" />
+            <Button Text="›" Command="{Binding NextMonthCommand}" WidthRequest="40" />
+        </HorizontalStackLayout>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Transactions}" Margin="12,0">
+            <CollectionView.EmptyView>
+                <Label Text="{x:Static strings:AppResources.Transactions_Empty}"
+                       HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="0,40" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:TransactionRow">
+                    <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems>
+                                <SwipeItem Text="{x:Static strings:AppResources.Transactions_Delete}"
+                                           BackgroundColor="#E53935"
+                                           Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=DeleteTransactionCommand}"
+                                           CommandParameter="{Binding .}" />
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="4,10" ColumnSpacing="10">
+                            <Label Grid.Column="0" Text="{Binding DateDisplay}" FontSize="12" TextColor="Gray"
+                                   VerticalOptions="Center" WidthRequest="44" />
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="{Binding CategoryName}" FontSize="14" FontAttributes="Bold" />
+                                <Label Text="{Binding Note}" FontSize="12" TextColor="Gray" />
+                            </VerticalStackLayout>
+                            <Label Grid.Column="2" Text="{Binding AmountDisplay}" FontSize="15"
+                                   VerticalOptions="Center" HorizontalOptions="End" />
+                        </Grid>
+                    </SwipeView>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
 </ContentPage>

@@ -2,11 +2,11 @@ using Castellan.App.ViewModels;
 
 namespace Castellan.App.Views;
 
-public partial class TransactionsPage : ContentPage
+public partial class AddTransactionPage : ContentPage
 {
-    private readonly TransactionsViewModel _vm;
+    private readonly AddTransactionViewModel _vm;
 
-    public TransactionsPage(TransactionsViewModel vm)
+    public AddTransactionPage(AddTransactionViewModel vm)
     {
         InitializeComponent();
         _vm = vm;

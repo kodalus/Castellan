@@ -38,7 +38,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms</value>
   </resheader>
 
-  <!-- Nawigacja / Navigation -->
+  <!-- Nawigacja -->
   <data name="Tab_Dashboard" xml:space="preserve">
     <value>Główna</value>
   </data>
@@ -50,6 +50,94 @@
   </data>
   <data name="Tab_Envelopes" xml:space="preserve">
     <value>Koperty</value>
+  </data>
+
+  <!-- Dashboard -->
+  <data name="Dashboard_AvailableFunds" xml:space="preserve">
+    <value>Środki</value>
+  </data>
+  <data name="Dashboard_TotalPlanned" xml:space="preserve">
+    <value>Zaplanowano</value>
+  </data>
+  <data name="Dashboard_RemainingToAllocate" xml:space="preserve">
+    <value>Do przydzielenia</value>
+  </data>
+  <data name="Dashboard_NoBudget" xml:space="preserve">
+    <value>Brak budżetu na ten miesiąc — użyj „Planuj"</value>
+  </data>
+
+  <!-- Konta -->
+  <data name="Accounts_Empty" xml:space="preserve">
+    <value>Brak kont — dodaj pierwsze konto</value>
+  </data>
+  <data name="Accounts_AddTitle" xml:space="preserve">
+    <value>Nowe konto</value>
+  </data>
+  <data name="Accounts_Name" xml:space="preserve">
+    <value>Nazwa</value>
+  </data>
+  <data name="Accounts_Kind" xml:space="preserve">
+    <value>Typ konta</value>
+  </data>
+  <data name="Accounts_Balance" xml:space="preserve">
+    <value>Saldo (zł)</value>
+  </data>
+
+  <!-- Transakcje -->
+  <data name="Transactions_Empty" xml:space="preserve">
+    <value>Brak transakcji w tym miesiącu</value>
+  </data>
+  <data name="Transactions_AddTitle" xml:space="preserve">
+    <value>Nowa transakcja</value>
+  </data>
+  <data name="Transactions_Account" xml:space="preserve">
+    <value>Konto</value>
+  </data>
+  <data name="Transactions_Amount" xml:space="preserve">
+    <value>Kwota (zł, np. -123.45)</value>
+  </data>
+  <data name="Transactions_Date" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="Transactions_Category" xml:space="preserve">
+    <value>Kategoria</value>
+  </data>
+  <data name="Transactions_Note" xml:space="preserve">
+    <value>Notatka (opcjonalnie)</value>
+  </data>
+  <data name="Transactions_Delete" xml:space="preserve">
+    <value>Usuń</value>
+  </data>
+
+  <!-- Koperty -->
+  <data name="Envelopes_Empty" xml:space="preserve">
+    <value>Brak budżetu — użyj „Planuj"</value>
+  </data>
+  <data name="Envelopes_Plan" xml:space="preserve">
+    <value>Planuj</value>
+  </data>
+  <data name="Envelopes_PlanTitle" xml:space="preserve">
+    <value>Plan miesiąca</value>
+  </data>
+  <data name="Envelopes_AvailableFunds" xml:space="preserve">
+    <value>Środki do dyspozycji (zł)</value>
+  </data>
+  <data name="Envelopes_Planned" xml:space="preserve">
+    <value>Plan</value>
+  </data>
+  <data name="Envelopes_Actual" xml:space="preserve">
+    <value>Wydatki</value>
+  </data>
+  <data name="Envelopes_Remaining" xml:space="preserve">
+    <value>Pozostało</value>
+  </data>
+
+  <!-- Wspólne -->
+  <data name="Button_Save" xml:space="preserve">
+    <value>Zapisz</value>
+  </data>
+  <data name="Button_Cancel" xml:space="preserve">
+    <value>Anuluj</value>
   </data>
 
 </root>

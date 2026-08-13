@@ -1,3 +1,4 @@
+using Castellan.Domain.Aggregates;
 using Microsoft.EntityFrameworkCore;
 
 namespace Castellan.Infrastructure.Data;
@@ -5,6 +6,11 @@ namespace Castellan.Infrastructure.Data;
 public sealed class CastellanDbContext : DbContext
 {
     public CastellanDbContext(DbContextOptions<CastellanDbContext> options) : base(options) { }
+
+    public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<MonthBudget> MonthBudgets => Set<MonthBudget>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

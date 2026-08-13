@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.AddAccountPage"
+             x:DataType="vm:AddAccountViewModel"
+             Title="{x:Static strings:AppResources.Accounts_AddTitle}">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{x:Static strings:AppResources.Button_Save}" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="{x:Static strings:AppResources.Button_Cancel}" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <VerticalStackLayout Padding="16" Spacing="16">
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="{x:Static strings:AppResources.Accounts_Name}" FontSize="13" TextColor="Gray" />
+            <Entry Text="{Binding Name}" Placeholder="{x:Static strings:AppResources.Accounts_Name}" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="{x:Static strings:AppResources.Accounts_Kind}" FontSize="13" TextColor="Gray" />
+            <Picker ItemsSource="{Binding KindOptions}" SelectedIndex="{Binding KindIndex}" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="{x:Static strings:AppResources.Accounts_Balance}" FontSize="13" TextColor="Gray" />
+            <Entry Text="{Binding BalanceText}" Keyboard="Numeric" />
+        </VerticalStackLayout>
+
+    </VerticalStackLayout>
+</ContentPage>

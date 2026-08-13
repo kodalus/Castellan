@@ -1,9 +1,15 @@
-﻿namespace Castellan.App;
+using Castellan.App.Views;
+
+namespace Castellan.App;
 
 public partial class AppShell : Shell
 {
-	public AppShell()
-	{
-		InitializeComponent();
-	}
+    public AppShell()
+    {
+        InitializeComponent();
+
+        Routing.RegisterRoute("addAccount",     typeof(AddAccountPage));
+        Routing.RegisterRoute("addTransaction", typeof(AddTransactionPage));
+        Routing.RegisterRoute("planEnvelopes",  typeof(PlanEnvelopesPage));
+    }
 }
