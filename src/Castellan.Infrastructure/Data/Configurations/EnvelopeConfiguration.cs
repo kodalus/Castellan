@@ -1,3 +1,4 @@
+using Castellan.Domain;
 using Castellan.Domain.Aggregates;
 using Castellan.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -9,9 +10,11 @@ internal sealed class EnvelopeConfiguration : IEntityTypeConfiguration<Envelope>
 {
     public void Configure(EntityTypeBuilder<Envelope> builder)
     {
+        builder.ToTable("Envelopes");
         builder.HasKey(e => e.Id);
         builder.Property(e => e.Id);
-        builder.Property(e => e.MonthBudgetId);
+        builder.Property(e => e.MonthBudgetId)
+            .HasConversion(id => id.Value, v => new MonthBudgetId(v));
         builder.Property(e => e.CategoryId)
             .HasConversion(id => id.Value, v => new CategoryId(v));
         builder.Property(e => e.PlannedAmount)

@@ -1,7 +1,9 @@
+using Castellan.Domain;
 using Castellan.Domain.Aggregates;
 using Castellan.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Castellan.Infrastructure.Data.Configurations;
 
@@ -11,11 +13,12 @@ internal sealed class MonthBudgetConfiguration : IEntityTypeConfiguration<MonthB
     {
         builder.HasKey(b => b.Id);
         builder.Property(b => b.Id)
-            .HasConversion(id => id.Value, v => new MonthBudgetId(v));
+            .HasConversion(id => id.Value, v => new MonthBudgetId(v))
+            .ValueGeneratedNever();
         builder.Property(b => b.Month)
-            .HasConversion(
+            .HasConversion(new ValueConverter<YearMonth, string>(
                 m => m.ToString(),
-                s => { var p = s.Split('-'); return new YearMonth(int.Parse(p[0]), int.Parse(p[1])); });
+                s => new YearMonth(int.Parse(s.Substring(0, 4)), int.Parse(s.Substring(5, 2)))));
         builder.Property(b => b.AvailableFunds)
             .HasConversion(m => m.Grosze, v => new Money(v));
         builder.Property(b => b.PlannedAt);

@@ -31,7 +31,7 @@ public partial class TransactionsViewModel : ObservableObject
 
     [ObservableProperty] private bool _isEmpty = true;
 
-    public string CurrentMonthDisplay => _currentMonth.ToDisplayString();
+    public string CurrentMonthDisplay => CurrentMonth.ToDisplayString();
 
     public TransactionsViewModel(
         ITransactionRepository transactions,
@@ -41,7 +41,7 @@ public partial class TransactionsViewModel : ObservableObject
         _transactions = transactions;
         _categories = categories;
         _delete = delete;
-        _currentMonth = YearMonth.Current;
+        CurrentMonth = YearMonth.Current;
     }
 
     [RelayCommand]

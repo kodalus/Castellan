@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
              xmlns:vm="clr-namespace:Castellan.App.ViewModels"
              x:Class="Castellan.App.Views.PlanEnvelopesPage"
              x:DataType="vm:PlanEnvelopesViewModel"
-             Title="{x:Static strings:AppResources.Envelopes_PlanTitle}">
+             Title="Plan miesiąca">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="{x:Static strings:AppResources.Button_Save}" Command="{Binding SaveCommand}" />
-        <ToolbarItem Text="{x:Static strings:AppResources.Button_Cancel}" Command="{Binding CancelCommand}" />
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto,*">
@@ -17,7 +16,7 @@
         <VerticalStackLayout Grid.Row="0" Padding="16" Spacing="12">
             <Label Text="{Binding MonthDisplay}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" />
             <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Envelopes_AvailableFunds}" FontSize="13" TextColor="Gray" />
+                <Label Text="Środki do dyspozycji (zł)" FontSize="13" TextColor="Gray" />
                 <Entry Text="{Binding AvailableFundsText}" Keyboard="Numeric" />
             </VerticalStackLayout>
             <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#E0E0E0, Dark=#444}" />

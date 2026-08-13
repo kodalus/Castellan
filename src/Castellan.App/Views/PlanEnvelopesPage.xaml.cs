@@ -13,6 +13,12 @@ public partial class PlanEnvelopesPage : ContentPage, IQueryAttributable
         BindingContext = vm;
     }
 
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        _ = _vm.LoadCommand.ExecuteAsync(null);
+    }
+
     public void ApplyQueryAttributes(IDictionary<string, object> query)
         => _vm.ApplyQueryAttributes(query);
 }

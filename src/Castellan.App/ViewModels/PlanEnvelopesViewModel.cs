@@ -93,10 +93,19 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
         }
         catch (BudgetOverAllocatedException ex)
         {
-            await Application.Current!.MainPage!.DisplayAlert(
+            await Shell.Current.DisplayAlertAsync(
                 "Przekroczono budżet",
                 $"Suma planów przekracza dostępne środki o {ex.Attempted - ex.Available}.",
                 "OK");
+        }
+        catch (Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (var e = ex; e != null; e = e.InnerException)
+                sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
+            System.Diagnostics.Debug.WriteLine("[SavePlan] " + sb);
+            if (Shell.Current?.CurrentPage is Page page)
+                await page.DisplayAlert("Błąd zapisu planu", sb.ToString(), "OK");
         }
     }
 

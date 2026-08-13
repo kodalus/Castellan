@@ -27,10 +27,12 @@ internal sealed class TransactionRepository(CastellanDbContext db) : ITransactio
         var localEnd = localStart.AddMonths(1);
         var start = new DateTimeOffset(localStart);
         var end = new DateTimeOffset(localEnd);
-        return await db.Transactions
+        // EF Core SQLite can't translate DateTimeOffset range comparisons, filter client-side
+        var all = await db.Transactions.ToListAsync(ct);
+        return all
             .Where(t => t.OccurredAt >= start && t.OccurredAt < end)
             .OrderByDescending(t => t.OccurredAt)
-            .ToListAsync(ct);
+            .ToList();
     }
 
     public Task AddAsync(Transaction transaction, CancellationToken ct = default)

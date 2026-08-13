@@ -16,12 +16,12 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private MonthOverview? _monthData;
     [ObservableProperty] private bool _isLoading;
 
-    public string CurrentMonthDisplay => _currentMonth.ToDisplayString();
+    public string CurrentMonthDisplay => CurrentMonth.ToDisplayString();
 
     public DashboardViewModel(GetMonthOverviewUseCase getOverview)
     {
         _getOverview = getOverview;
-        _currentMonth = YearMonth.Current;
+        CurrentMonth = YearMonth.Current;
     }
 
     [RelayCommand]

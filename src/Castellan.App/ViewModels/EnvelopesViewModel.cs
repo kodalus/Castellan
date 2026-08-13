@@ -16,12 +16,12 @@ public partial class EnvelopesViewModel : ObservableObject
     [ObservableProperty] private MonthOverview? _monthData;
     [ObservableProperty] private bool _hasData;
 
-    public string CurrentMonthDisplay => _currentMonth.ToDisplayString();
+    public string CurrentMonthDisplay => CurrentMonth.ToDisplayString();
 
     public EnvelopesViewModel(GetMonthOverviewUseCase getOverview)
     {
         _getOverview = getOverview;
-        _currentMonth = YearMonth.Current;
+        CurrentMonth = YearMonth.Current;
     }
 
     [RelayCommand]

@@ -1,3 +1,4 @@
+using Castellan.Domain;
 using Castellan.Domain.Aggregates;
 using Castellan.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -16,5 +17,11 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(c => c.Kind).HasConversion<int>();
         builder.Property(c => c.IsSystem);
         builder.Property(c => c.IsArchived);
+
+        builder.HasData(
+            new { Id = Category.UnsortedId,     Name = "Nieprzypisane", Kind = CategoryKind.Expense, IsSystem = true, IsArchived = false },
+            new { Id = Category.UnidentifiedId, Name = "Nierozpoznane", Kind = CategoryKind.Expense, IsSystem = true, IsArchived = false },
+            new { Id = Category.TransferId,     Name = "Przelew",       Kind = CategoryKind.Expense, IsSystem = true, IsArchived = false }
+        );
     }
 }

@@ -1,3 +1,4 @@
+using Castellan.Domain;
 using Castellan.Domain.Aggregates;
 using Castellan.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,8 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
     {
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Id)
-            .HasConversion(id => id.Value, v => new TransactionId(v));
+            .HasConversion(id => id.Value, v => new TransactionId(v))
+            .ValueGeneratedNever();
         builder.Property(t => t.AccountId)
             .HasConversion(id => id.Value, v => new AccountId(v));
         builder.Property(t => t.Amount)
@@ -34,6 +36,11 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
         builder.Property(t => t.RawNotificationId);
 
         builder.Ignore(t => t.IsExcludedFromCalculations);
+
+        builder.HasOne<Account>()
+            .WithMany()
+            .HasForeignKey(t => t.AccountId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(t => t.AccountId);
         builder.HasIndex(t => t.OccurredAt);

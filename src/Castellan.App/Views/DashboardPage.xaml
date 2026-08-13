@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
              xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             xmlns:usecases="clr-namespace:Castellan.Application.UseCases;assembly=Castellan.Application"
              x:Class="Castellan.App.Views.DashboardPage"
              x:DataType="vm:DashboardViewModel"
              Title="{x:Static strings:AppResources.Tab_Dashboard}">
@@ -16,24 +17,24 @@
         </HorizontalStackLayout>
 
         <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Margin="12,4" ColumnSpacing="8">
-            <Frame Grid.Column="0" Padding="8" HasShadow="False" BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444}">
+            <Border Grid.Column="0" Padding="8" Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#444}" StrokeShape="Rectangle">
                 <VerticalStackLayout Spacing="2">
                     <Label Text="{x:Static strings:AppResources.Dashboard_AvailableFunds}" FontSize="11" TextColor="Gray" />
                     <Label Text="{Binding MonthData.AvailableFunds}" FontSize="13" FontAttributes="Bold" />
                 </VerticalStackLayout>
-            </Frame>
-            <Frame Grid.Column="1" Padding="8" HasShadow="False" BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444}">
+            </Border>
+            <Border Grid.Column="1" Padding="8" Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#444}" StrokeShape="Rectangle">
                 <VerticalStackLayout Spacing="2">
                     <Label Text="{x:Static strings:AppResources.Dashboard_TotalPlanned}" FontSize="11" TextColor="Gray" />
                     <Label Text="{Binding MonthData.TotalPlanned}" FontSize="13" FontAttributes="Bold" />
                 </VerticalStackLayout>
-            </Frame>
-            <Frame Grid.Column="2" Padding="8" HasShadow="False" BorderColor="{AppThemeBinding Light=#E0E0E0, Dark=#444}">
+            </Border>
+            <Border Grid.Column="2" Padding="8" Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#444}" StrokeShape="Rectangle">
                 <VerticalStackLayout Spacing="2">
                     <Label Text="{x:Static strings:AppResources.Dashboard_RemainingToAllocate}" FontSize="11" TextColor="Gray" />
                     <Label Text="{Binding MonthData.RemainingToAllocate}" FontSize="13" FontAttributes="Bold" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
         </Grid>
 
         <CollectionView Grid.Row="2" ItemsSource="{Binding MonthData.Envelopes}" Margin="12,4">
@@ -42,7 +43,7 @@
                        HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="0,40" />
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
-                <DataTemplate>
+                <DataTemplate x:DataType="usecases:EnvelopeOverview">
                     <Grid RowDefinitions="Auto,6" Padding="4,10">
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
                             <Label Grid.Column="0" Text="{Binding CategoryName}" FontSize="14" />

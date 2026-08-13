@@ -72,9 +72,21 @@ public partial class AddTransactionViewModel : ObservableObject
 
         var occurredAt = new DateTimeOffset(Date.ToUniversalTime(), TimeSpan.Zero);
 
-        await _addTx.ExecuteAsync(
-            new AddManualTransactionUseCase.Input(accountId, new Money(grosze), occurredAt, categoryId, Note), ct);
-        await Shell.Current.GoToAsync("..");
+        try
+        {
+            await _addTx.ExecuteAsync(
+                new AddManualTransactionUseCase.Input(accountId, new Money(grosze), occurredAt, categoryId, Note), ct);
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (var e = ex; e != null; e = e.InnerException)
+                sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
+            System.Diagnostics.Debug.WriteLine("[SaveTransaction] " + sb);
+            if (Shell.Current?.CurrentPage is Page page)
+                await page.DisplayAlert("Błąd zapisu transakcji", sb.ToString(), "OK");
+        }
     }
 
     [RelayCommand]

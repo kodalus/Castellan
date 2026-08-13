@@ -1,3 +1,4 @@
+using Castellan.Domain;
 using Castellan.Domain.Aggregates;
 using Castellan.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,8 @@ internal sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
     {
         builder.HasKey(a => a.Id);
         builder.Property(a => a.Id)
-            .HasConversion(id => id.Value, v => new AccountId(v));
+            .HasConversion(id => id.Value, v => new AccountId(v))
+            .ValueGeneratedNever();
         builder.Property(a => a.Name).IsRequired().HasMaxLength(200);
         builder.Property(a => a.BankKey).HasMaxLength(100);
         builder.Property(a => a.Kind).HasConversion<int>();

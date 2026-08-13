@@ -1,18 +1,19 @@
 using Castellan.Domain.Exceptions;
 using Castellan.Domain.ValueObjects;
+using Castellan.Domain;
 
 namespace Castellan.Domain.Aggregates;
 
 public class Envelope
 {
     public Guid Id { get; private set; }
-    public Guid MonthBudgetId { get; private set; }
+    public MonthBudgetId MonthBudgetId { get; private set; }
     public CategoryId CategoryId { get; private set; }
     public Money PlannedAmount { get; private set; }
 
     private Envelope() { }
 
-    internal Envelope(Guid monthBudgetId, CategoryId categoryId, Money plannedAmount)
+    internal Envelope(MonthBudgetId monthBudgetId, CategoryId categoryId, Money plannedAmount)
     {
         Id = Guid.CreateVersion7();
         MonthBudgetId = monthBudgetId;
@@ -61,7 +62,7 @@ public class MonthBudget
         if (existing is not null)
             existing.UpdateAmount(amount);
         else
-            _envelopes.Add(new Envelope(Id.Value, categoryId, amount));
+            _envelopes.Add(new Envelope(Id, categoryId, amount));
     }
 
     public void Remove(CategoryId categoryId)

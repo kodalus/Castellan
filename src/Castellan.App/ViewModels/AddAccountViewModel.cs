@@ -29,9 +29,26 @@ public partial class AddAccountViewModel : ObservableObject
         var grosze = (long)Math.Round(dec * 100, MidpointRounding.AwayFromZero);
         var kind = KindIndex == 1 ? AccountKind.Savings : AccountKind.Checking;
 
-        await _create.ExecuteAsync(
-            new CreateAccountUseCase.Input(Name.Trim(), kind, new Money(grosze), DateTimeOffset.Now), ct);
-        await Shell.Current.GoToAsync("..");
+        try
+        {
+            await _create.ExecuteAsync(
+                new CreateAccountUseCase.Input(Name.Trim(), kind, new Money(grosze), DateTimeOffset.Now), ct);
+            await Shell.Current.GoToAsync("..");
+        }
+        catch (Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            var e = ex;
+            while (e != null)
+            {
+                sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
+                e = e.InnerException;
+            }
+            var msg = sb.ToString();
+            System.Diagnostics.Debug.WriteLine("[SaveAccount] " + msg);
+            if (Shell.Current?.CurrentPage is Page page)
+                await page.DisplayAlert("Błąd zapisu", msg, "OK");
+        }
     }
 
     [RelayCommand]
