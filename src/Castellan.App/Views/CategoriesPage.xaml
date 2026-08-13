@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.CategoriesPage"
+             x:DataType="vm:CategoriesViewModel"
+             Title="Kategorie">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="+" Command="{Binding AddCategoryCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <CollectionView ItemsSource="{Binding Items}" Margin="12">
+        <CollectionView.EmptyView>
+            <Label Text="Brak kategorii — dodaj pierwszą za pomocą przycisku +."
+                   HorizontalOptions="Center" VerticalOptions="Center"
+                   TextColor="Gray" HorizontalTextAlignment="Center" Margin="24,40" />
+        </CollectionView.EmptyView>
+        <CollectionView.ItemTemplate>
+            <DataTemplate x:DataType="vm:CategoryRow">
+                <SwipeView>
+                    <SwipeView.RightItems>
+                        <SwipeItems>
+                            <SwipeItem Text="Archiwizuj" BackgroundColor="#FF8F00"
+                                       Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CategoriesViewModel}}, Path=ArchiveCategoryCommand}"
+                                       CommandParameter="{Binding .}" />
+                        </SwipeItems>
+                    </SwipeView.RightItems>
+                    <Grid ColumnDefinitions="*,Auto" Padding="4,14" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="{Binding Name}" FontSize="15" VerticalOptions="Center" />
+                        <Label Grid.Column="1" Text="{Binding KindDisplay}"
+                               FontSize="12" TextColor="White" BackgroundColor="#555"
+                               Padding="8,4" VerticalOptions="Center" />
+                    </Grid>
+                </SwipeView>
+            </DataTemplate>
+        </CollectionView.ItemTemplate>
+    </CollectionView>
+
+</ContentPage>

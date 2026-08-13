@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.AddCategoryRulePage"
+             x:DataType="vm:AddCategoryRuleViewModel"
+             Title="Nowa reguła">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <VerticalStackLayout Padding="16" Spacing="20">
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="Wzorzec (fragment nazwy sprzedawcy)" FontSize="13" TextColor="Gray" />
+            <Entry Text="{Binding Pattern}"
+                   Placeholder="np. McDonald, ORLEN, Biedronka"
+                   ClearButtonVisibility="WhileEditing" />
+            <Label Text="Transakcja zostanie zakategoryzowana, gdy nazwa sprzedawcy zawiera ten tekst (bez rozróżnienia wielkości liter)."
+                   FontSize="11" TextColor="Gray" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="Kategoria" FontSize="13" TextColor="Gray" />
+            <Picker ItemsSource="{Binding Categories}"
+                    SelectedIndex="{Binding CategoryIndex}"
+                    ItemDisplayBinding="{Binding Name}" />
+        </VerticalStackLayout>
+
+    </VerticalStackLayout>
+
+</ContentPage>

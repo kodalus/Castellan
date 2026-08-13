@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.AddCategoryPage"
+             x:DataType="vm:AddCategoryViewModel"
+             Title="Nowa kategoria">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <VerticalStackLayout Padding="16" Spacing="20">
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="Nazwa" FontSize="13" TextColor="Gray" />
+            <Entry Text="{Binding Name}"
+                   Placeholder="np. Kawiarnia, Paliwo, Wynagrodzenie"
+                   ClearButtonVisibility="WhileEditing" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Spacing="4">
+            <Label Text="Rodzaj" FontSize="13" TextColor="Gray" />
+            <Picker ItemsSource="{Binding Kinds}"
+                    SelectedIndex="{Binding KindIndex}" />
+        </VerticalStackLayout>
+
+    </VerticalStackLayout>
+
+</ContentPage>

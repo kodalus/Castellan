@@ -85,6 +85,14 @@ public partial class TransactionsViewModel : ObservableObject
         => await Shell.Current.GoToAsync("addTransaction");
 
     [RelayCommand]
+    private static async Task ManageRulesAsync()
+        => await Shell.Current.GoToAsync("categoryRules");
+
+    [RelayCommand]
+    private static async Task ManageCategoriesAsync()
+        => await Shell.Current.GoToAsync("categories");
+
+    [RelayCommand]
     private static async Task QuickAddAsync()
         => await Shell.Current.GoToAsync("quickAdd");
 

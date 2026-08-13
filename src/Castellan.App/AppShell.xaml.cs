@@ -13,5 +13,9 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("planEnvelopes",     typeof(PlanEnvelopesPage));
         Routing.RegisterRoute("reconcileAccount",  typeof(ReconcileAccountPage));
         Routing.RegisterRoute("quickAdd",          typeof(QuickAddTransactionPage));
+        Routing.RegisterRoute("categoryRules",     typeof(CategoryRulesPage));
+        Routing.RegisterRoute("addCategoryRule",   typeof(AddCategoryRulePage));
+        Routing.RegisterRoute("categories",        typeof(CategoriesPage));
+        Routing.RegisterRoute("addCategory",       typeof(AddCategoryPage));
     }
 }

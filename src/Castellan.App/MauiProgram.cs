@@ -54,6 +54,10 @@ public static class MauiProgram
         builder.Services.AddTransient<ReconcileAccountViewModel>();
         builder.Services.AddTransient<QuickAddTransactionViewModel>();
         builder.Services.AddTransient<InboxViewModel>();
+        builder.Services.AddTransient<CategoryRulesViewModel>();
+        builder.Services.AddTransient<AddCategoryRuleViewModel>();
+        builder.Services.AddTransient<CategoriesViewModel>();
+        builder.Services.AddTransient<AddCategoryViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
         builder.Services.AddTransient<DashboardPage>();
@@ -66,6 +70,10 @@ public static class MauiProgram
         builder.Services.AddTransient<ReconcileAccountPage>();
         builder.Services.AddTransient<QuickAddTransactionPage>();
         builder.Services.AddTransient<InboxPage>();
+        builder.Services.AddTransient<CategoryRulesPage>();
+        builder.Services.AddTransient<AddCategoryRulePage>();
+        builder.Services.AddTransient<CategoriesPage>();
+        builder.Services.AddTransient<AddCategoryPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
@@ -74,6 +82,7 @@ public static class MauiProgram
         var app = builder.Build();
 
         app.Services.ApplyMigrations();
+        app.Services.SeedDefaultData();
 
         return app;
     }

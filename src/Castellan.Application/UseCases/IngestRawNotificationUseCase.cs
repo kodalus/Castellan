@@ -10,6 +10,7 @@ public sealed partial class IngestRawNotificationUseCase(
     IRawNotificationRepository rawNotifications,
     IAccountRepository accounts,
     ITransactionRepository transactions,
+    ICategoryRuleRepository categoryRules,
     IUnitOfWork uow,
     IEnumerable<INotificationParser> parsers)
 {
@@ -41,13 +42,20 @@ public sealed partial class IngestRawNotificationUseCase(
         await rawNotifications.AddAsync(notification, ct);
 
         if (notification.ParseStatus == ParseStatus.Unparsed)
-            await TryAutoParseAsync(notification, input.PackageName, input.PostedAt, ct);
+        {
+            var rules = await categoryRules.ListAsync(ct);
+            await TryAutoParseAsync(notification, input.PackageName, input.PostedAt, rules, ct);
+        }
 
         await uow.SaveChangesAsync(ct);
     }
 
     private async Task TryAutoParseAsync(
-        RawNotification notification, string packageName, DateTimeOffset postedAt, CancellationToken ct)
+        RawNotification notification,
+        string packageName,
+        DateTimeOffset postedAt,
+        IReadOnlyList<CategoryRule> rules,
+        CancellationToken ct)
     {
         var parser = parsers.FirstOrDefault(p => p.PackageName == packageName);
         if (parser is null) return;
@@ -60,6 +68,12 @@ public sealed partial class IngestRawNotificationUseCase(
 
         var tx = Transaction.CreateFromNotification(
             account.Id, parsed.Amount, postedAt, notification.Id, parsed.Merchant);
+
+        var matchedRule = rules
+            .OrderBy(r => r.Priority)
+            .FirstOrDefault(r => r.Matches(parsed.Merchant));
+        if (matchedRule is not null)
+            tx.AssignCategory(matchedRule.CategoryId);
 
         await transactions.AddAsync(tx, ct);
         notification.MarkParsed(tx.Id);
