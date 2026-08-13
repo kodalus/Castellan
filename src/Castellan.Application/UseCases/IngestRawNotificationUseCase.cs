@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Castellan.Application.Parsers;
 using Castellan.Application.Repositories;
 using Castellan.Domain;
 using Castellan.Domain.Aggregates;
@@ -7,17 +8,18 @@ namespace Castellan.Application.UseCases;
 
 public sealed partial class IngestRawNotificationUseCase(
     IRawNotificationRepository rawNotifications,
-    IUnitOfWork uow)
+    IAccountRepository accounts,
+    ITransactionRepository transactions,
+    IUnitOfWork uow,
+    IEnumerable<INotificationParser> parsers)
 {
-    // Only these packages are ever recorded — everything else is silently discarded.
     public static readonly IReadOnlySet<string> AllowedPackages = new HashSet<string>(StringComparer.Ordinal)
     {
-        "pl.ing.mojeing",                        // ING
-        "com.revolut.revolut",                   // Revolut
-        "com.google.android.apps.walletnfcrel",  // Google Wallet — always Ignored
+        "pl.ing.mojeing",
+        "com.revolut.revolut",
+        "com.google.android.apps.walletnfcrel",
     };
 
-    // Google Wallet duplicates bank notifications but carries no transaction data.
     private static readonly IReadOnlySet<string> IgnoredPackages = new HashSet<string>(StringComparer.Ordinal)
     {
         "com.google.android.apps.walletnfcrel",
@@ -37,10 +39,55 @@ public sealed partial class IngestRawNotificationUseCase(
             : RawNotification.CreateUnparsed(input.PackageName, maskedTitle, maskedText, input.PostedAt);
 
         await rawNotifications.AddAsync(notification, ct);
+
+        if (notification.ParseStatus == ParseStatus.Unparsed)
+            await TryAutoParseAsync(notification, input.PackageName, input.PostedAt, ct);
+
         await uow.SaveChangesAsync(ct);
     }
 
-    // Masks 4–8 digit sequences not adjacent to a decimal separator (3DS codes, BLIK, OTP).
+    private async Task TryAutoParseAsync(
+        RawNotification notification, string packageName, DateTimeOffset postedAt, CancellationToken ct)
+    {
+        var parser = parsers.FirstOrDefault(p => p.PackageName == packageName);
+        if (parser is null) return;
+
+        var parsed = parser.TryParse(notification.Title, notification.Text);
+        if (parsed is null) return;
+
+        var account = await FindAccountAsync(packageName, ct);
+        if (account is null) return;
+
+        var tx = Transaction.CreateFromNotification(
+            account.Id, parsed.Amount, postedAt, notification.Id, parsed.Merchant);
+
+        await transactions.AddAsync(tx, ct);
+        notification.MarkParsed(tx.Id);
+    }
+
+    private async Task<Account?> FindAccountAsync(string packageName, CancellationToken ct)
+    {
+        var all = await accounts.ListAsync(ct);
+        var active = all.Where(a => !a.IsArchived).ToList();
+
+        var keyword = packageName switch
+        {
+            "pl.ing.mojeing"      => "ING",
+            "com.revolut.revolut" => "Revolut",
+            _                     => null,
+        };
+
+        if (keyword is not null)
+        {
+            var byName = active.FirstOrDefault(a =>
+                a.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase));
+            if (byName is not null) return byName;
+        }
+
+        return active.FirstOrDefault(a => a.Kind == AccountKind.Checking)
+            ?? active.FirstOrDefault();
+    }
+
     private static string MaskSensitiveData(string text) =>
         SensitivePattern().Replace(text, "****");
 

@@ -45,6 +45,28 @@ public class Transaction
         };
     }
 
+    public static Transaction CreateFromNotification(
+        AccountId accountId,
+        Money amount,
+        DateTimeOffset occurredAt,
+        RawNotificationId rawNotificationId,
+        string? merchant = null)
+    {
+        return new Transaction
+        {
+            Id = TransactionId.New(),
+            AccountId = accountId,
+            Amount = amount,
+            OccurredAt = occurredAt,
+            CategoryId = Category.UnsortedId,
+            RawMerchant = merchant,
+            Note = merchant,
+            RawNotificationId = rawNotificationId.Value,
+            Source = TransactionSource.Notification,
+            Kind = TransactionKind.Regular,
+        };
+    }
+
     // N-2, N-6: creates Unidentified transaction for negative reconciliation discrepancy
     public static Transaction CreateReconciliation(
         AccountId accountId,

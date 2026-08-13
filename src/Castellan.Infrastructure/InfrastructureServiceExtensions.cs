@@ -1,6 +1,8 @@
 using Castellan.Application;
+using Castellan.Application.Parsers;
 using Castellan.Application.Repositories;
 using Castellan.Infrastructure.Data;
+using Castellan.Infrastructure.Parsers;
 using Castellan.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,9 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IMonthBudgetRepository, MonthBudgetRepository>();
         services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
         services.AddScoped<IRawNotificationRepository, RawNotificationRepository>();
+
+        services.AddSingleton<INotificationParser, IngNotificationParser>();
+        services.AddSingleton<INotificationParser, RevolutNotificationParser>();
 
         return services;
     }
