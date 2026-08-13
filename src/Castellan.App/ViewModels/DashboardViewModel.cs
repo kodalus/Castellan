@@ -45,4 +45,8 @@ public partial class DashboardViewModel : ObservableObject
         CurrentMonth = CurrentMonth.Next();
         await LoadAsync(ct);
     }
+
+    [RelayCommand]
+    private static async Task OpenStatisticsAsync()
+        => await Shell.Current.GoToAsync("statistics");
 }

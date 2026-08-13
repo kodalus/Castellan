@@ -17,5 +17,6 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("addCategoryRule",   typeof(AddCategoryRulePage));
         Routing.RegisterRoute("categories",        typeof(CategoriesPage));
         Routing.RegisterRoute("addCategory",       typeof(AddCategoryPage));
+        Routing.RegisterRoute("statistics",        typeof(StatisticsPage));
     }
 }

@@ -37,6 +37,7 @@ public static class MauiProgram
         builder.Services.AddTransient<GetAccountsWithBalancesUseCase>();
         builder.Services.AddTransient<ReconcileAccountUseCase>();
         builder.Services.AddTransient<IngestRawNotificationUseCase>();
+        builder.Services.AddTransient<GetMonthlyStatsUseCase>();
 
 #if ANDROID
         builder.Services.AddSingleton<INotificationPermissionService,
@@ -58,6 +59,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AddCategoryRuleViewModel>();
         builder.Services.AddTransient<CategoriesViewModel>();
         builder.Services.AddTransient<AddCategoryViewModel>();
+        builder.Services.AddTransient<StatisticsViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
         builder.Services.AddTransient<DashboardPage>();
@@ -74,6 +76,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AddCategoryRulePage>();
         builder.Services.AddTransient<CategoriesPage>();
         builder.Services.AddTransient<AddCategoryPage>();
+        builder.Services.AddTransient<StatisticsPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

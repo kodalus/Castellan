@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.StatisticsPage"
+             x:DataType="vm:StatisticsViewModel"
+             Title="Statystyki">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="12" Spacing="16" IsVisible="{Binding HasData}">
+
+            <!-- Summary: 6-month totals -->
+            <Border Padding="14,12" StrokeShape="RoundRectangle 10">
+                <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                        <Label Text="Wydatki" FontSize="11" TextColor="Gray" />
+                        <Label Text="{Binding TotalExpenseDisplay}"
+                               FontSize="14" FontAttributes="Bold" TextColor="#F44336" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
+                        <Label Text="Przychody" FontSize="11" TextColor="Gray" HorizontalOptions="Center" />
+                        <Label Text="{Binding TotalIncomeDisplay}"
+                               FontSize="14" FontAttributes="Bold" TextColor="#4CAF50"
+                               HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Column="2" HorizontalOptions="End" Spacing="2">
+                        <Label Text="Netto" FontSize="11" TextColor="Gray" HorizontalOptions="End" />
+                        <Label Text="{Binding TotalNetDisplay}"
+                               FontSize="14" FontAttributes="Bold" HorizontalOptions="End">
+                            <Label.Triggers>
+                                <DataTrigger TargetType="Label" Binding="{Binding NetIsPositive}" Value="True">
+                                    <Setter Property="TextColor" Value="#4CAF50" />
+                                </DataTrigger>
+                                <DataTrigger TargetType="Label" Binding="{Binding NetIsPositive}" Value="False">
+                                    <Setter Property="TextColor" Value="#F44336" />
+                                </DataTrigger>
+                            </Label.Triggers>
+                        </Label>
+                    </VerticalStackLayout>
+                </Grid>
+            </Border>
+
+            <!-- Expense bar chart -->
+            <Label Text="Wydatki — ostatnie 6 miesięcy"
+                   FontSize="13" FontAttributes="Bold" Margin="0,4,0,0" />
+            <Border Padding="14,12" StrokeShape="RoundRectangle 10">
+                <HorizontalStackLayout Spacing="4" HorizontalOptions="Center"
+                                       BindableLayout.ItemsSource="{Binding ExpenseBars}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MonthBar">
+                            <VerticalStackLayout WidthRequest="48" Spacing="2">
+                                <Grid HeightRequest="120">
+                                    <BoxView VerticalOptions="End" HorizontalOptions="Fill"
+                                             HeightRequest="{Binding BarHeight}"
+                                             Color="{Binding BarColor}"
+                                             CornerRadius="3,3,0,0" />
+                                </Grid>
+                                <Label Text="{Binding Label}"
+                                       FontSize="10" HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Income bar chart -->
+            <Label Text="Przychody — ostatnie 6 miesięcy"
+                   FontSize="13" FontAttributes="Bold" Margin="0,4,0,0" />
+            <Border Padding="14,12" StrokeShape="RoundRectangle 10">
+                <HorizontalStackLayout Spacing="4" HorizontalOptions="Center"
+                                       BindableLayout.ItemsSource="{Binding IncomeBars}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MonthBar">
+                            <VerticalStackLayout WidthRequest="48" Spacing="2">
+                                <Grid HeightRequest="120">
+                                    <BoxView VerticalOptions="End" HorizontalOptions="Fill"
+                                             HeightRequest="{Binding BarHeight}"
+                                             Color="{Binding BarColor}"
+                                             CornerRadius="3,3,0,0" />
+                                </Grid>
+                                <Label Text="{Binding Label}"
+                                       FontSize="10" HorizontalOptions="Center" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </HorizontalStackLayout>
+            </Border>
+
+            <!-- Top 5 expense categories -->
+            <Label Text="Top kategorie wydatków (6 mies.)"
+                   FontSize="13" FontAttributes="Bold" Margin="0,4,0,0" />
+            <Border Padding="14,12" StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="12"
+                                     BindableLayout.ItemsSource="{Binding TopCategories}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TopCatRow">
+                            <VerticalStackLayout Spacing="4">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0" Text="{Binding CategoryName}"
+                                           FontSize="14" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding AmountDisplay}"
+                                           FontSize="14" FontAttributes="Bold"
+                                           TextColor="#F44336" VerticalOptions="Center" />
+                                </Grid>
+                                <ProgressBar Progress="{Binding FillRatio}"
+                                             ProgressColor="#F44336" HeightRequest="5" />
+                            </VerticalStackLayout>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

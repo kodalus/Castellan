@@ -8,6 +8,10 @@
              x:DataType="vm:DashboardViewModel"
              Title="{x:Static strings:AppResources.Tab_Dashboard}">
 
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Statystyki" Command="{Binding OpenStatisticsCommand}" Order="Secondary" />
+    </ContentPage.ToolbarItems>
+
     <Grid RowDefinitions="Auto,Auto,*">
 
         <HorizontalStackLayout Grid.Row="0" HorizontalOptions="Center" Margin="0,12,0,4" Spacing="12">
