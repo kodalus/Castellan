@@ -15,6 +15,8 @@ public partial class EnvelopesViewModel : ObservableObject
 
     [ObservableProperty] private MonthOverview? _monthData;
     [ObservableProperty] private bool _hasData;
+    [ObservableProperty] private double _totalSpentRatio;
+    [ObservableProperty] private string _totalActualDisplay = "";
 
     public string CurrentMonthDisplay => CurrentMonth.ToDisplayString();
 
@@ -29,6 +31,20 @@ public partial class EnvelopesViewModel : ObservableObject
     {
         MonthData = await _getOverview.ExecuteAsync(CurrentMonth, ct);
         HasData = MonthData is not null;
+
+        if (MonthData is { Envelopes.Count: > 0 })
+        {
+            var actualGrosze  = MonthData.Envelopes.Sum(e => Math.Abs(e.Actual.Grosze));
+            var plannedGrosze = MonthData.Envelopes.Sum(e => e.Planned.Grosze);
+            TotalSpentRatio   = plannedGrosze == 0 ? 0.0
+                : Math.Clamp((double)actualGrosze / plannedGrosze, 0.0, 1.0);
+            TotalActualDisplay = new Money(actualGrosze).ToString();
+        }
+        else
+        {
+            TotalSpentRatio    = 0.0;
+            TotalActualDisplay = Money.Zero.ToString();
+        }
     }
 
     [RelayCommand]

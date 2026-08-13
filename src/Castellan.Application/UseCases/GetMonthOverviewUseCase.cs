@@ -12,13 +12,20 @@ public sealed record EnvelopeOverview(
     Money Actual,
     Money Remaining)
 {
-    // 0.0–1.0 share of planned amount already spent (absolute value, capped at 1)
+    // 0.0–1.0 capped (for ProgressBar.Progress)
     public double SpentRatio => Planned.Grosze == 0 ? 0.0
         : Math.Clamp((double)Math.Abs(Actual.Grosze) / (double)Planned.Grosze, 0.0, 1.0);
+
+    // uncapped (> 1.0 when over budget — used for color)
+    public double SpentFraction => Planned.Grosze == 0 ? 0.0
+        : (double)Math.Abs(Actual.Grosze) / (double)Planned.Grosze;
+
+    public bool IsOverBudget => SpentFraction > 1.0;
 
     public string PlannedDisplay   => Planned.ToString();
     public string ActualDisplay    => Actual.Abs().ToString();
     public string RemainingDisplay => Remaining.ToString();
+    public string ProgressLabel    => $"{ActualDisplay} z {PlannedDisplay}";
 }
 
 public sealed record MonthOverview(
