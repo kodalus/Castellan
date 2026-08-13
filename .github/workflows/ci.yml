@@ -19,7 +19,13 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore
+        run: |
+          dotnet restore src/Castellan.Domain/Castellan.Domain.csproj
+          dotnet restore src/Castellan.Application/Castellan.Application.csproj
+          dotnet restore src/Castellan.Infrastructure/Castellan.Infrastructure.csproj
+          dotnet restore tests/Castellan.Domain.Tests/Castellan.Domain.Tests.csproj
+          dotnet restore tests/Castellan.Application.Tests/Castellan.Application.Tests.csproj
+          dotnet restore tests/Castellan.Infrastructure.Tests/Castellan.Infrastructure.Tests.csproj
 
       - name: Build (non-MAUI)
         run: |
@@ -28,7 +34,10 @@ jobs:
           dotnet build src/Castellan.Infrastructure/Castellan.Infrastructure.csproj --no-restore
 
       - name: Test
-        run: dotnet test --no-restore --logger "console;verbosity=minimal"
+        run: |
+          dotnet test tests/Castellan.Domain.Tests/Castellan.Domain.Tests.csproj --no-restore --logger "console;verbosity=minimal"
+          dotnet test tests/Castellan.Application.Tests/Castellan.Application.Tests.csproj --no-restore --logger "console;verbosity=minimal"
+          dotnet test tests/Castellan.Infrastructure.Tests/Castellan.Infrastructure.Tests.csproj --no-restore --logger "console;verbosity=minimal"
 
   android:
     name: Android APK
