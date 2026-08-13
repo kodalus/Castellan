@@ -1,4 +1,5 @@
 using System.Globalization;
+using Castellan.App.Services;
 using Castellan.App.ViewModels;
 using Castellan.App.Views;
 using Castellan.Application.UseCases;
@@ -35,6 +36,12 @@ public static class MauiProgram
         builder.Services.AddTransient<GetMonthOverviewUseCase>();
         builder.Services.AddTransient<GetAccountsWithBalancesUseCase>();
         builder.Services.AddTransient<ReconcileAccountUseCase>();
+        builder.Services.AddTransient<IngestRawNotificationUseCase>();
+
+#if ANDROID
+        builder.Services.AddSingleton<INotificationPermissionService,
+            Castellan.App.Platforms.Android.Services.AndroidNotificationPermissionService>();
+#endif
 
         // ViewModels
         builder.Services.AddTransient<DashboardViewModel>();
@@ -46,6 +53,7 @@ public static class MauiProgram
         builder.Services.AddTransient<PlanEnvelopesViewModel>();
         builder.Services.AddTransient<ReconcileAccountViewModel>();
         builder.Services.AddTransient<QuickAddTransactionViewModel>();
+        builder.Services.AddTransient<InboxViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
         builder.Services.AddTransient<DashboardPage>();
@@ -57,6 +65,7 @@ public static class MauiProgram
         builder.Services.AddTransient<PlanEnvelopesPage>();
         builder.Services.AddTransient<ReconcileAccountPage>();
         builder.Services.AddTransient<QuickAddTransactionPage>();
+        builder.Services.AddTransient<InboxPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

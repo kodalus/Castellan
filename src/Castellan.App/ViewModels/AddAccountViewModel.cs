@@ -47,7 +47,7 @@ public partial class AddAccountViewModel : ObservableObject
             var msg = sb.ToString();
             System.Diagnostics.Debug.WriteLine("[SaveAccount] " + msg);
             if (Shell.Current?.CurrentPage is Page page)
-                await page.DisplayAlert("Błąd zapisu", msg, "OK");
+                await page.DisplayAlertAsync("Błąd zapisu", msg, "OK");
         }
     }
 

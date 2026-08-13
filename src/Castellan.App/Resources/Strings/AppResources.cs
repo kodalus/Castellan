@@ -13,6 +13,7 @@ public static class AppResources
     public static string Tab_Accounts     => Get(nameof(Tab_Accounts));
     public static string Tab_Transactions => Get(nameof(Tab_Transactions));
     public static string Tab_Envelopes    => Get(nameof(Tab_Envelopes));
+    public static string Tab_Inbox        => Get(nameof(Tab_Inbox));
 
     // Dashboard
     public static string Dashboard_AvailableFunds     => Get(nameof(Dashboard_AvailableFunds));

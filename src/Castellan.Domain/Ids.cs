@@ -29,3 +29,15 @@ public readonly record struct ReconciliationId(Guid Value)
     public static ReconciliationId New() => new(Guid.CreateVersion7());
     public override string ToString() => Value.ToString();
 }
+
+public readonly record struct RawNotificationId(Guid Value)
+{
+    public static RawNotificationId New() => new(Guid.CreateVersion7());
+    public override string ToString() => Value.ToString();
+}
+
+public readonly record struct CategoryRuleId(Guid Value)
+{
+    public static CategoryRuleId New() => new(Guid.CreateVersion7());
+    public override string ToString() => Value.ToString();
+}

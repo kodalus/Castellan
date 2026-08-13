@@ -1,0 +1,49 @@
+using Android.App;
+using Android.Content;
+using Android.Service.Notification;
+using Castellan.Application.UseCases;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Castellan.App.Platforms.Android.Services;
+
+[Service(
+    Label = "Castellan — powiadomienia bankowe",
+    Permission = "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE",
+    Exported = true)]
+[IntentFilter(["android.service.notification.NotificationListenerService"])]
+public class CastellanNotificationListenerService : NotificationListenerService
+{
+    public override void OnNotificationPosted(StatusBarNotification? sbn)
+    {
+        if (sbn is null) return;
+
+        var packageName = sbn.PackageName ?? "";
+
+        // First filter: not in whitelist → discard immediately, no logging
+        if (!IngestRawNotificationUseCase.AllowedPackages.Contains(packageName)) return;
+
+        var extras = sbn.Notification?.Extras;
+        var title = extras?.GetString(global::Android.App.Notification.ExtraTitle) ?? "";
+        var text  = extras?.GetString(global::Android.App.Notification.ExtraText)  ?? "";
+
+        var postedAt = DateTimeOffset.FromUnixTimeMilliseconds(sbn.PostTime);
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var services = IPlatformApplication.Current?.Services;
+                if (services is null) return;
+
+                using var scope = services.CreateScope();
+                var useCase = scope.ServiceProvider.GetRequiredService<IngestRawNotificationUseCase>();
+                await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(packageName, title, text, postedAt));
+            }
+            catch (Exception ex)
+            {
+                // Must never propagate — an unhandled exception disables the service silently
+                global::Android.Util.Log.Error("Castellan.NLS", ex.ToString());
+            }
+        });
+    }
+}

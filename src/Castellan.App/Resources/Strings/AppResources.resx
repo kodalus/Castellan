@@ -51,6 +51,9 @@
   <data name="Tab_Envelopes" xml:space="preserve">
     <value>Koperty</value>
   </data>
+  <data name="Tab_Inbox" xml:space="preserve">
+    <value>Skrzynka</value>
+  </data>
 
   <!-- Dashboard -->
   <data name="Dashboard_AvailableFunds" xml:space="preserve">

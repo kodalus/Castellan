@@ -85,7 +85,7 @@ public partial class AddTransactionViewModel : ObservableObject
                 sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
             System.Diagnostics.Debug.WriteLine("[SaveTransaction] " + sb);
             if (Shell.Current?.CurrentPage is Page page)
-                await page.DisplayAlert("Błąd zapisu transakcji", sb.ToString(), "OK");
+                await page.DisplayAlertAsync("Błąd zapisu transakcji", sb.ToString(), "OK");
         }
     }
 

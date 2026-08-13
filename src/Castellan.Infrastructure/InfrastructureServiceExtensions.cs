@@ -21,6 +21,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddScoped<IMonthBudgetRepository, MonthBudgetRepository>();
         services.AddScoped<IReconciliationRepository, ReconciliationRepository>();
+        services.AddScoped<IRawNotificationRepository, RawNotificationRepository>();
 
         return services;
     }

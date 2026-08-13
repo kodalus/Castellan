@@ -40,13 +40,13 @@ public partial class ReconcileAccountViewModel : ObservableObject, IQueryAttribu
 
             if (result.RequiresDecision && Shell.Current?.CurrentPage is Page p)
             {
-                await p.DisplayAlert(
+                await p.DisplayAlertAsync(
                     "Nadwyżka salda",
                     $"Rozbieżność: {result.Discrepancy}.\nMożliwy niezapisany przychód lub zduplikowany wydatek. Uzgodnienie zapisano — sprawdź transakcje okresu.",
                     "OK");
             }
 
-            await Shell.Current.GoToAsync("..");
+            await Shell.Current!.GoToAsync("..");
         }
         catch (Exception ex)
         {
@@ -55,7 +55,7 @@ public partial class ReconcileAccountViewModel : ObservableObject, IQueryAttribu
                 sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
             System.Diagnostics.Debug.WriteLine("[Reconcile] " + sb);
             if (Shell.Current?.CurrentPage is Page page)
-                await page.DisplayAlert("Błąd uzgodnienia", sb.ToString(), "OK");
+                await page.DisplayAlertAsync("Błąd uzgodnienia", sb.ToString(), "OK");
         }
     }
 

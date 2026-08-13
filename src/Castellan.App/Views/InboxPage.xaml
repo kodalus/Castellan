@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.InboxPage"
+             x:DataType="vm:InboxViewModel"
+             Title="Skrzynka">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Permission banner -->
+        <Border Grid.Row="0"
+                IsVisible="{Binding IsPermissionDenied}"
+                BackgroundColor="#FFF3CD" Stroke="#FFC107"
+                Margin="12,8" Padding="12,10">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="8" />
+            </Border.StrokeShape>
+            <Grid ColumnDefinitions="*,Auto">
+                <VerticalStackLayout Grid.Column="0" Spacing="2">
+                    <Label Text="Brak dostępu do powiadomień"
+                           FontAttributes="Bold" FontSize="14" TextColor="#856404" />
+                    <Label Text="Przyznaj uprawnienie, aby Castellan mógł automatycznie rejestrować transakcje bankowe."
+                           FontSize="12" TextColor="#856404" />
+                </VerticalStackLayout>
+                <Button Grid.Column="1"
+                        Text="Ustawienia"
+                        Command="{Binding OpenPermissionSettingsCommand}"
+                        FontSize="12" Padding="10,6"
+                        BackgroundColor="#FFC107" TextColor="#212529" />
+            </Grid>
+        </Border>
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Items}" Margin="12,0">
+            <CollectionView.EmptyView>
+                <VerticalStackLayout HorizontalOptions="Center" VerticalOptions="Center" Spacing="8" Margin="0,60">
+                    <Label Text="Brak powiadomień bankowych"
+                           HorizontalOptions="Center" FontSize="16" TextColor="Gray" />
+                    <Label Text="Powiadomienia z ING i Revolut będą się tu pojawiać automatycznie."
+                           HorizontalOptions="Center" FontSize="13" TextColor="Gray"
+                           HorizontalTextAlignment="Center" Margin="24,0" />
+                </VerticalStackLayout>
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:InboxRow">
+                    <Grid ColumnDefinitions="Auto,*" Padding="4,10" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" VerticalOptions="Start" Spacing="4">
+                            <Label Text="{Binding PackageLabel}"
+                                   FontSize="11" FontAttributes="Bold"
+                                   TextColor="White" BackgroundColor="#0066CC"
+                                   Padding="6,2" />
+                            <Label Text="{Binding DateDisplay}"
+                                   FontSize="11" TextColor="Gray" />
+                        </VerticalStackLayout>
+                        <VerticalStackLayout Grid.Column="1" Spacing="2">
+                            <Label Text="{Binding Title}" FontSize="14" FontAttributes="Bold" />
+                            <Label Text="{Binding Text}" FontSize="13" TextColor="Gray"
+                                   MaxLines="2" LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+</ContentPage>

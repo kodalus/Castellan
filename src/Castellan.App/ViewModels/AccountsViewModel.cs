@@ -55,7 +55,7 @@ public partial class AccountsViewModel : ObservableObject
             var msg = string.Join("\n", CollectMessages(ex));
             System.Diagnostics.Debug.WriteLine("[Accounts.Load] " + msg);
             if (Shell.Current?.CurrentPage is Page p)
-                await p.DisplayAlert("Błąd ładowania kont", msg, "OK");
+                await p.DisplayAlertAsync("Błąd ładowania kont", msg, "OK");
         }
 
         static IEnumerable<string> CollectMessages(Exception? e)

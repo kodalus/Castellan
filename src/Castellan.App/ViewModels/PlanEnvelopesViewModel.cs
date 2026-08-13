@@ -105,7 +105,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
                 sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
             System.Diagnostics.Debug.WriteLine("[SavePlan] " + sb);
             if (Shell.Current?.CurrentPage is Page page)
-                await page.DisplayAlert("Błąd zapisu planu", sb.ToString(), "OK");
+                await page.DisplayAlertAsync("Błąd zapisu planu", sb.ToString(), "OK");
         }
     }
 

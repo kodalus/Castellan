@@ -85,7 +85,7 @@ public partial class QuickAddTransactionViewModel : ObservableObject
             for (var e = ex; e != null; e = e.InnerException)
                 sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
             if (Shell.Current?.CurrentPage is Page page)
-                await page.DisplayAlert("Błąd", sb.ToString(), "OK");
+                await page.DisplayAlertAsync("Błąd", sb.ToString(), "OK");
         }
     }
 

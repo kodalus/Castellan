@@ -12,6 +12,7 @@ public sealed class CastellanDbContext : DbContext
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<MonthBudget> MonthBudgets => Set<MonthBudget>();
     public DbSet<Reconciliation> Reconciliations => Set<Reconciliation>();
+    public DbSet<RawNotification> RawNotifications => Set<RawNotification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
