@@ -8,6 +8,7 @@
              Title="{x:Static strings:AppResources.Tab_Transactions}">
 
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="⚡" Command="{Binding QuickAddCommand}" Order="Secondary" Priority="0" />
         <ToolbarItem Text="+" Command="{Binding AddTransactionCommand}" />
     </ContentPage.ToolbarItems>
 

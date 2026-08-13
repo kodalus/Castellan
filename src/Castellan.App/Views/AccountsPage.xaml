@@ -23,8 +23,12 @@
                         <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold" />
                         <Label Text="{Binding Kind}" FontSize="12" TextColor="Gray" />
                     </VerticalStackLayout>
-                    <Label Grid.Column="1" Text="{Binding BalanceDisplay}" FontSize="15"
-                           VerticalOptions="Center" HorizontalOptions="End" />
+                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="4">
+                        <Label Text="{Binding BalanceDisplay}" FontSize="15" HorizontalOptions="End" />
+                        <Button Text="Uzgodnij"
+                                Command="{Binding ReconcileCommand}"
+                                FontSize="11" HeightRequest="30" Padding="10,0" />
+                    </VerticalStackLayout>
                 </Grid>
             </DataTemplate>
         </CollectionView.ItemTemplate>

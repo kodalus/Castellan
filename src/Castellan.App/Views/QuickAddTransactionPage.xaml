@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.QuickAddTransactionPage"
+             x:DataType="vm:QuickAddTransactionViewModel"
+             Title="Szybki wydatek">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="16">
+
+        <!-- Amount -->
+        <VerticalStackLayout Grid.Row="0" Spacing="4">
+            <Label Text="Kwota (zł)" FontSize="13" TextColor="Gray" />
+            <Entry Text="{Binding AmountText}"
+                   Keyboard="Numeric"
+                   Placeholder="0,00"
+                   FontSize="28"
+                   FontAttributes="Bold" />
+            <Label Text="{Binding SelectedCategoryName, StringFormat='Kategoria: {0}'}"
+                   FontSize="13" TextColor="Gray" />
+        </VerticalStackLayout>
+
+        <!-- Category grid -->
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Categories}">
+            <CollectionView.ItemsLayout>
+                <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="8" VerticalItemSpacing="8" />
+            </CollectionView.ItemsLayout>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:CategoryButton">
+                    <Button Text="{Binding Name}"
+                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:QuickAddTransactionViewModel}}, Path=SelectCategoryCommand}"
+                            CommandParameter="{Binding .}"
+                            FontSize="13"
+                            HeightRequest="48" />
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- Confirm button -->
+        <Button Grid.Row="2"
+                Text="Gotowe"
+                Command="{Binding SaveCommand}"
+                FontSize="17"
+                FontAttributes="Bold"
+                HeightRequest="52" />
+
+    </Grid>
+
+</ContentPage>

@@ -8,8 +8,10 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        Routing.RegisterRoute("addAccount",     typeof(AddAccountPage));
-        Routing.RegisterRoute("addTransaction", typeof(AddTransactionPage));
-        Routing.RegisterRoute("planEnvelopes",  typeof(PlanEnvelopesPage));
+        Routing.RegisterRoute("addAccount",        typeof(AddAccountPage));
+        Routing.RegisterRoute("addTransaction",    typeof(AddTransactionPage));
+        Routing.RegisterRoute("planEnvelopes",     typeof(PlanEnvelopesPage));
+        Routing.RegisterRoute("reconcileAccount",  typeof(ReconcileAccountPage));
+        Routing.RegisterRoute("quickAdd",          typeof(QuickAddTransactionPage));
     }
 }

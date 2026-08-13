@@ -45,6 +45,24 @@ public class Transaction
         };
     }
 
+    // N-2, N-6: creates Unidentified transaction for negative reconciliation discrepancy
+    public static Transaction CreateReconciliation(
+        AccountId accountId,
+        Money discrepancy,
+        DateTimeOffset occurredAt)
+    {
+        return new Transaction
+        {
+            Id = TransactionId.New(),
+            AccountId = accountId,
+            Amount = discrepancy,
+            OccurredAt = occurredAt,
+            CategoryId = Category.UnidentifiedId,
+            Source = TransactionSource.Reconciliation,
+            Kind = TransactionKind.Unidentified,
+        };
+    }
+
     public void AssignCategory(CategoryId categoryId) => CategoryId = categoryId;
 
     public void SetNote(string? note) => Note = note;

@@ -13,9 +13,9 @@ public partial class AccountsPage : ContentPage
         BindingContext = vm;
     }
 
-    protected override void OnAppearing()
+    protected override void OnNavigatedTo(NavigatedToEventArgs args)
     {
-        base.OnAppearing();
+        base.OnNavigatedTo(args);
         _ = _vm.LoadCommand.ExecuteAsync(null);
     }
 }

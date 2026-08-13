@@ -14,10 +14,13 @@ internal sealed class TransactionRepository(CastellanDbContext db) : ITransactio
 
     public async Task<IReadOnlyList<Transaction>> ListForAccountAsync(
         AccountId accountId, CancellationToken ct = default)
-        => await db.Transactions
+    {
+        // EF Core SQLite can't translate DateTimeOffset ordering — sort client-side
+        var all = await db.Transactions
             .Where(t => t.AccountId == accountId)
-            .OrderByDescending(t => t.OccurredAt)
             .ToListAsync(ct);
+        return [.. all.OrderByDescending(t => t.OccurredAt)];
+    }
 
     public async Task<IReadOnlyList<Transaction>> ListForMonthAsync(
         YearMonth month, CancellationToken ct = default)

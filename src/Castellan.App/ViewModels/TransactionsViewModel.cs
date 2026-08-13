@@ -85,6 +85,10 @@ public partial class TransactionsViewModel : ObservableObject
         => await Shell.Current.GoToAsync("addTransaction");
 
     [RelayCommand]
+    private static async Task QuickAddAsync()
+        => await Shell.Current.GoToAsync("quickAdd");
+
+    [RelayCommand]
     private async Task DeleteTransactionAsync(TransactionRow row, CancellationToken ct = default)
     {
         await _delete.ExecuteAsync(row.Id, ct);

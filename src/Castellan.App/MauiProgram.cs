@@ -33,6 +33,8 @@ public static class MauiProgram
         builder.Services.AddTransient<DeleteTransactionUseCase>();
         builder.Services.AddTransient<PlanMonthUseCase>();
         builder.Services.AddTransient<GetMonthOverviewUseCase>();
+        builder.Services.AddTransient<GetAccountsWithBalancesUseCase>();
+        builder.Services.AddTransient<ReconcileAccountUseCase>();
 
         // ViewModels
         builder.Services.AddTransient<DashboardViewModel>();
@@ -42,6 +44,8 @@ public static class MauiProgram
         builder.Services.AddTransient<AddAccountViewModel>();
         builder.Services.AddTransient<AddTransactionViewModel>();
         builder.Services.AddTransient<PlanEnvelopesViewModel>();
+        builder.Services.AddTransient<ReconcileAccountViewModel>();
+        builder.Services.AddTransient<QuickAddTransactionViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
         builder.Services.AddTransient<DashboardPage>();
@@ -51,6 +55,8 @@ public static class MauiProgram
         builder.Services.AddTransient<AddAccountPage>();
         builder.Services.AddTransient<AddTransactionPage>();
         builder.Services.AddTransient<PlanEnvelopesPage>();
+        builder.Services.AddTransient<ReconcileAccountPage>();
+        builder.Services.AddTransient<QuickAddTransactionPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
