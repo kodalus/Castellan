@@ -27,6 +27,12 @@
                     </DataTrigger>
                 </Label.Triggers>
             </Label>
+            <Button Text="{Binding ReserveHintDisplay}"
+                    Command="{Binding ApplyReserveHintCommand}"
+                    IsVisible="{Binding HasReserveHint}"
+                    FontSize="12" Padding="12,8" CornerRadius="6"
+                    BackgroundColor="#E3F2FD" TextColor="#1565C0"
+                    HorizontalOptions="Fill" />
             <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#E0E0E0, Dark=#444}" />
         </VerticalStackLayout>
 

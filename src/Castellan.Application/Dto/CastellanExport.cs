@@ -26,7 +26,8 @@ public sealed record CategoryRuleDto(
 public sealed record TransactionDto(
     Guid Id, Guid AccountId, long Amount, string OccurredAt, Guid CategoryId,
     string? RawMerchant, string? MerchantKey, string? Note, int Source, int Kind,
-    Guid? TransferGroupId, Guid? ProposedTransferGroupId, Guid? SupersededById, Guid? RawNotificationId);
+    Guid? TransferGroupId, Guid? ProposedTransferGroupId, Guid? SupersededById, Guid? RawNotificationId,
+    Guid? PaidFromFundId = null);
 
 public sealed record EnvelopeDto(Guid CategoryId, long PlannedAmount);
 

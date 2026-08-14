@@ -59,7 +59,7 @@ public static class InfrastructureServiceExtensions
                 "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
                 "Rozrywka", "Ubrania i obuwie", "Elektronika", "Edukacja",
                 "Sport i rekreacja", "Higiena i kosmetyki", "Podróże", "Inne wydatki",
-                "Inwestycje", "Dobroczynność",
+                "Inwestycje", "Dobroczynność", "Przedszkole", "Rezerwy",
             };
             var incomes = new[]
             {
@@ -79,6 +79,8 @@ public static class InfrastructureServiceExtensions
         // Archiwizacja kategorii zachowuje nazwę, więc zarchiwizowane nie wracają.
         EnsureCategory(db, "Inwestycje");
         EnsureCategory(db, "Dobroczynność");
+        EnsureCategory(db, "Przedszkole");
+        EnsureCategory(db, "Rezerwy");
         db.SaveChanges();
     }
 

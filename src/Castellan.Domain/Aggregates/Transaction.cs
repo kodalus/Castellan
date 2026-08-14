@@ -19,9 +19,13 @@ public class Transaction
     public TransactionId? SupersededById { get; private set; }
     public Guid? RawNotificationId { get; private set; }
 
+    // Wydatek pokryty z funduszu — odpisy trafiły do kopert w poprzednich
+    // miesiącach, więc sama zapłata nie może obciążać budżetu ponownie.
+    public FundId? PaidFromFundId { get; private set; }
+
     // N-4: superseded or transfer excluded from calculations
     public bool IsExcludedFromCalculations =>
-        Kind == TransactionKind.Transfer || SupersededById.HasValue;
+        Kind == TransactionKind.Transfer || SupersededById.HasValue || PaidFromFundId.HasValue;
 
     private Transaction() { }
 
@@ -101,6 +105,10 @@ public class Transaction
         Kind = TransactionKind.Transfer;
         CategoryId = Category.TransferId;
     }
+
+    public void PayFromFund(FundId fundId) => PaidFromFundId = fundId;
+
+    public void ClearFundPayment() => PaidFromFundId = null;
 
     public void ProposeTransfer(Guid proposalGroupId) =>
         ProposedTransferGroupId = proposalGroupId;

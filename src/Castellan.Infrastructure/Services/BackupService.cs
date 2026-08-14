@@ -34,7 +34,8 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                 t.CategoryId.Value, t.RawMerchant, t.MerchantKey, t.Note,
                 (int)t.Source, (int)t.Kind,
                 t.TransferGroupId, t.ProposedTransferGroupId,
-                t.SupersededById?.Value, t.RawNotificationId)).ToList(),
+                t.SupersededById?.Value, t.RawNotificationId,
+                t.PaidFromFundId?.Value)).ToList(),
             MonthBudgets = budgets.Select(b => new MonthBudgetDto(
                 b.Id.Value, b.Month.ToString(), b.AvailableFunds.Grosze, b.PlannedAt.ToString("O"),
                 b.Envelopes.Select(e => new EnvelopeDto(e.CategoryId.Value, e.PlannedAmount.Grosze)).ToList())).ToList(),
@@ -83,7 +84,7 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
 
             foreach (var t in data.Transactions)
                 await db.Database.ExecuteSqlRawAsync(
-                    "INSERT INTO Transactions (Id, AccountId, Amount, OccurredAt, CategoryId, RawMerchant, MerchantKey, Note, Source, Kind, TransferGroupId, ProposedTransferGroupId, SupersededById, RawNotificationId) VALUES ({0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13})",
+                    "INSERT INTO Transactions (Id, AccountId, Amount, OccurredAt, CategoryId, RawMerchant, MerchantKey, Note, Source, Kind, TransferGroupId, ProposedTransferGroupId, SupersededById, RawNotificationId, PaidFromFundId) VALUES ({0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14})",
                     t.Id, t.AccountId, t.Amount, t.OccurredAt, t.CategoryId,
                     (object?)t.RawMerchant ?? DBNull.Value,
                     (object?)t.MerchantKey ?? DBNull.Value,
@@ -92,7 +93,8 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                     t.TransferGroupId.HasValue ? (object)t.TransferGroupId.Value : DBNull.Value,
                     t.ProposedTransferGroupId.HasValue ? (object)t.ProposedTransferGroupId.Value : DBNull.Value,
                     t.SupersededById.HasValue ? (object)t.SupersededById.Value : DBNull.Value,
-                    t.RawNotificationId.HasValue ? (object)t.RawNotificationId.Value : DBNull.Value);
+                    t.RawNotificationId.HasValue ? (object)t.RawNotificationId.Value : DBNull.Value,
+                    t.PaidFromFundId.HasValue ? (object)t.PaidFromFundId.Value : DBNull.Value);
 
             foreach (var b in data.MonthBudgets)
             {

@@ -18,14 +18,19 @@ public sealed record FundSummary(
     DateOnly Deadline,
     double Progress);
 
+public sealed record FundOverview(
+    IReadOnlyList<FundSummary> Items,
+    Money TotalBalance,
+    Money TotalSuggestedMonthly);
+
 public sealed class GetFundOverviewUseCase(IFundRepository funds)
 {
-    public async Task<IReadOnlyList<FundSummary>> ExecuteAsync(int paydateDay, CancellationToken ct = default)
+    public async Task<FundOverview> ExecuteAsync(int paydateDay, CancellationToken ct = default)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
         var all   = await funds.ListAsync(ct);
 
-        return [.. all
+        var items = all
             .Where(f => !f.IsArchived)
             .Select(f => new FundSummary(
                 f.Id,
@@ -41,7 +46,14 @@ public sealed class GetFundOverviewUseCase(IFundRepository funds)
                 f.Deadline,
                 f.Progress))
             .OrderBy(s => s.IsDelayed ? 0 : 1)
-            .ThenBy(s => s.Deadline)];
+            .ThenBy(s => s.Deadline)
+            .ToList();
+
+        return new FundOverview(
+            items,
+            new Money(items.Sum(s => s.Balance.Grosze)),
+            // Suma odpisów = podpowiedź kwoty koperty "Rezerwy" na najbliższy miesiąc.
+            new Money(items.Sum(s => s.SuggestedMonthly.Grosze)));
     }
 
     private static string KindDisplay(FundKind kind) => kind switch

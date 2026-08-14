@@ -43,6 +43,9 @@ public partial class FundsViewModel : ObservableObject
 
     [ObservableProperty] private string _paydateText = "";
 
+    [ObservableProperty] private string _totalSuggestedDisplay = "";
+    [ObservableProperty] private string _totalBalanceDisplay = "";
+
     public bool NeedsPaydate => PaydateDay <= 0;
 
     public FundsViewModel(GetFundOverviewUseCase overview)
@@ -60,8 +63,10 @@ public partial class FundsViewModel : ObservableObject
             PaydateDay = Microsoft.Maui.Storage.Preferences.Get("paydate_day", 0);
 
             Items.Clear();
-            var list = await _overview.ExecuteAsync(PaydateDay, ct);
-            foreach (var s in list)
+            var overview = await _overview.ExecuteAsync(PaydateDay, ct);
+            TotalSuggestedDisplay = $"Odkładasz łącznie: {overview.TotalSuggestedMonthly} / mies.";
+            TotalBalanceDisplay   = $"Zebrane w funduszach: {overview.TotalBalance}";
+            foreach (var s in overview.Items)
             {
                 var fundId = s.Id;
                 Items.Add(new FundRow(

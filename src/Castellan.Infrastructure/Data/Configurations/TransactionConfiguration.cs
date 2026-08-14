@@ -34,6 +34,10 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
                 id => id.Value,
                 v => new TransactionId(v)));
         builder.Property(t => t.RawNotificationId);
+        builder.Property(t => t.PaidFromFundId)
+            .HasConversion(new ValueConverter<FundId, Guid>(
+                id => id.Value,
+                v => new FundId(v)));
 
         builder.Ignore(t => t.IsExcludedFromCalculations);
 

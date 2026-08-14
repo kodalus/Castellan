@@ -15,13 +15,20 @@ public sealed record TransactionRow(
     string DateDisplay,
     string CategoryName,
     string? Note,
-    bool IsExcluded);
+    bool IsExcluded,
+    string? FundName = null)
+{
+    public bool IsPaidFromFund => FundName is not null;
+    public string FundLabel => FundName is not null ? $"⛃ z funduszu: {FundName}" : "";
+}
 
 public partial class TransactionsViewModel : ObservableObject
 {
     private readonly ITransactionRepository _transactions;
     private readonly ICategoryRepository _categories;
+    private readonly IFundRepository _funds;
     private readonly DeleteTransactionUseCase _delete;
+    private readonly PayTransactionFromFundUseCase _payFromFund;
 
     public ObservableCollection<TransactionRow> Transactions { get; } = [];
 
@@ -36,11 +43,15 @@ public partial class TransactionsViewModel : ObservableObject
     public TransactionsViewModel(
         ITransactionRepository transactions,
         ICategoryRepository categories,
-        DeleteTransactionUseCase delete)
+        IFundRepository funds,
+        DeleteTransactionUseCase delete,
+        PayTransactionFromFundUseCase payFromFund)
     {
         _transactions = transactions;
         _categories = categories;
+        _funds = funds;
         _delete = delete;
+        _payFromFund = payFromFund;
         CurrentMonth = YearMonth.Current;
     }
 
@@ -51,17 +62,20 @@ public partial class TransactionsViewModel : ObservableObject
         var txs = await _transactions.ListForMonthAsync(CurrentMonth, ct);
         var cats = await _categories.GetManyAsync(txs.Select(t => t.CategoryId).Distinct(), ct);
         var catMap = cats.ToDictionary(c => c.Id);
+        var fundMap = (await _funds.ListAsync(ct)).ToDictionary(f => f.Id, f => f.Name);
 
         foreach (var tx in txs)
         {
             var catName = catMap.TryGetValue(tx.CategoryId, out var cat) ? cat.Name : "?";
+            string? fundName = tx.PaidFromFundId is { } fid && fundMap.TryGetValue(fid, out var fn) ? fn : null;
             Transactions.Add(new TransactionRow(
                 tx.Id,
                 tx.Amount.ToString(),
                 tx.OccurredAt.ToLocalTime().ToString("d"),
                 catName,
                 tx.Note,
-                tx.IsExcludedFromCalculations));
+                tx.IsExcludedFromCalculations,
+                fundName));
         }
         IsEmpty = Transactions.Count == 0;
     }
@@ -95,6 +109,43 @@ public partial class TransactionsViewModel : ObservableObject
     [RelayCommand]
     private static async Task QuickAddAsync()
         => await Shell.Current.GoToAsync("quickAdd");
+
+    [RelayCommand]
+    private async Task PayFromFundAsync(TransactionRow row, CancellationToken ct = default)
+    {
+        var page = Shell.Current?.CurrentPage;
+        if (page is null) return;
+
+        if (row.IsPaidFromFund)
+        {
+            var undo = await page.DisplayAlertAsync(
+                "Pokryte z funduszu",
+                $"Ten wydatek jest pokryty z funduszu „{row.FundName}”. Cofnąć? Kwota wróci na saldo funduszu, a wydatek znów obciąży koperty.",
+                "Cofnij", "Zostaw");
+            if (!undo) return;
+
+            await _payFromFund.UndoAsync(row.Id, ct);
+            await LoadAsync(ct);
+            return;
+        }
+
+        var funds = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
+        if (funds.Count == 0)
+        {
+            await page.DisplayAlertAsync("Brak funduszy", "Najpierw utwórz fundusz w zakładce Fundusze.", "OK");
+            return;
+        }
+
+        var choice = await page.DisplayActionSheet(
+            "Pokryj z funduszu", "Anuluj", null, [.. funds.Select(f => f.Name)]);
+        if (string.IsNullOrEmpty(choice) || choice == "Anuluj") return;
+
+        var fund = funds.FirstOrDefault(f => f.Name == choice);
+        if (fund is null) return;
+
+        await _payFromFund.ExecuteAsync(row.Id, fund.Id, ct);
+        await LoadAsync(ct);
+    }
 
     [RelayCommand]
     private async Task DeleteTransactionAsync(TransactionRow row, CancellationToken ct = default)

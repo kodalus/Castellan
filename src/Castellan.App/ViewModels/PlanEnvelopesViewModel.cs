@@ -22,16 +22,22 @@ public partial class EnvelopeInputRow(CategoryId categoryId, string categoryName
 
 public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributable
 {
+    private const string ReserveCategoryName = "Rezerwy";
+
     private readonly ICategoryRepository _categories;
     private readonly IMonthBudgetRepository _budgets;
     private readonly PlanMonthUseCase _plan;
+    private readonly GetFundOverviewUseCase _fundOverview;
 
     private YearMonth _month;
+    private decimal _suggestedReserve;
 
     [ObservableProperty] private string _monthDisplay = "";
     [ObservableProperty] private string _availableFundsText = "0";
     [ObservableProperty] private string _remainingToAllocateDisplay = "";
     [ObservableProperty] private bool _isOverAllocated;
+    [ObservableProperty] private string _reserveHintDisplay = "";
+    [ObservableProperty] private bool _hasReserveHint;
 
     public ObservableCollection<EnvelopeInputRow> Envelopes { get; } = [];
 
@@ -49,14 +55,37 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     private static decimal ParseAmount(string text) =>
         decimal.TryParse(text.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0m;
 
+    private async Task LoadReserveHintAsync(CancellationToken ct)
+    {
+        var paydateDay = Microsoft.Maui.Storage.Preferences.Get("paydate_day", 0);
+        var overview   = await _fundOverview.ExecuteAsync(paydateDay, ct);
+
+        _suggestedReserve = overview.TotalSuggestedMonthly.Grosze / 100m;
+        HasReserveHint = _suggestedReserve > 0
+            && Envelopes.Any(r => r.CategoryName.Equals(ReserveCategoryName, StringComparison.OrdinalIgnoreCase));
+        ReserveHintDisplay = $"Fundusze: odkładaj {_suggestedReserve:N2} zł — wstaw do „Rezerwy”";
+    }
+
     public PlanEnvelopesViewModel(
         ICategoryRepository categories,
         IMonthBudgetRepository budgets,
-        PlanMonthUseCase plan)
+        PlanMonthUseCase plan,
+        GetFundOverviewUseCase fundOverview)
     {
         _categories = categories;
         _budgets = budgets;
         _plan = plan;
+        _fundOverview = fundOverview;
+    }
+
+    /// <summary>Wpisuje sumę odpisów na fundusze do koperty „Rezerwy”.</summary>
+    [RelayCommand]
+    private void ApplyReserveHint()
+    {
+        var row = Envelopes.FirstOrDefault(r =>
+            r.CategoryName.Equals(ReserveCategoryName, StringComparison.OrdinalIgnoreCase));
+        if (row is null) return;
+        row.PlannedAmountText = _suggestedReserve.ToString("F2", CultureInfo.InvariantCulture);
     }
 
     public void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -89,6 +118,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
             Envelopes.Add(row);
         }
 
+        await LoadReserveHintAsync(ct);
         Recalculate();
     }
 
