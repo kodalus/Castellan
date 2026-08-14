@@ -33,6 +33,8 @@ public sealed record MonthOverview(
     Money AvailableFunds,
     Money TotalPlanned,
     Money RemainingToAllocate,
+    Money TotalSpent,
+    Money RemainingToSpend,
     IReadOnlyList<EnvelopeOverview> Envelopes);
 
 public sealed class GetMonthOverviewUseCase(
@@ -71,11 +73,17 @@ public sealed class GetMonthOverviewUseCase(
 
         var totalPlanned = budget.Envelopes.Select(e => e.PlannedAmount).Sum();
 
+        // "Wydano" / "Pozostało do wydania" liczone wyłącznie z planu (kopert),
+        // nigdy z aktywów ani funduszy — te pozostają poza budżetem miesiąca.
+        var totalSpent = new Money(envelopes.Sum(e => Math.Abs(e.Actual.Grosze)));
+
         return new MonthOverview(
             month,
             budget.AvailableFunds,
             totalPlanned,
             budget.AvailableFunds - totalPlanned,
+            totalSpent,
+            totalPlanned - totalSpent,
             envelopes);
     }
 }

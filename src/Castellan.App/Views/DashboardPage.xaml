@@ -12,7 +12,7 @@
         <ToolbarItem Text="Statystyki" Command="{Binding OpenStatisticsCommand}" Order="Secondary" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
 
         <!-- Notification health warning -->
         <Border Grid.Row="0"
@@ -50,7 +50,22 @@
             </Border>
         </Grid>
 
-        <CollectionView Grid.Row="3" ItemsSource="{Binding MonthData.Envelopes}" Margin="12,4">
+        <Grid Grid.Row="3" ColumnDefinitions="*,*" Margin="12,0,12,4" ColumnSpacing="8">
+            <Border Grid.Column="0" Padding="8" Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#444}" StrokeShape="Rectangle">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Wydano" FontSize="11" TextColor="Gray" />
+                    <Label Text="{Binding MonthData.TotalSpent}" FontSize="13" FontAttributes="Bold" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Grid.Column="1" Padding="8" Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#444}" StrokeShape="Rectangle">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="Pozostało do wydania" FontSize="11" TextColor="Gray" />
+                    <Label Text="{Binding MonthData.RemainingToSpend}" FontSize="13" FontAttributes="Bold" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
+
+        <CollectionView Grid.Row="4" ItemsSource="{Binding MonthData.Envelopes}" Margin="12,4">
             <CollectionView.EmptyView>
                 <Label Text="{x:Static strings:AppResources.Dashboard_NoBudget}"
                        HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="0,40" />
