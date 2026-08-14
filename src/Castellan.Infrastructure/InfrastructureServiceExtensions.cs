@@ -36,6 +36,7 @@ public static class InfrastructureServiceExtensions
 
         services.AddSingleton<INotificationParser, IngNotificationParser>();
         services.AddSingleton<INotificationParser, RevolutNotificationParser>();
+        services.AddSingleton<INotificationParser, GoogleWalletNotificationParser>();
 
         return services;
     }
@@ -63,7 +64,7 @@ public static class InfrastructureServiceExtensions
             };
             var incomes = new[]
             {
-                "Wynagrodzenie", "Premia", "Zwrot kosztów", "Inne przychody",
+                "Wynagrodzenie", "Premia", "Zwrot kosztów", "800+", "Inne przychody",
             };
 
             foreach (var name in expenses)
@@ -77,10 +78,11 @@ public static class InfrastructureServiceExtensions
 
         // Kategorie dodane po pierwszym seedzie — dopilnuj ich także w istniejących bazach.
         // Archiwizacja kategorii zachowuje nazwę, więc zarchiwizowane nie wracają.
-        EnsureCategory(db, "Inwestycje");
-        EnsureCategory(db, "Dobroczynność");
-        EnsureCategory(db, "Przedszkole");
-        EnsureCategory(db, "Rezerwy");
+        EnsureCategory(db, "Inwestycje", CategoryKind.Expense);
+        EnsureCategory(db, "Dobroczynność", CategoryKind.Expense);
+        EnsureCategory(db, "Przedszkole", CategoryKind.Expense);
+        EnsureCategory(db, "Rezerwy", CategoryKind.Expense);
+        EnsureCategory(db, "800+", CategoryKind.Income);
 
         // Jeden paragon ze sklepu to zwykle jedzenie + chemia + higiena naraz,
         // więc "Jedzenie" zmieniło się w szerszą kategorię zakupową.
@@ -89,10 +91,10 @@ public static class InfrastructureServiceExtensions
         db.SaveChanges();
     }
 
-    private static void EnsureCategory(CastellanDbContext db, string name)
+    private static void EnsureCategory(CastellanDbContext db, string name, CategoryKind kind)
     {
         if (!db.Categories.Any(c => !c.IsSystem && c.Name == name))
-            db.Categories.Add(Category.Create(name, CategoryKind.Expense));
+            db.Categories.Add(Category.Create(name, kind));
     }
 
     /// <summary>

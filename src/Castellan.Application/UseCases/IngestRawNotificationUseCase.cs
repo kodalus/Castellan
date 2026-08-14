@@ -22,11 +22,6 @@ public sealed partial class IngestRawNotificationUseCase(
         "com.google.android.apps.walletnfcrel",
     };
 
-    private static readonly IReadOnlySet<string> IgnoredPackages = new HashSet<string>(StringComparer.Ordinal)
-    {
-        "com.google.android.apps.walletnfcrel",
-    };
-
     public sealed record Input(string PackageName, string Title, string Text, DateTimeOffset PostedAt);
 
     public async Task ExecuteAsync(Input input, CancellationToken ct = default)
@@ -36,9 +31,10 @@ public sealed partial class IngestRawNotificationUseCase(
         var maskedTitle = MaskSensitiveData(input.Title);
         var maskedText  = MaskSensitiveData(input.Text);
 
-        var notification = IgnoredPackages.Contains(input.PackageName)
-            ? RawNotification.CreateIgnored(input.PackageName, maskedTitle, maskedText, input.PostedAt)
-            : RawNotification.CreateUnparsed(input.PackageName, maskedTitle, maskedText, input.PostedAt);
+        // Portfel Google bywa jedynym śladem płatności NFC telefonem (np. dla ING,
+        // który przy zbliżeniówce z telefonu nie wysyła własnego powiadomienia) —
+        // wcześniej był tu na stałe ignorowany, co gubiło te transakcje całkowicie.
+        var notification = RawNotification.CreateUnparsed(input.PackageName, maskedTitle, maskedText, input.PostedAt);
 
         await rawNotifications.AddAsync(notification, ct);
 
@@ -64,7 +60,7 @@ public sealed partial class IngestRawNotificationUseCase(
         var parsed = parser.TryParse(notification.Title, notification.Text);
         if (parsed is null) return;
 
-        var account = await FindAccountAsync(packageName, ct);
+        var account = await FindAccountAsync(packageName, parsed.AccountHint, ct);
         if (account is null) return;
 
         var tx = Transaction.CreateFromNotification(
@@ -170,7 +166,7 @@ public sealed partial class IngestRawNotificationUseCase(
         match.ProposeTransfer(groupId);
     }
 
-    private async Task<Account?> FindAccountAsync(string packageName, CancellationToken ct)
+    private async Task<Account?> FindAccountAsync(string packageName, string? accountHint, CancellationToken ct)
     {
         var all = await accounts.ListAsync(ct);
         var active = all.Where(a => !a.IsArchived).ToList();
@@ -187,6 +183,15 @@ public sealed partial class IngestRawNotificationUseCase(
             var byName = active.FirstOrDefault(a =>
                 a.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase));
             if (byName is not null) return byName;
+        }
+
+        // Portfel Google nie mówi z jakiego banku jest karta przez packageName —
+        // zdradza to dopiero treść powiadomienia ("karta Revolut Wspólny").
+        if (!string.IsNullOrWhiteSpace(accountHint))
+        {
+            var byHint = active.FirstOrDefault(a =>
+                accountHint.Contains(a.Name, StringComparison.OrdinalIgnoreCase));
+            if (byHint is not null) return byHint;
         }
 
         return active.FirstOrDefault(a => a.Kind == AccountKind.Checking)
