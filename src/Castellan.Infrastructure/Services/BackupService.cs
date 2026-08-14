@@ -1,12 +1,19 @@
 using Castellan.Application.Dto;
 using Castellan.Application.Services;
 using Castellan.Infrastructure.Data;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
 namespace Castellan.Infrastructure.Services;
 
 internal sealed class BackupService(CastellanDbContext db) : IBackupService
 {
+    // EF Core boxes a plain `DBNull.Value` as typeof(DBNull) and can't find a
+    // store type mapping for it. Wrapping in a SqliteParameter with an explicit
+    // SqliteType sidesteps EF's CLR-type inference entirely.
+    private static SqliteParameter Null(object? value, SqliteType type) =>
+        new() { Value = value ?? (object)DBNull.Value, SqliteType = type };
+
     public async Task<CastellanExport> ExportAsync(CancellationToken ct = default)
     {
         var accounts     = await db.Accounts.AsNoTracking().ToListAsync(ct);
@@ -68,7 +75,7 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                 await db.Database.ExecuteSqlRawAsync(
                     "INSERT INTO Accounts (Id, Name, Kind, LiquidityTier, BankKey, IsArchived, LastReconciledBalance, LastReconciledAt) VALUES ({0},{1},{2},{3},{4},{5},{6},{7})",
                     a.Id, a.Name, a.Kind, a.LiquidityTier,
-                    (object?)a.BankKey ?? DBNull.Value,
+                    Null(a.BankKey, SqliteType.Text),
                     a.IsArchived ? 1 : 0, a.LastReconciledBalance, a.LastReconciledAt);
 
             foreach (var c in data.Categories.Where(c => !c.IsSystem))
@@ -80,21 +87,21 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                 await db.Database.ExecuteSqlRawAsync(
                     "INSERT INTO CategoryRules (Id, Pattern, CategoryId, Origin, HitCount, LastUsedAt) VALUES ({0},{1},{2},{3},{4},{5})",
                     r.Id, r.Pattern, r.CategoryId, r.Origin, r.HitCount,
-                    (object?)r.LastUsedAt ?? DBNull.Value);
+                    Null(r.LastUsedAt, SqliteType.Text));
 
             foreach (var t in data.Transactions)
                 await db.Database.ExecuteSqlRawAsync(
                     "INSERT INTO Transactions (Id, AccountId, Amount, OccurredAt, CategoryId, RawMerchant, MerchantKey, Note, Source, Kind, TransferGroupId, ProposedTransferGroupId, SupersededById, RawNotificationId, PaidFromFundId) VALUES ({0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14})",
                     t.Id, t.AccountId, t.Amount, t.OccurredAt, t.CategoryId,
-                    (object?)t.RawMerchant ?? DBNull.Value,
-                    (object?)t.MerchantKey ?? DBNull.Value,
-                    (object?)t.Note ?? DBNull.Value,
+                    Null(t.RawMerchant, SqliteType.Text),
+                    Null(t.MerchantKey, SqliteType.Text),
+                    Null(t.Note, SqliteType.Text),
                     t.Source, t.Kind,
-                    t.TransferGroupId.HasValue ? (object)t.TransferGroupId.Value : DBNull.Value,
-                    t.ProposedTransferGroupId.HasValue ? (object)t.ProposedTransferGroupId.Value : DBNull.Value,
-                    t.SupersededById.HasValue ? (object)t.SupersededById.Value : DBNull.Value,
-                    t.RawNotificationId.HasValue ? (object)t.RawNotificationId.Value : DBNull.Value,
-                    t.PaidFromFundId.HasValue ? (object)t.PaidFromFundId.Value : DBNull.Value);
+                    Null(t.TransferGroupId, SqliteType.Text),
+                    Null(t.ProposedTransferGroupId, SqliteType.Text),
+                    Null(t.SupersededById, SqliteType.Text),
+                    Null(t.RawNotificationId, SqliteType.Text),
+                    Null(t.PaidFromFundId, SqliteType.Text));
 
             foreach (var b in data.MonthBudgets)
             {
