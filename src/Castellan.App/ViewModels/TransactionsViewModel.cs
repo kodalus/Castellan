@@ -16,7 +16,8 @@ public sealed record TransactionRow(
     string CategoryName,
     string? Note,
     bool IsExcluded,
-    string? FundName = null)
+    string? FundName = null,
+    bool IsEditable = true)
 {
     public bool IsPaidFromFund => FundName is not null;
     public string FundLabel => FundName is not null ? $"⛃ z funduszu: {FundName}" : "";
@@ -68,6 +69,12 @@ public partial class TransactionsViewModel : ObservableObject
         {
             var catName = catMap.TryGetValue(tx.CategoryId, out var cat) ? cat.Name : "?";
             string? fundName = tx.PaidFromFundId is { } fid && fundMap.TryGetValue(fid, out var fn) ? fn : null;
+            // Transfery mają parę powiązanych wpisów, a wpisy pokryte z funduszu już
+            // zdjęły kwotę z jego salda — edycja tych pól tutaj rozjechałaby dane
+            // gdzie indziej, więc dla tych trzech przypadków edycja jest wyłączona.
+            var isEditable = tx.Kind != TransactionKind.Transfer
+                && !tx.SupersededById.HasValue
+                && !tx.PaidFromFundId.HasValue;
             Transactions.Add(new TransactionRow(
                 tx.Id,
                 tx.Amount.ToString(),
@@ -75,7 +82,8 @@ public partial class TransactionsViewModel : ObservableObject
                 catName,
                 tx.Note,
                 tx.IsExcludedFromCalculations,
-                fundName));
+                fundName,
+                isEditable));
         }
         IsEmpty = Transactions.Count == 0;
     }
@@ -145,6 +153,13 @@ public partial class TransactionsViewModel : ObservableObject
 
         await _payFromFund.ExecuteAsync(row.Id, fund.Id, ct);
         await LoadAsync(ct);
+    }
+
+    [RelayCommand]
+    private static async Task EditTransactionAsync(TransactionRow row)
+    {
+        if (!row.IsEditable) return;
+        await Shell.Current.GoToAsync($"editTransaction?txId={row.Id.Value}");
     }
 
     [RelayCommand]

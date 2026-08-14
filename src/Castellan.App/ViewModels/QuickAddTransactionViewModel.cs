@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using Castellan.App.Services;
 using Castellan.Application.Repositories;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
@@ -14,6 +15,8 @@ public sealed record CategoryButton(CategoryId Id, string Name);
 
 public partial class QuickAddTransactionViewModel : ObservableObject
 {
+    private const string DefaultCategoryName = "Produkty do domu";
+
     private readonly IAccountRepository _accounts;
     private readonly ICategoryRepository _categories;
     private readonly AddManualTransactionUseCase _addTx;
@@ -40,8 +43,12 @@ public partial class QuickAddTransactionViewModel : ObservableObject
     public async Task LoadAsync(CancellationToken ct = default)
     {
         var accountList = await _accounts.ListAsync(ct);
-        var def = accountList.FirstOrDefault(a => !a.IsArchived && a.Kind == AccountKind.Checking)
-               ?? accountList.FirstOrDefault(a => !a.IsArchived);
+        var active = accountList.Where(a => !a.IsArchived).ToList();
+
+        var preferredId = DefaultAccountPreference.Get();
+        var def = (preferredId is not null ? active.FirstOrDefault(a => a.Id == preferredId) : null)
+               ?? active.FirstOrDefault(a => a.Kind == AccountKind.Checking)
+               ?? active.FirstOrDefault();
         if (def is not null) _defaultAccountId = def.Id;
 
         Categories.Clear();
@@ -49,10 +56,12 @@ public partial class QuickAddTransactionViewModel : ObservableObject
         foreach (var c in cats.Where(c => !c.IsSystem && !c.IsArchived && c.Kind == CategoryKind.Expense))
             Categories.Add(new CategoryButton(c.Id, c.Name));
 
-        if (Categories.Count > 0)
+        var preferredCategory = Categories.FirstOrDefault(c =>
+            c.Name.Equals(DefaultCategoryName, StringComparison.OrdinalIgnoreCase)) ?? Categories.FirstOrDefault();
+        if (preferredCategory is not null)
         {
-            _selectedCategoryId = Categories[0].Id;
-            SelectedCategoryName = Categories[0].Name;
+            _selectedCategoryId = preferredCategory.Id;
+            SelectedCategoryName = preferredCategory.Name;
         }
     }
 

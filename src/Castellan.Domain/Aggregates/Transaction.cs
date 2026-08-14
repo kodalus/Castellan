@@ -96,6 +96,12 @@ public class Transaction
 
     public void SetNote(string? note) => Note = note;
 
+    public void SetAmount(Money amount) => Amount = amount;
+
+    public void SetAccount(AccountId accountId) => AccountId = accountId;
+
+    public void SetOccurredAt(DateTimeOffset occurredAt) => OccurredAt = occurredAt;
+
     public void Supersede(TransactionId byId) => SupersededById = byId;
 
     public void SetTransferGroup(Guid groupId)

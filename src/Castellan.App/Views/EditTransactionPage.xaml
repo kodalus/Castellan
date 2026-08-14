@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.EditTransactionPage"
+             x:DataType="vm:EditTransactionViewModel"
+             Title="Edytuj transakcję">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="{x:Static strings:AppResources.Button_Save}" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="{x:Static strings:AppResources.Button_Cancel}" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <HorizontalStackLayout Spacing="20">
+                <RadioButton Content="Wydatek" GroupName="txKind"
+                             IsChecked="{Binding IsExpense, Mode=TwoWay}" />
+                <RadioButton Content="Przychód" GroupName="txKind"
+                             IsChecked="{Binding IsIncome, Mode=TwoWay}" />
+            </HorizontalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Account}" FontSize="13" TextColor="Gray" />
+                <Picker ItemsSource="{Binding AccountOptions}" ItemDisplayBinding="{Binding Name}"
+                        SelectedIndex="{Binding AccountIndex}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Amount}" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding AmountText}" Keyboard="Numeric"
+                       Placeholder="100.00" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Date}" FontSize="13" TextColor="Gray" />
+                <DatePicker Date="{Binding Date}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Category}" FontSize="13" TextColor="Gray" />
+                <Picker ItemsSource="{Binding CategoryOptions}" ItemDisplayBinding="{Binding Name}"
+                        SelectedIndex="{Binding CategoryIndex}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Note}" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding Note}" />
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

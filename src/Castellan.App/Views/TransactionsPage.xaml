@@ -43,6 +43,11 @@
                             </SwipeItems>
                         </SwipeView.RightItems>
                         <Grid ColumnDefinitions="Auto,*,Auto" Padding="4,10" ColumnSpacing="10">
+                            <Grid.GestureRecognizers>
+                                <TapGestureRecognizer
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=EditTransactionCommand}"
+                                    CommandParameter="{Binding .}" />
+                            </Grid.GestureRecognizers>
                             <Label Grid.Column="0" Text="{Binding DateDisplay}" FontSize="12" TextColor="Gray"
                                    VerticalOptions="Center" WidthRequest="44" />
                             <VerticalStackLayout Grid.Column="1" Spacing="2">
