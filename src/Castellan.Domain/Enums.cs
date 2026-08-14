@@ -13,3 +13,5 @@ public enum TransactionKind { Regular, Authorization, Transfer, Unidentified }
 public enum ParseStatus { Unparsed, Parsed, Ignored }
 
 public enum CategoryRuleOrigin { Learned, Manual }
+
+public enum FundKind { Insurance, Vacation, Tax, Custom }

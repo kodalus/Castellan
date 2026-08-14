@@ -42,6 +42,9 @@ public static class MauiProgram
         builder.Services.AddTransient<GetTransferProposalsUseCase>();
         builder.Services.AddTransient<ConfirmTransferUseCase>();
         builder.Services.AddTransient<RejectTransferUseCase>();
+        builder.Services.AddTransient<CreateFundUseCase>();
+        builder.Services.AddTransient<ContributeToFundUseCase>();
+        builder.Services.AddTransient<GetFundOverviewUseCase>();
 
 #if ANDROID
         builder.Services.AddSingleton<INotificationPermissionService,
@@ -65,6 +68,9 @@ public static class MauiProgram
         builder.Services.AddTransient<AddCategoryViewModel>();
         builder.Services.AddTransient<StatisticsViewModel>();
         builder.Services.AddTransient<AssignCategoryViewModel>();
+        builder.Services.AddTransient<FundsViewModel>();
+        builder.Services.AddTransient<AddFundViewModel>();
+        builder.Services.AddTransient<ContributeFundViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
         builder.Services.AddTransient<DashboardPage>();
@@ -83,6 +89,9 @@ public static class MauiProgram
         builder.Services.AddTransient<AddCategoryPage>();
         builder.Services.AddTransient<StatisticsPage>();
         builder.Services.AddTransient<AssignCategoryPage>();
+        builder.Services.AddTransient<FundsPage>();
+        builder.Services.AddTransient<AddFundPage>();
+        builder.Services.AddTransient<ContributeFundPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();

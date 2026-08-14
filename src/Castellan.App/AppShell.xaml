@@ -12,6 +12,7 @@
         <ShellContent Title="{x:Static strings:AppResources.Tab_Transactions}" Route="transactions" ContentTemplate="{DataTemplate views:TransactionsPage}" />
         <ShellContent Title="{x:Static strings:AppResources.Tab_Envelopes}"    Route="envelopes"    ContentTemplate="{DataTemplate views:EnvelopesPage}" />
         <ShellContent Title="{x:Static strings:AppResources.Tab_Inbox}"       Route="inbox"        ContentTemplate="{DataTemplate views:InboxPage}" />
+        <ShellContent Title="Fundusze"                                         Route="funds"        ContentTemplate="{DataTemplate views:FundsPage}" />
     </TabBar>
 
 </Shell>

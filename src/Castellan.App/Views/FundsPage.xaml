@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.FundsPage"
+             x:DataType="vm:FundsViewModel"
+             Title="Fundusze">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="+" Command="{Binding AddFundCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout>
+
+            <!-- Paydate setup banner (shown once until configured) -->
+            <Border IsVisible="{Binding NeedsPaydate}"
+                    BackgroundColor="#FFF9C4" Padding="12,10" Margin="12,8,12,0"
+                    StrokeShape="RoundRectangle 8" Stroke="Transparent">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Podaj dzień miesiąca, w którym otrzymujesz wypłatę — pozwoli to dokładnie wyliczyć miesięczne raty."
+                           FontSize="12" TextColor="#5D4037" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <Entry Grid.Column="0"
+                               Text="{Binding PaydateText}"
+                               Keyboard="Numeric"
+                               Placeholder="np. 25"
+                               MaxLength="2" />
+                        <Button Grid.Column="1"
+                                Text="Zapisz"
+                                Command="{Binding SavePaydateCommand}"
+                                BackgroundColor="#F57F17" TextColor="White"
+                                FontSize="13" Padding="12,6" CornerRadius="6" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Text="Brak funduszy. Dodaj pierwszy tapując +."
+                   HorizontalOptions="Center" TextColor="Gray"
+                   FontSize="14" Margin="0,60"
+                   IsVisible="{Binding IsEmpty}" />
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}"
+                                 IsVisible="{Binding IsNotEmpty}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FundRow">
+                        <Border Margin="12,6" Padding="14,12"
+                                StrokeShape="RoundRectangle 10">
+                            <VerticalStackLayout Spacing="8">
+
+                                <!-- Header: name + kind + balance/target -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                        <Label Text="{Binding Name}"
+                                               FontSize="15" FontAttributes="Bold"
+                                               LineBreakMode="TailTruncation" />
+                                        <Label Text="{Binding KindDisplay}"
+                                               FontSize="11" TextColor="Gray" />
+                                    </VerticalStackLayout>
+                                    <VerticalStackLayout Grid.Column="1"
+                                                         HorizontalOptions="End" Spacing="2">
+                                        <Label Text="{Binding BalanceDisplay}"
+                                               FontSize="16" FontAttributes="Bold"
+                                               HorizontalOptions="End" />
+                                        <Label Text="{Binding TargetDisplay}"
+                                               FontSize="11" TextColor="Gray"
+                                               HorizontalOptions="End" />
+                                    </VerticalStackLayout>
+                                </Grid>
+
+                                <!-- Progress bar toward target -->
+                                <ProgressBar Progress="{Binding Progress}"
+                                             ProgressColor="#2196F3"
+                                             HeightRequest="6" />
+
+                                <!-- Delay indicator + deadline -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding PeriodsRemainingDisplay}"
+                                           FontSize="11" TextColor="Gray"
+                                           VerticalOptions="Center" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding DeficitDisplay}"
+                                           FontSize="11" TextColor="#F44336"
+                                           IsVisible="{Binding IsDelayed}"
+                                           VerticalOptions="Center" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding DeficitDisplay}"
+                                           FontSize="11" TextColor="#4CAF50"
+                                           IsVisible="{Binding IsNotDelayed}"
+                                           VerticalOptions="Center" />
+                                </Grid>
+
+                                <!-- Suggested monthly + contribute button -->
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0"
+                                           Text="{Binding SuggestedMonthlyDisplay}"
+                                           FontSize="12" FontAttributes="Bold"
+                                           TextColor="#1565C0"
+                                           VerticalOptions="Center" />
+                                    <Button Grid.Column="1"
+                                            Text="Wpłać"
+                                            Command="{Binding ContributeCommand}"
+                                            FontSize="12" Padding="12,6"
+                                            CornerRadius="6"
+                                            BackgroundColor="#2196F3"
+                                            TextColor="White" />
+                                </Grid>
+
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

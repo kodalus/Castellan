@@ -41,3 +41,9 @@ public readonly record struct CategoryRuleId(Guid Value)
     public static CategoryRuleId New() => new(Guid.CreateVersion7());
     public override string ToString() => Value.ToString();
 }
+
+public readonly record struct FundId(Guid Value)
+{
+    public static FundId New() => new(Guid.CreateVersion7());
+    public override string ToString() => Value.ToString();
+}
