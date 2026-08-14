@@ -8,10 +8,10 @@
              Title="{x:Static strings:AppResources.Tab_Transactions}">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="⚡" Command="{Binding QuickAddCommand}" Order="Secondary" Priority="0" />
         <ToolbarItem Text="Reguły" Command="{Binding ManageRulesCommand}" Order="Secondary" Priority="1" />
         <ToolbarItem Text="Kategorie" Command="{Binding ManageCategoriesCommand}" Order="Secondary" Priority="2" />
-        <ToolbarItem Text="+" Command="{Binding AddTransactionCommand}" />
+        <ToolbarItem Text="⚡" Command="{Binding QuickAddCommand}" Priority="0" />
+        <ToolbarItem Text="+" Command="{Binding AddTransactionCommand}" Priority="1" />
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto,*">

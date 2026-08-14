@@ -30,8 +30,24 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
 
     [ObservableProperty] private string _monthDisplay = "";
     [ObservableProperty] private string _availableFundsText = "0";
+    [ObservableProperty] private string _remainingToAllocateDisplay = "";
+    [ObservableProperty] private bool _isOverAllocated;
 
     public ObservableCollection<EnvelopeInputRow> Envelopes { get; } = [];
+
+    partial void OnAvailableFundsTextChanged(string value) => Recalculate();
+
+    private void Recalculate()
+    {
+        var funds = ParseAmount(AvailableFundsText);
+        var planned = Envelopes.Sum(r => ParseAmount(r.PlannedAmountText));
+        var remaining = funds - planned;
+        IsOverAllocated = remaining < 0;
+        RemainingToAllocateDisplay = $"Do zaplanowania: {remaining:N2} zł";
+    }
+
+    private static decimal ParseAmount(string text) =>
+        decimal.TryParse(text.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0m;
 
     public PlanEnvelopesViewModel(
         ICategoryRepository categories,
@@ -68,8 +84,12 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
             var amtText = existing is not null
                 ? (existing.PlannedAmount.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture)
                 : "0";
-            Envelopes.Add(new EnvelopeInputRow(c.Id, c.Name, amtText));
+            var row = new EnvelopeInputRow(c.Id, c.Name, amtText);
+            row.PropertyChanged += (_, _) => Recalculate();
+            Envelopes.Add(row);
         }
+
+        Recalculate();
     }
 
     [RelayCommand]
