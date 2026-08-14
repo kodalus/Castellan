@@ -45,8 +45,6 @@
                                IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
-            <BoxView HeightRequest="80" Color="Transparent" />
-
         </VerticalStackLayout>
     </ScrollView>
 

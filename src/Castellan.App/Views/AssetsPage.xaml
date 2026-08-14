@@ -11,7 +11,7 @@
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout>
+        <VerticalStackLayout Padding="0,0,0,16">
 
             <!-- Summary card: total autonomy -->
             <Border Margin="12,10,12,4" Padding="16,14"
@@ -108,8 +108,6 @@
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>
-
-            <BoxView HeightRequest="80" Color="Transparent" />
 
         </VerticalStackLayout>
     </ScrollView>
