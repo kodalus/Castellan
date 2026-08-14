@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.BackupPage"
+             x:DataType="vm:BackupViewModel"
+             Title="Kopia zapasowa">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <!-- Export -->
+            <Border Padding="16" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Eksport danych" FontSize="16" FontAttributes="Bold" />
+                    <Label TextColor="Gray" FontSize="13"
+                           Text="Tworzy plik JSON ze wszystkimi kontami, transakcjami, kopertami, funduszami i aktywami. Możesz go zapisać w chmurze lub przesłać mailem." />
+                    <Button Text="Eksportuj do JSON"
+                            Command="{Binding ExportCommand}"
+                            HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Import -->
+            <Border Padding="16" StrokeShape="RoundRectangle 12">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Import danych" FontSize="16" FontAttributes="Bold" />
+                    <Label TextColor="Gray" FontSize="13"
+                           Text="Wczytuje dane z pliku JSON. UWAGA: zastępuje wszystkie obecne dane. Zalecane po reinstalacji aplikacji lub przeniesieniu na nowe urządzenie." />
+                    <Button Text="Importuj z pliku JSON"
+                            Command="{Binding ImportCommand}"
+                            HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Status -->
+            <Border Padding="14,12" StrokeShape="RoundRectangle 10"
+                    IsVisible="{Binding HasStatus}">
+                <Label Text="{Binding StatusMessage}"
+                       FontSize="13" />
+            </Border>
+
+            <!-- Busy -->
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+            <BoxView HeightRequest="80" Color="Transparent" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

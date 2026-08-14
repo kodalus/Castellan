@@ -48,6 +48,8 @@ public static class MauiProgram
         builder.Services.AddTransient<CreateAssetUseCase>();
         builder.Services.AddTransient<UpdateAssetValueUseCase>();
         builder.Services.AddTransient<GetCushionOverviewUseCase>();
+        builder.Services.AddTransient<ExportDataUseCase>();
+        builder.Services.AddTransient<ImportDataUseCase>();
 
 #if ANDROID
         builder.Services.AddSingleton<INotificationPermissionService,
@@ -77,6 +79,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AssetsViewModel>();
         builder.Services.AddTransient<AddAssetViewModel>();
         builder.Services.AddTransient<UpdateAssetValueViewModel>();
+        builder.Services.AddTransient<BackupViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
         builder.Services.AddTransient<DashboardPage>();
@@ -101,6 +104,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AssetsPage>();
         builder.Services.AddTransient<AddAssetPage>();
         builder.Services.AddTransient<UpdateAssetValuePage>();
+        builder.Services.AddTransient<BackupPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
