@@ -12,15 +12,24 @@
         <ToolbarItem Text="Statystyki" Command="{Binding OpenStatisticsCommand}" Order="Secondary" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,Auto,*">
 
-        <HorizontalStackLayout Grid.Row="0" HorizontalOptions="Center" Margin="0,12,0,4" Spacing="12">
+        <!-- Notification health warning -->
+        <Border Grid.Row="0"
+                IsVisible="{Binding IsNotificationWarningVisible}"
+                BackgroundColor="#FFF9C4"
+                Padding="12,8" Margin="12,8,12,0">
+            <Label Text="Powiadomienia bankowe nie zostały odebrane od ponad doby. Sprawdź uprawnienia w zakładce Inbox."
+                   FontSize="12" TextColor="#5D4037" />
+        </Border>
+
+        <HorizontalStackLayout Grid.Row="1" HorizontalOptions="Center" Margin="0,12,0,4" Spacing="12">
             <Button Text="‹" Command="{Binding PreviousMonthCommand}" WidthRequest="40" />
             <Label Text="{Binding CurrentMonthDisplay}" VerticalOptions="Center" FontSize="16" FontAttributes="Bold" />
             <Button Text="›" Command="{Binding NextMonthCommand}" WidthRequest="40" />
         </HorizontalStackLayout>
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" Margin="12,4" ColumnSpacing="8">
+        <Grid Grid.Row="2" ColumnDefinitions="*,*,*" Margin="12,4" ColumnSpacing="8">
             <Border Grid.Column="0" Padding="8" Stroke="{AppThemeBinding Light=#E0E0E0, Dark=#444}" StrokeShape="Rectangle">
                 <VerticalStackLayout Spacing="2">
                     <Label Text="{x:Static strings:AppResources.Dashboard_AvailableFunds}" FontSize="11" TextColor="Gray" />
@@ -41,7 +50,7 @@
             </Border>
         </Grid>
 
-        <CollectionView Grid.Row="2" ItemsSource="{Binding MonthData.Envelopes}" Margin="12,4">
+        <CollectionView Grid.Row="3" ItemsSource="{Binding MonthData.Envelopes}" Margin="12,4">
             <CollectionView.EmptyView>
                 <Label Text="{x:Static strings:AppResources.Dashboard_NoBudget}"
                        HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="0,40" />

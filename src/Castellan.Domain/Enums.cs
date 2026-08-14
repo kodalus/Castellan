@@ -11,3 +11,5 @@ public enum TransactionSource { Manual, Notification, Reconciliation }
 public enum TransactionKind { Regular, Authorization, Transfer, Unidentified }
 
 public enum ParseStatus { Unparsed, Parsed, Ignored }
+
+public enum CategoryRuleOrigin { Learned, Manual }

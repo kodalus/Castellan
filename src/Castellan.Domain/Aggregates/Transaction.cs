@@ -15,6 +15,7 @@ public class Transaction
     public TransactionSource Source { get; private set; }
     public TransactionKind Kind { get; private set; }
     public Guid? TransferGroupId { get; private set; }
+    public Guid? ProposedTransferGroupId { get; private set; }
     public TransactionId? SupersededById { get; private set; }
     public Guid? RawNotificationId { get; private set; }
 
@@ -87,6 +88,8 @@ public class Transaction
 
     public void AssignCategory(CategoryId categoryId) => CategoryId = categoryId;
 
+    public void SetMerchantKey(string? key) => MerchantKey = key;
+
     public void SetNote(string? note) => Note = note;
 
     public void Supersede(TransactionId byId) => SupersededById = byId;
@@ -94,7 +97,14 @@ public class Transaction
     public void SetTransferGroup(Guid groupId)
     {
         TransferGroupId = groupId;
+        ProposedTransferGroupId = null;
         Kind = TransactionKind.Transfer;
         CategoryId = Category.TransferId;
     }
+
+    public void ProposeTransfer(Guid proposalGroupId) =>
+        ProposedTransferGroupId = proposalGroupId;
+
+    public void ClearTransferProposal() =>
+        ProposedTransferGroupId = null;
 }

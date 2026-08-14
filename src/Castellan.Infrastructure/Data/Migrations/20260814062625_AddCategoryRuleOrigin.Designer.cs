@@ -3,6 +3,7 @@ using System;
 using Castellan.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Castellan.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(CastellanDbContext))]
-    partial class CastellanDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260814062625_AddCategoryRuleOrigin")]
+    partial class AddCategoryRuleOrigin
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
@@ -278,9 +281,6 @@ namespace Castellan.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("OccurredAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid?>("ProposedTransferGroupId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("RawMerchant")

@@ -8,7 +8,7 @@ namespace Castellan.Infrastructure.Repositories;
 public class CategoryRuleRepository(CastellanDbContext db) : ICategoryRuleRepository
 {
     public async Task<IReadOnlyList<CategoryRule>> ListAsync(CancellationToken ct = default)
-        => await db.CategoryRules.OrderBy(r => r.Priority).ThenBy(r => r.Pattern).ToListAsync(ct);
+        => await db.CategoryRules.OrderByDescending(r => r.HitCount).ThenBy(r => r.Pattern).ToListAsync(ct);
 
     public async Task AddAsync(CategoryRule rule, CancellationToken ct = default)
         => await db.CategoryRules.AddAsync(rule, ct);

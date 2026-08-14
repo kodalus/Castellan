@@ -17,6 +17,10 @@ public class CategoryRuleConfiguration : IEntityTypeConfiguration<CategoryRule>
             .HasConversion(id => id.Value, v => new CategoryId(v))
             .ValueGeneratedNever();
         builder.Property(r => r.Pattern).IsRequired().HasMaxLength(200);
-        builder.HasIndex(r => r.Priority);
+        builder.Property(r => r.Origin).HasConversion<string>().IsRequired();
+        builder.Property(r => r.LastUsedAt)
+            .HasConversion(
+                v => v.HasValue ? v.Value.ToString("O") : null,
+                v => v != null ? DateTimeOffset.Parse(v) : (DateTimeOffset?)null);
     }
 }

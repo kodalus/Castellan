@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Castellan.Application.Parsers;
 using Castellan.Application.Repositories;
+using Castellan.Application.Services;
 using Castellan.Domain;
 using Castellan.Domain.Aggregates;
 
@@ -69,14 +70,104 @@ public sealed partial class IngestRawNotificationUseCase(
         var tx = Transaction.CreateFromNotification(
             account.Id, parsed.Amount, postedAt, notification.Id, parsed.Merchant);
 
+        // Normalize and set MerchantKey
+        var merchantKey = MerchantKeyNormalizer.Normalize(parsed.Merchant);
+        tx.SetMerchantKey(merchantKey);
+
+        // Apply best matching rule: longest pattern wins, tie-break by HitCount
+        var matchText = merchantKey ?? parsed.Merchant;
         var matchedRule = rules
-            .OrderBy(r => r.Priority)
-            .FirstOrDefault(r => r.Matches(parsed.Merchant));
+            .Where(r => r.Matches(matchText))
+            .OrderByDescending(r => r.Pattern.Length)
+            .ThenByDescending(r => r.HitCount)
+            .FirstOrDefault();
+
         if (matchedRule is not null)
+        {
             tx.AssignCategory(matchedRule.CategoryId);
+            matchedRule.RecordHit();
+        }
+
+        // Deduplication check (spec 11.1)
+        var dedupResult = await TryDeduplicateAsync(tx, account.Id, postedAt, merchantKey, ct);
+        if (dedupResult == DeduplicateResult.ExactDuplicate)
+        {
+            // Drop silently — notification still marked as parsed below
+            notification.MarkParsed(tx.Id);
+            return;
+        }
 
         await transactions.AddAsync(tx, ct);
+
+        // Transfer detection (spec 11.2) — propose after adding tx so it's reachable
+        await TryProposeTransferAsync(tx, account.Id, postedAt, ct);
+
         notification.MarkParsed(tx.Id);
+    }
+
+    private enum DeduplicateResult { None, Authorization, ExactDuplicate }
+
+    private async Task<DeduplicateResult> TryDeduplicateAsync(
+        Transaction tx,
+        AccountId accountId,
+        DateTimeOffset postedAt,
+        string? merchantKey,
+        CancellationToken ct)
+    {
+        if (merchantKey is null) return DeduplicateResult.None;
+
+        var since = postedAt.AddHours(-25);
+        var recent = await transactions.ListRecentAsync(since, ct);
+
+        var candidate = recent.FirstOrDefault(t =>
+            t.AccountId == accountId &&
+            !t.SupersededById.HasValue &&
+            t.MerchantKey is not null &&
+            t.MerchantKey.Equals(merchantKey, StringComparison.OrdinalIgnoreCase) &&
+            AmountMatches(t.Amount.Grosze, tx.Amount.Grosze));
+
+        if (candidate is null) return DeduplicateResult.None;
+
+        if (candidate.Kind == TransactionKind.Authorization)
+        {
+            // Authorization pre-auth → supersede it with the real charge
+            candidate.Supersede(tx.Id);
+            return DeduplicateResult.Authorization;
+        }
+
+        // Same kind — this is an exact duplicate; don't add it
+        return DeduplicateResult.ExactDuplicate;
+    }
+
+    private static bool AmountMatches(long a, long b)
+    {
+        if (a == b) return true;
+        if (b == 0) return a == 0;
+        return Math.Abs(a - b) <= Math.Abs(b) * 2 / 100; // ≤2% diff
+    }
+
+    private async Task TryProposeTransferAsync(
+        Transaction tx,
+        AccountId ownAccountId,
+        DateTimeOffset postedAt,
+        CancellationToken ct)
+    {
+        var since = postedAt.AddHours(-48);
+        var recent = await transactions.ListRecentAsync(since, ct);
+
+        var match = recent.FirstOrDefault(t =>
+            t.AccountId != ownAccountId &&
+            t.Amount.Grosze == -tx.Amount.Grosze &&
+            t.Kind != TransactionKind.Transfer &&
+            t.ProposedTransferGroupId is null &&
+            !t.SupersededById.HasValue &&
+            t.Id != tx.Id);
+
+        if (match is null) return;
+
+        var groupId = Guid.NewGuid();
+        tx.ProposeTransfer(groupId);
+        match.ProposeTransfer(groupId);
     }
 
     private async Task<Account?> FindAccountAsync(string packageName, CancellationToken ct)

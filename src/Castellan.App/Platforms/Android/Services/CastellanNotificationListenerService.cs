@@ -35,6 +35,9 @@ public class CastellanNotificationListenerService : NotificationListenerService
                 var services = IPlatformApplication.Current?.Services;
                 if (services is null) return;
 
+                Microsoft.Maui.Storage.Preferences.Set(
+                    "last_notification_at", DateTimeOffset.UtcNow.Ticks);
+
                 using var scope = services.CreateScope();
                 var useCase = scope.ServiceProvider.GetRequiredService<IngestRawNotificationUseCase>();
                 await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(packageName, title, text, postedAt));

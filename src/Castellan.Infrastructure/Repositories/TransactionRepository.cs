@@ -38,6 +38,25 @@ internal sealed class TransactionRepository(CastellanDbContext db) : ITransactio
             .ToList();
     }
 
+    public async Task<IReadOnlyList<Transaction>> ListUnsortedAsync(CancellationToken ct = default)
+    {
+        var unsortedId = Category.UnsortedId.Value;
+        var all = await db.Transactions.ToListAsync(ct);
+        return [.. all.Where(t => t.CategoryId.Value == unsortedId).OrderByDescending(t => t.OccurredAt)];
+    }
+
+    public async Task<IReadOnlyList<Transaction>> ListRecentAsync(DateTimeOffset since, CancellationToken ct = default)
+    {
+        var all = await db.Transactions.ToListAsync(ct);
+        return [.. all.Where(t => t.OccurredAt >= since)];
+    }
+
+    public async Task<IReadOnlyList<Transaction>> ListProposedTransfersAsync(CancellationToken ct = default)
+    {
+        var all = await db.Transactions.ToListAsync(ct);
+        return [.. all.Where(t => t.ProposedTransferGroupId.HasValue)];
+    }
+
     public Task AddAsync(Transaction transaction, CancellationToken ct = default)
     {
         db.Transactions.Add(transaction);
