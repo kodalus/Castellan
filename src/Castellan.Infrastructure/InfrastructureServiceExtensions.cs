@@ -55,7 +55,7 @@ public static class InfrastructureServiceExtensions
         {
             var expenses = new[]
             {
-                "Jedzenie", "Restauracje i kawiarnie", "Transport", "Paliwo",
+                "Produkty do domu", "Restauracje i kawiarnie", "Transport", "Paliwo",
                 "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
                 "Rozrywka", "Ubrania i obuwie", "Elektronika", "Edukacja",
                 "Sport i rekreacja", "Higiena i kosmetyki", "Podróże", "Inne wydatki",
@@ -81,6 +81,11 @@ public static class InfrastructureServiceExtensions
         EnsureCategory(db, "Dobroczynność");
         EnsureCategory(db, "Przedszkole");
         EnsureCategory(db, "Rezerwy");
+
+        // Jeden paragon ze sklepu to zwykle jedzenie + chemia + higiena naraz,
+        // więc "Jedzenie" zmieniło się w szerszą kategorię zakupową.
+        RenameCategory(db, from: "Jedzenie", to: "Produkty do domu");
+
         db.SaveChanges();
     }
 
@@ -88,5 +93,17 @@ public static class InfrastructureServiceExtensions
     {
         if (!db.Categories.Any(c => !c.IsSystem && c.Name == name))
             db.Categories.Add(Category.Create(name, CategoryKind.Expense));
+    }
+
+    /// <summary>
+    /// Zmienia nazwę tylko wtedy, gdy stara nazwa nadal istnieje, a nowej jeszcze nie ma —
+    /// dzięki temu nie nadpisze własnych zmian użytkownika ani nie zrobi duplikatu.
+    /// </summary>
+    private static void RenameCategory(CastellanDbContext db, string from, string to)
+    {
+        if (db.Categories.Any(c => !c.IsSystem && c.Name == to)) return;
+
+        var existing = db.Categories.FirstOrDefault(c => !c.IsSystem && c.Name == from);
+        existing?.Rename(to);
     }
 }
