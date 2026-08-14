@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Castellan.App.Services;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
 using Castellan.Domain.Aggregates;
@@ -13,15 +14,22 @@ public sealed class AccountRow
     public string Name { get; }
     public string BalanceDisplay { get; }
     public AccountKind Kind { get; }
+    public bool IsDefault { get; }
+    public bool IsNotDefault => !IsDefault;
     public IAsyncRelayCommand ReconcileCommand { get; }
+    public IAsyncRelayCommand SetDefaultCommand { get; }
 
-    public AccountRow(AccountId id, string name, string balanceDisplay, AccountKind kind, Func<Task> reconcile)
+    public AccountRow(
+        AccountId id, string name, string balanceDisplay, AccountKind kind, bool isDefault,
+        Func<Task> reconcile, Func<Task> setDefault)
     {
         Id = id;
         Name = name;
         BalanceDisplay = balanceDisplay;
         Kind = kind;
+        IsDefault = isDefault;
         ReconcileCommand = new AsyncRelayCommand(reconcile);
+        SetDefaultCommand = new AsyncRelayCommand(setDefault);
     }
 }
 
@@ -41,12 +49,19 @@ public partial class AccountsViewModel : ObservableObject
         {
             Accounts.Clear();
             var list = await _getAccounts.ExecuteAsync(ct);
+            var defaultId = DefaultAccountPreference.Get();
             foreach (var a in list.Where(a => !a.IsArchived))
             {
                 var captured = a;
                 Accounts.Add(new AccountRow(
                     a.Id, a.Name, a.CurrentBalance.ToString(), a.Kind,
-                    () => Shell.Current.GoToAsync($"reconcileAccount?accountId={captured.Id}&name={Uri.EscapeDataString(captured.Name)}")));
+                    defaultId == a.Id,
+                    () => Shell.Current.GoToAsync($"reconcileAccount?accountId={captured.Id}&name={Uri.EscapeDataString(captured.Name)}"),
+                    async () =>
+                    {
+                        DefaultAccountPreference.Set(captured.Id);
+                        await LoadAsync();
+                    }));
             }
             IsEmpty = Accounts.Count == 0;
         }

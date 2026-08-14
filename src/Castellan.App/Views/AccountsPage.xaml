@@ -25,6 +25,13 @@
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="4">
                         <Label Text="{Binding BalanceDisplay}" FontSize="15" HorizontalOptions="End" />
+                        <Label Text="★ Domyślne" FontSize="11" TextColor="#1565C0"
+                               HorizontalOptions="End"
+                               IsVisible="{Binding IsDefault}" />
+                        <Button Text="Ustaw domyślne"
+                                Command="{Binding SetDefaultCommand}"
+                                FontSize="11" HeightRequest="30" Padding="10,0"
+                                IsVisible="{Binding IsNotDefault}" />
                         <Button Text="Uzgodnij"
                                 Command="{Binding ReconcileCommand}"
                                 FontSize="11" HeightRequest="30" Padding="10,0" />
