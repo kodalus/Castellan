@@ -51,25 +51,40 @@ public static class InfrastructureServiceExtensions
         using var scope = services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
 
-        if (db.Categories.Any(c => !c.IsSystem)) return;
-
-        var expenses = new[]
+        if (!db.Categories.Any(c => !c.IsSystem))
         {
-            "Jedzenie", "Restauracje i kawiarnie", "Transport", "Paliwo",
-            "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
-            "Rozrywka", "Ubrania i obuwie", "Elektronika", "Edukacja",
-            "Sport i rekreacja", "Higiena i kosmetyki", "Podróże", "Inne wydatki",
-        };
-        var incomes = new[]
-        {
-            "Wynagrodzenie", "Premia", "Zwrot kosztów", "Inne przychody",
-        };
+            var expenses = new[]
+            {
+                "Jedzenie", "Restauracje i kawiarnie", "Transport", "Paliwo",
+                "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
+                "Rozrywka", "Ubrania i obuwie", "Elektronika", "Edukacja",
+                "Sport i rekreacja", "Higiena i kosmetyki", "Podróże", "Inne wydatki",
+                "Inwestycje", "Dobroczynność",
+            };
+            var incomes = new[]
+            {
+                "Wynagrodzenie", "Premia", "Zwrot kosztów", "Inne przychody",
+            };
 
-        foreach (var name in expenses)
-            db.Categories.Add(Category.Create(name, CategoryKind.Expense));
-        foreach (var name in incomes)
-            db.Categories.Add(Category.Create(name, CategoryKind.Income));
+            foreach (var name in expenses)
+                db.Categories.Add(Category.Create(name, CategoryKind.Expense));
+            foreach (var name in incomes)
+                db.Categories.Add(Category.Create(name, CategoryKind.Income));
 
+            db.SaveChanges();
+            return;
+        }
+
+        // Kategorie dodane po pierwszym seedzie — dopilnuj ich także w istniejących bazach.
+        // Archiwizacja kategorii zachowuje nazwę, więc zarchiwizowane nie wracają.
+        EnsureCategory(db, "Inwestycje");
+        EnsureCategory(db, "Dobroczynność");
         db.SaveChanges();
+    }
+
+    private static void EnsureCategory(CastellanDbContext db, string name)
+    {
+        if (!db.Categories.Any(c => !c.IsSystem && c.Name == name))
+            db.Categories.Add(Category.Create(name, CategoryKind.Expense));
     }
 }
