@@ -19,6 +19,8 @@ public partial class AddTransactionViewModel : ObservableObject
     private readonly ICategoryRepository _categories;
     private readonly AddManualTransactionUseCase _addTx;
 
+    private IReadOnlyList<Category> _allCategories = [];
+
     public ObservableCollection<AccountOption> AccountOptions { get; } = [];
     public ObservableCollection<CategoryOption> CategoryOptions { get; } = [];
 
@@ -27,6 +29,20 @@ public partial class AddTransactionViewModel : ObservableObject
     [ObservableProperty] private string _amountText = "";
     [ObservableProperty] private DateTime _date = DateTime.Today;
     [ObservableProperty] private string? _note;
+
+    // Znak kwoty wynika z trybu, nie z tego, czy użytkownik pamiętał o minusie.
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsExpense))]
+    private bool _isIncome;
+
+    // Zapisywalna, bo RadioButton "Wydatek" wiąże się TwoWay i musi móc ją ustawić.
+    public bool IsExpense
+    {
+        get => !IsIncome;
+        set => IsIncome = !value;
+    }
+
+    partial void OnIsIncomeChanged(bool value) => FillCategoryOptions();
 
     public AddTransactionViewModel(
         IAccountRepository accounts,
@@ -42,17 +58,25 @@ public partial class AddTransactionViewModel : ObservableObject
     public async Task LoadAsync(CancellationToken ct = default)
     {
         AccountOptions.Clear();
-        CategoryOptions.Clear();
 
         var accounts = await _accounts.ListAsync(ct);
         foreach (var a in accounts) AccountOptions.Add(new AccountOption(a.Id, a.Name));
 
-        var categories = await _categories.ListAsync(ct);
-        foreach (var c in categories.Where(c => !c.IsSystem && !c.IsArchived))
-            CategoryOptions.Add(new CategoryOption(c.Id, c.Name));
+        _allCategories = await _categories.ListAsync(ct);
+        FillCategoryOptions();
 
         if (AccountOptions.Count > 0) AccountIndex = 0;
-        if (CategoryOptions.Count > 0) CategoryIndex = 0;
+    }
+
+    private void FillCategoryOptions()
+    {
+        var kind = IsIncome ? CategoryKind.Income : CategoryKind.Expense;
+
+        CategoryOptions.Clear();
+        foreach (var c in _allCategories.Where(c => !c.IsSystem && !c.IsArchived && c.Kind == kind))
+            CategoryOptions.Add(new CategoryOption(c.Id, c.Name));
+
+        CategoryIndex = CategoryOptions.Count > 0 ? 0 : -1;
     }
 
     [RelayCommand]
@@ -61,7 +85,10 @@ public partial class AddTransactionViewModel : ObservableObject
         if (AccountIndex < 0 || AccountIndex >= AccountOptions.Count) return;
         if (!decimal.TryParse(AmountText.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var dec)) return;
 
-        var grosze = (long)Math.Round(dec * 100, MidpointRounding.AwayFromZero);
+        // Kwotę wpisuje się zawsze dodatnią; minus dokłada tryb "Wydatek".
+        var magnitude = (long)Math.Round(Math.Abs(dec) * 100, MidpointRounding.AwayFromZero);
+        if (magnitude == 0) return;
+        var grosze = IsIncome ? magnitude : -magnitude;
         var accountId = AccountOptions[AccountIndex].Id;
 
         CategoryId categoryId;

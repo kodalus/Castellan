@@ -14,6 +14,13 @@
 
     <VerticalStackLayout Padding="16" Spacing="16">
 
+        <HorizontalStackLayout Spacing="20">
+            <RadioButton Content="Wydatek" GroupName="txKind"
+                         IsChecked="{Binding IsExpense, Mode=TwoWay}" />
+            <RadioButton Content="Przychód" GroupName="txKind"
+                         IsChecked="{Binding IsIncome, Mode=TwoWay}" />
+        </HorizontalStackLayout>
+
         <VerticalStackLayout Spacing="4">
             <Label Text="{x:Static strings:AppResources.Transactions_Account}" FontSize="13" TextColor="Gray" />
             <Picker ItemsSource="{Binding AccountOptions}" ItemDisplayBinding="{Binding Name}"
@@ -23,7 +30,7 @@
         <VerticalStackLayout Spacing="4">
             <Label Text="{x:Static strings:AppResources.Transactions_Amount}" FontSize="13" TextColor="Gray" />
             <Entry Text="{Binding AmountText}" Keyboard="Numeric"
-                   Placeholder="-100.00" />
+                   Placeholder="100.00" />
         </VerticalStackLayout>
 
         <VerticalStackLayout Spacing="4">

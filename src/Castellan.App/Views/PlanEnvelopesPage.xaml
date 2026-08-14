@@ -27,6 +27,12 @@
                     </DataTrigger>
                 </Label.Triggers>
             </Label>
+            <Button Text="{Binding IncomeHintDisplay}"
+                    Command="{Binding ApplyIncomeHintCommand}"
+                    IsVisible="{Binding HasIncomeHint}"
+                    FontSize="12" Padding="12,8" CornerRadius="6"
+                    BackgroundColor="#E8F5E9" TextColor="#2E7D32"
+                    HorizontalOptions="Fill" />
             <Button Text="{Binding ReserveHintDisplay}"
                     Command="{Binding ApplyReserveHintCommand}"
                     IsVisible="{Binding HasReserveHint}"

@@ -28,9 +28,11 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     private readonly IMonthBudgetRepository _budgets;
     private readonly PlanMonthUseCase _plan;
     private readonly GetFundOverviewUseCase _fundOverview;
+    private readonly ITransactionRepository _transactions;
 
     private YearMonth _month;
     private decimal _suggestedReserve;
+    private decimal _suggestedFunds;
 
     [ObservableProperty] private string _monthDisplay = "";
     [ObservableProperty] private string _availableFundsText = "0";
@@ -38,6 +40,8 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     [ObservableProperty] private bool _isOverAllocated;
     [ObservableProperty] private string _reserveHintDisplay = "";
     [ObservableProperty] private bool _hasReserveHint;
+    [ObservableProperty] private string _incomeHintDisplay = "";
+    [ObservableProperty] private bool _hasIncomeHint;
 
     public ObservableCollection<EnvelopeInputRow> Envelopes { get; } = [];
 
@@ -70,12 +74,47 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
         ICategoryRepository categories,
         IMonthBudgetRepository budgets,
         PlanMonthUseCase plan,
-        GetFundOverviewUseCase fundOverview)
+        GetFundOverviewUseCase fundOverview,
+        ITransactionRepository transactions)
     {
         _categories = categories;
         _budgets = budgets;
         _plan = plan;
         _fundOverview = fundOverview;
+        _transactions = transactions;
+    }
+
+    /// <summary>Wpisuje wpływy jako kwotę do rozdysponowania.</summary>
+    [RelayCommand]
+    private void ApplyIncomeHint() =>
+        AvailableFundsText = _suggestedFunds.ToString("F2", CultureInfo.InvariantCulture);
+
+    private async Task LoadIncomeHintAsync(CancellationToken ct)
+    {
+        var income = await SumIncomeAsync(_month, ct);
+        var label  = "Wpływy w tym miesiącu";
+
+        // Plan powstaje zwykle przed wypłatą, więc gdy w bieżącym miesiącu
+        // nic jeszcze nie wpłynęło, bierzemy poprzedni miesiąc jako szacunek.
+        if (income == 0)
+        {
+            income = await SumIncomeAsync(_month.Previous(), ct);
+            label  = "Wpływy z poprzedniego miesiąca";
+        }
+
+        _suggestedFunds  = income;
+        HasIncomeHint    = income > 0;
+        IncomeHintDisplay = $"{label}: {income:N2} zł — wstaw jako środki";
+    }
+
+    private async Task<decimal> SumIncomeAsync(YearMonth month, CancellationToken ct)
+    {
+        var txs = await _transactions.ListForMonthAsync(month, ct);
+        // Ta sama definicja wpływu co w statystykach: dodatnia i nieodrzucona.
+        var grosze = txs
+            .Where(t => !t.IsExcludedFromCalculations && !t.Amount.IsNegative)
+            .Sum(t => t.Amount.Grosze);
+        return grosze / 100m;
     }
 
     /// <summary>Wpisuje sumę odpisów na fundusze do koperty „Rezerwy”.</summary>
@@ -119,6 +158,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
         }
 
         await LoadReserveHintAsync(ct);
+        await LoadIncomeHintAsync(ct);
         Recalculate();
     }
 
