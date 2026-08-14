@@ -62,7 +62,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
 
         var cats = await _categories.ListAsync(ct);
         Envelopes.Clear();
-        foreach (var c in cats.Where(c => !c.IsSystem && !c.IsArchived))
+        foreach (var c in cats.Where(c => !c.IsSystem && !c.IsArchived && c.Kind == CategoryKind.Expense))
         {
             var existing = budget?.Envelopes.FirstOrDefault(e => e.CategoryId == c.Id);
             var amtText = existing is not null

@@ -15,6 +15,7 @@ public sealed class CastellanDbContext : DbContext
     public DbSet<RawNotification> RawNotifications => Set<RawNotification>();
     public DbSet<CategoryRule> CategoryRules => Set<CategoryRule>();
     public DbSet<Fund> Funds => Set<Fund>();
+    public DbSet<Asset> Assets => Set<Asset>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

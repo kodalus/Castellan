@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.UpdateAssetValuePage"
+             x:DataType="vm:UpdateAssetValueViewModel"
+             Title="Aktualizacja wartości">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zapisz"
+                     Command="{Binding SaveCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <!-- Asset name card -->
+            <Border Padding="14,12" StrokeShape="RoundRectangle 10">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="{Binding AssetName}"
+                           FontSize="17" FontAttributes="Bold" />
+                    <Label Text="{Binding CurrentValueDisplay}"
+                           FontSize="13" TextColor="Gray" />
+                </VerticalStackLayout>
+            </Border>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Nowa wartość (zł)" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding NewValueText}"
+                       Keyboard="Numeric"
+                       Placeholder="np. 52000"
+                       ReturnCommand="{Binding SaveCommand}" />
+            </VerticalStackLayout>
+
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="#F44336" FontSize="13"
+                   IsVisible="{Binding HasError}" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

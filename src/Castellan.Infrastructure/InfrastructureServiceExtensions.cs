@@ -28,6 +28,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IRawNotificationRepository, RawNotificationRepository>();
         services.AddScoped<ICategoryRuleRepository, CategoryRuleRepository>();
         services.AddScoped<IFundRepository, FundRepository>();
+        services.AddScoped<IAssetRepository, AssetRepository>();
 
         services.AddSingleton<INotificationParser, IngNotificationParser>();
         services.AddSingleton<INotificationParser, RevolutNotificationParser>();

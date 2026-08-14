@@ -15,3 +15,5 @@ public enum ParseStatus { Unparsed, Parsed, Ignored }
 public enum CategoryRuleOrigin { Learned, Manual }
 
 public enum FundKind { Insurance, Vacation, Tax, Custom }
+
+public enum AssetLiquidity { Immediate, Fast, Medium, Slow }

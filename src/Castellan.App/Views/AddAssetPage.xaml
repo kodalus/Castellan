@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.AddAssetPage"
+             x:DataType="vm:AddAssetViewModel"
+             Title="Nowe aktywo">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zapisz"
+                     Command="{Binding SaveCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Nazwa" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding Name}"
+                       Placeholder="np. Konto oszczędnościowe PKO"
+                       MaxLength="100" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Poziom płynności" FontSize="13" TextColor="Gray" />
+                <Picker ItemsSource="{Binding Liquidities}"
+                        SelectedItem="{Binding SelectedLiquidity}"
+                        ItemDisplayBinding="{Binding Display}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="6">
+                <Label Text="Aktualna wartość (zł)" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding ValueText}"
+                       Keyboard="Numeric"
+                       Placeholder="np. 50000 lub 50000,00" />
+            </VerticalStackLayout>
+
+            <Label Text="{Binding ErrorMessage}"
+                   TextColor="#F44336" FontSize="13"
+                   IsVisible="{Binding HasError}" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>
