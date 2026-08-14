@@ -9,7 +9,8 @@ public sealed record AssetRow(
     string Name,
     AssetLiquidity Liquidity,
     Money Value,
-    DateOnly UpdatedOn);
+    DateOnly UpdatedOn,
+    bool IsAccount = false);
 
 public sealed record CushionTier(
     AssetLiquidity Liquidity,
@@ -24,11 +25,13 @@ public sealed record CushionOverview(
     IReadOnlyList<CushionTier> Tiers,
     Money AvgMonthlyExpense,
     int MonthsOfData,
-    double TotalMonths);
+    double TotalMonths,
+    Money TotalValue);
 
 public sealed class GetCushionOverviewUseCase(
     IAssetRepository assets,
-    ITransactionRepository transactions)
+    ITransactionRepository transactions,
+    GetAccountsWithBalancesUseCase accountBalances)
 {
     private static readonly AssetLiquidity[] TierOrder =
         [AssetLiquidity.Immediate, AssetLiquidity.Fast, AssetLiquidity.Medium, AssetLiquidity.Slow];
@@ -40,6 +43,15 @@ public sealed class GetCushionOverviewUseCase(
 
         var (avgExpense, monthsUsed) = await ComputeAvgExpenseAsync(expenseMonths, ct);
 
+        // Salda kont rozliczeniowych liczą się do płynności natychmiastowej.
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        var checkingRows = (await accountBalances.ExecuteAsync(ct))
+            .Where(a => !a.IsArchived && a.Kind == AccountKind.Checking)
+            .Select(a => new AssetRow(
+                default, $"Konto: {a.Name}", AssetLiquidity.Immediate,
+                a.CurrentBalance, today, IsAccount: true))
+            .ToList();
+
         var cumulative = 0L;
         var tiers = new List<CushionTier>();
 
@@ -49,6 +61,9 @@ public sealed class GetCushionOverviewUseCase(
                 .Where(a => a.Liquidity == liquidity)
                 .Select(a => new AssetRow(a.Id, a.Name, a.Liquidity, a.Value, a.UpdatedOn))
                 .ToList();
+
+            if (liquidity == AssetLiquidity.Immediate)
+                tierAssets = [.. checkingRows, .. tierAssets];
 
             var tierValue = tierAssets.Sum(a => a.Value.Grosze);
             cumulative += tierValue;
@@ -67,10 +82,10 @@ public sealed class GetCushionOverviewUseCase(
         }
 
         double totalMonths = avgExpense.Grosze > 0
-            ? (double)active.Sum(a => a.Value.Grosze) / avgExpense.Grosze
+            ? (double)cumulative / avgExpense.Grosze
             : 0;
 
-        return new CushionOverview(tiers, avgExpense, monthsUsed, totalMonths);
+        return new CushionOverview(tiers, avgExpense, monthsUsed, totalMonths, new Money(cumulative));
     }
 
     private async Task<(Money avg, int months)> ComputeAvgExpenseAsync(int count, CancellationToken ct)

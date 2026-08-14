@@ -17,12 +17,15 @@ public sealed class AssetRowVm
     public string UpdatedDisplay { get; }
     public ICommand UpdateCommand { get; }
 
+    public bool IsAccount { get; }
+
     public AssetRowVm(AssetRow row, ICommand updateCommand)
     {
         Id             = row.Id;
         Name           = row.Name;
+        IsAccount      = row.IsAccount;
         ValueDisplay   = $"{row.Value.Grosze / 100m:N2} zł";
-        UpdatedDisplay = row.UpdatedOn.ToString("d.MM.yyyy");
+        UpdatedDisplay = row.IsAccount ? "saldo konta" : row.UpdatedOn.ToString("d.MM.yyyy");
         UpdateCommand  = updateCommand;
     }
 }
@@ -60,6 +63,7 @@ public partial class AssetsViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsNotEmpty))]
     [NotifyPropertyChangedFor(nameof(TotalMonthsDisplay))]
     [NotifyPropertyChangedFor(nameof(AvgExpenseDisplay))]
+    [NotifyPropertyChangedFor(nameof(TotalValueDisplay))]
     private CushionOverview? _cushion;
 
     [ObservableProperty] private bool _isBusy;
@@ -76,6 +80,10 @@ public partial class AssetsViewModel : ObservableObject
         ? $"śr. wydatki: {Cushion.AvgMonthlyExpense.Grosze / 100m:N2} zł / mies. (z {Cushion.MonthsOfData} mies.)"
         : "brak danych o wydatkach";
 
+    public string TotalValueDisplay => Cushion is not null
+        ? $"razem: {Cushion.TotalValue.Grosze / 100m:N2} zł"
+        : "";
+
     public AssetsViewModel(GetCushionOverviewUseCase overview)
     {
         _overview = overview;
@@ -90,7 +98,11 @@ public partial class AssetsViewModel : ObservableObject
             Cushion = await _overview.ExecuteAsync(ct: ct);
 
             var updateCmd = new AsyncRelayCommand<AssetId>(async id =>
-                await Shell.Current.GoToAsync($"updateAssetValue?assetId={id}"));
+            {
+                // Wiersze kont rozliczeniowych są tylko do odczytu (saldo z rozliczeń).
+                if (id == default) return;
+                await Shell.Current.GoToAsync($"updateAssetValue?assetId={id}");
+            });
 
             Tiers = new ObservableCollection<CushionTierVm>(
                 Cushion.Tiers.Select(t => new CushionTierVm(t, updateCmd)));
