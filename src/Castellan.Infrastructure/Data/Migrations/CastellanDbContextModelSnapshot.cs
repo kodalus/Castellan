@@ -51,6 +51,37 @@ namespace Castellan.Infrastructure.Data.Migrations
                     b.ToTable("Accounts");
                 });
 
+            modelBuilder.Entity("Castellan.Domain.Aggregates.Asset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsArchived")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Liquidity")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UpdatedOn")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Value")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Assets", (string)null);
+                });
+
             modelBuilder.Entity("Castellan.Domain.Aggregates.Category", b =>
                 {
                     b.Property<Guid>("Id")
@@ -149,37 +180,6 @@ namespace Castellan.Infrastructure.Data.Migrations
                     b.HasIndex("MonthBudgetId");
 
                     b.ToTable("Envelopes", (string)null);
-                });
-
-            modelBuilder.Entity("Castellan.Domain.Aggregates.Asset", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsArchived")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER")
-                        .HasDefaultValue(false);
-
-                    b.Property<string>("Liquidity")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("UpdatedOn")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<long>("Value")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Assets");
                 });
 
             modelBuilder.Entity("Castellan.Domain.Aggregates.Fund", b =>
@@ -347,6 +347,9 @@ namespace Castellan.Infrastructure.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("PaidFromFundId")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ProposedTransferGroupId")
