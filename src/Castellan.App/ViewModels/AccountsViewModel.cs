@@ -13,7 +13,7 @@ public sealed class AccountRow
     public AccountId Id { get; }
     public string Name { get; }
     public string BalanceDisplay { get; }
-    public AccountKind Kind { get; }
+    public string KindDisplay { get; }
     public bool IsDefault { get; }
     public bool IsNotDefault => !IsDefault;
     public IAsyncRelayCommand ReconcileCommand { get; }
@@ -26,7 +26,12 @@ public sealed class AccountRow
         Id = id;
         Name = name;
         BalanceDisplay = balanceDisplay;
-        Kind = kind;
+        KindDisplay = kind switch
+        {
+            AccountKind.Checking => "Rachunek bieżący",
+            AccountKind.Savings  => "Oszczędnościowe",
+            _                    => kind.ToString(),
+        };
         IsDefault = isDefault;
         ReconcileCommand = new AsyncRelayCommand(reconcile);
         SetDefaultCommand = new AsyncRelayCommand(setDefault);

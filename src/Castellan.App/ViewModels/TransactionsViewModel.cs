@@ -124,35 +124,42 @@ public partial class TransactionsViewModel : ObservableObject
         var page = Shell.Current?.CurrentPage;
         if (page is null) return;
 
-        if (row.IsPaidFromFund)
+        try
         {
-            var undo = await page.DisplayAlertAsync(
-                "Pokryte z funduszu",
-                $"Ten wydatek jest pokryty z funduszu „{row.FundName}”. Cofnąć? Kwota wróci na saldo funduszu, a wydatek znów obciąży koperty.",
-                "Cofnij", "Zostaw");
-            if (!undo) return;
+            if (row.IsPaidFromFund)
+            {
+                var undo = await page.DisplayAlertAsync(
+                    "Pokryte z funduszu",
+                    $"Ten wydatek jest pokryty z funduszu „{row.FundName}”. Cofnąć? Kwota wróci na saldo funduszu, a wydatek znów obciąży koperty.",
+                    "Cofnij", "Zostaw");
+                if (!undo) return;
 
-            await _payFromFund.UndoAsync(row.Id, ct);
+                await _payFromFund.UndoAsync(row.Id, ct);
+                await LoadAsync(ct);
+                return;
+            }
+
+            var funds = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
+            if (funds.Count == 0)
+            {
+                await page.DisplayAlertAsync("Brak funduszy", "Najpierw utwórz fundusz w zakładce Fundusze.", "OK");
+                return;
+            }
+
+            var choice = await page.DisplayActionSheet(
+                "Pokryj z funduszu", "Anuluj", null, [.. funds.Select(f => f.Name)]);
+            if (string.IsNullOrEmpty(choice) || choice == "Anuluj") return;
+
+            var fund = funds.FirstOrDefault(f => f.Name == choice);
+            if (fund is null) return;
+
+            await _payFromFund.ExecuteAsync(row.Id, fund.Id, ct);
             await LoadAsync(ct);
-            return;
         }
-
-        var funds = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
-        if (funds.Count == 0)
+        catch (Exception ex)
         {
-            await page.DisplayAlertAsync("Brak funduszy", "Najpierw utwórz fundusz w zakładce Fundusze.", "OK");
-            return;
+            await page.DisplayAlertAsync("Błąd", DescribeException(ex), "OK");
         }
-
-        var choice = await page.DisplayActionSheet(
-            "Pokryj z funduszu", "Anuluj", null, [.. funds.Select(f => f.Name)]);
-        if (string.IsNullOrEmpty(choice) || choice == "Anuluj") return;
-
-        var fund = funds.FirstOrDefault(f => f.Name == choice);
-        if (fund is null) return;
-
-        await _payFromFund.ExecuteAsync(row.Id, fund.Id, ct);
-        await LoadAsync(ct);
     }
 
     [RelayCommand]
@@ -165,8 +172,26 @@ public partial class TransactionsViewModel : ObservableObject
     [RelayCommand]
     private async Task DeleteTransactionAsync(TransactionRow row, CancellationToken ct = default)
     {
-        await _delete.ExecuteAsync(row.Id, ct);
-        Transactions.Remove(row);
-        IsEmpty = Transactions.Count == 0;
+        try
+        {
+            await _delete.ExecuteAsync(row.Id, ct);
+            Transactions.Remove(row);
+            IsEmpty = Transactions.Count == 0;
+        }
+        catch (Exception ex)
+        {
+            // Bez try/catch tutaj nieobsłużony wyjątek (np. gdy dwa szybkie przesunięcia
+            // trafią w tę samą transakcję) zamykał całą aplikację zamiast pokazać komunikat.
+            if (Shell.Current?.CurrentPage is Page page)
+                await page.DisplayAlertAsync("Błąd usuwania transakcji", DescribeException(ex), "OK");
+        }
+    }
+
+    private static string DescribeException(Exception ex)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (var e = ex; e != null; e = e.InnerException)
+            sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
+        return sb.ToString();
     }
 }

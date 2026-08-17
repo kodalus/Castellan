@@ -21,7 +21,7 @@
                 <Grid ColumnDefinitions="*,Auto" Padding="4,12">
                     <VerticalStackLayout Grid.Column="0" Spacing="2">
                         <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold" />
-                        <Label Text="{Binding Kind}" FontSize="12" TextColor="Gray" />
+                        <Label Text="{Binding KindDisplay}" FontSize="12" TextColor="Gray" />
                     </VerticalStackLayout>
                     <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="4">
                         <Label Text="{Binding BalanceDisplay}" FontSize="15" HorizontalOptions="End" />
