@@ -16,6 +16,7 @@ public class MainActivity : MauiAppCompatActivity
         // AppShell, który przy starcie odczytuje PendingNavigation.
         HandleIntent(Intent);
         base.OnCreate(savedInstanceState);
+        MoreTabLabel.StripFrom(Window?.DecorView);
     }
 
     protected override void OnNewIntent(Intent? intent)

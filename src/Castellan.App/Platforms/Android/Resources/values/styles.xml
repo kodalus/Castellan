@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+        Nadpisanie motywu wygenerowanego przez MAUI. Nazwa musi być dokładnie ta sama
+        (Maui.MainTheme.NoActionBar), bo to jej używa MainActivity po zniknięciu splashu;
+        zasoby aplikacji mają pierwszeństwo przed zasobami bibliotek, więc ta definicja
+        wygrywa. Pierwsze pięć pozycji to kopia oryginału — bez nich zniknąłby pasek akcji
+        i tryb zaznaczania tekstu.
+    -->
+    <style name="Maui.MainTheme.NoActionBar" parent="Maui.MainTheme">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="windowActionModeOverlay">true</item>
+        <item name="android:actionModeBackground">?attr/colorPrimary</item>
+        <item name="android:actionModeStyle">@style/ActionMode</item>
+
+        <!--
+            Bez tego pasek stanu bierze colorPrimary (mosiądz) przyciemniony systemową
+            zasłoną i wychodzi brudnobrązowy nad prawie czarną aplikacją.
+        -->
+        <item name="android:statusBarColor">@color/castellanGround</item>
+        <item name="android:navigationBarColor">@color/castellanSurface</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">@color/castellanGround</item>
+        <item name="android:colorBackground">@color/castellanGround</item>
+
+        <item name="colorSurface">@color/castellanSurface</item>
+        <item name="colorOnSurface">@color/castellanTextPrimary</item>
+
+        <!-- Arkusz „więcej” pod trzema kropkami. -->
+        <item name="bottomSheetDialogTheme">@style/Castellan.BottomSheetDialog</item>
+    </style>
+
+    <style name="Castellan.BottomSheetDialog" parent="Theme.MaterialComponents.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/Castellan.BottomSheet</item>
+        <item name="android:colorBackground">@color/castellanSurface</item>
+        <item name="colorSurface">@color/castellanSurface</item>
+        <item name="colorOnSurface">@color/castellanTextPrimary</item>
+        <item name="android:textColorPrimary">@color/castellanTextPrimary</item>
+        <item name="android:textColorSecondary">@color/castellanTextSecondary</item>
+        <item name="android:navigationBarColor">@color/castellanSurface</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+    <style name="Castellan.BottomSheet" parent="Widget.MaterialComponents.BottomSheet">
+        <item name="backgroundTint">@color/castellanSurface</item>
+    </style>
+
+</resources>

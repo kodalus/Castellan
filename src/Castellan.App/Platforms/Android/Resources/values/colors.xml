@@ -1,6 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#512BD4</color>
-    <color name="colorPrimaryDark">#2B0B98</color>
-    <color name="colorAccent">#2B0B98</color>
+    <color name="colorPrimary">#D9A441</color>
+    <color name="colorPrimaryDark">#0F1216</color>
+    <color name="colorAccent">#D9A441</color>
+
+    <!--
+        Te same wartości co w Resources/Styles/Colors.xaml. Muszą istnieć osobno,
+        bo natywne okna Androida (arkusz „więcej”, alerty, wybór daty) nie widzą
+        zasobów MAUI — czytają wyłącznie motyw z res/values.
+    -->
+    <color name="castellanGround">#0F1216</color>
+    <color name="castellanSurface">#171B21</color>
+    <color name="castellanSurfaceRaised">#20252C</color>
+    <color name="castellanHairline">#2B323B</color>
+    <color name="castellanTextPrimary">#E9ECEF</color>
+    <color name="castellanTextSecondary">#98A1AC</color>
+    <color name="castellanBrass">#D9A441</color>
 </resources>
