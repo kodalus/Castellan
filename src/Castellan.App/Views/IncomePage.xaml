@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             xmlns:usecases="clr-namespace:Castellan.Application.UseCases;assembly=Castellan.Application"
+             x:Class="Castellan.App.Views.IncomePage"
+             x:DataType="vm:IncomeViewModel"
+             Title="Przychody">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Planuj" Command="{Binding PlanIncomeCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <Label Grid.Row="0" Text="{Binding MonthDisplay}"
+               FontSize="16" FontAttributes="Bold"
+               HorizontalOptions="Center" Margin="0,12,0,8" />
+
+        <!-- Summary: planned vs actual -->
+        <Border Grid.Row="1" Margin="12,0,12,8" Padding="16,14" StrokeShape="RoundRectangle 12">
+            <VerticalStackLayout Spacing="6">
+                <Grid ColumnDefinitions="*,*">
+                    <VerticalStackLayout Grid.Column="0" Spacing="2">
+                        <Label Text="Otrzymano" FontSize="11" TextColor="Gray" />
+                        <Label Text="{Binding ActualTotalDisplay}" FontSize="20" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                    <VerticalStackLayout Grid.Column="1" Spacing="2" HorizontalOptions="End">
+                        <Label Text="Zaplanowano" FontSize="11" TextColor="Gray" HorizontalOptions="End" />
+                        <Label Text="{Binding PlannedTotalDisplay}" FontSize="20" FontAttributes="Bold"
+                               TextColor="Gray" HorizontalOptions="End" />
+                    </VerticalStackLayout>
+                </Grid>
+                <Label Text="{Binding DifferenceDisplay}" FontSize="12" FontAttributes="Bold" TextColor="#2E7D32">
+                    <Label.Triggers>
+                        <DataTrigger TargetType="Label" Binding="{Binding IsShort}" Value="True">
+                            <Setter Property="TextColor" Value="#C62828" />
+                        </DataTrigger>
+                    </Label.Triggers>
+                </Label>
+            </VerticalStackLayout>
+        </Border>
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Items}" Margin="12,0">
+            <CollectionView.EmptyView>
+                <Label Text="Brak planu przychodów na ten miesiąc. Tapnij „Planuj”, aby wpisać spodziewane kwoty."
+                       HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray"
+                       Margin="24,40" HorizontalTextAlignment="Center" />
+            </CollectionView.EmptyView>
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="usecases:IncomeOverview">
+                    <Grid RowDefinitions="Auto,6" Padding="4,10">
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
+                            <Label Grid.Column="0" Text="{Binding CategoryName}" FontSize="14" />
+                            <Label Grid.Column="1" Text="{Binding ActualDisplay}" FontSize="13"
+                                   HorizontalOptions="End" Margin="8,0" />
+                            <Label Grid.Column="2" Text="{Binding PlannedDisplay}" FontSize="13"
+                                   TextColor="Gray" HorizontalOptions="End" />
+                        </Grid>
+                        <ProgressBar Grid.Row="1" Progress="{Binding ReceivedRatio}"
+                                     ProgressColor="#2E7D32" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+</ContentPage>

@@ -20,7 +20,10 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
         var categories   = await db.Categories.AsNoTracking().ToListAsync(ct);
         var rules        = await db.CategoryRules.AsNoTracking().ToListAsync(ct);
         var transactions = await db.Transactions.AsNoTracking().ToListAsync(ct);
-        var budgets      = await db.MonthBudgets.Include(b => b.Envelopes).AsNoTracking().ToListAsync(ct);
+        var budgets      = await db.MonthBudgets
+            .Include(b => b.Envelopes)
+            .Include(b => b.IncomePlans)
+            .AsNoTracking().ToListAsync(ct);
         var funds        = await db.Funds.AsNoTracking().ToListAsync(ct);
         var assets       = await db.Assets.AsNoTracking().ToListAsync(ct);
 
@@ -45,7 +48,8 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                 t.PaidFromFundId?.Value)).ToList(),
             MonthBudgets = budgets.Select(b => new MonthBudgetDto(
                 b.Id.Value, b.Month.ToString(), b.AvailableFunds.Grosze, b.PlannedAt.ToString("O"),
-                b.Envelopes.Select(e => new EnvelopeDto(e.CategoryId.Value, e.PlannedAmount.Grosze)).ToList())).ToList(),
+                b.Envelopes.Select(e => new EnvelopeDto(e.CategoryId.Value, e.PlannedAmount.Grosze)).ToList(),
+                b.IncomePlans.Select(p => new IncomePlanDto(p.CategoryId.Value, p.PlannedAmount.Grosze)).ToList())).ToList(),
             Funds = funds.Select(f => new FundDto(
                 f.Id.Value, f.Name, f.Kind.ToString(), f.TargetAmount.Grosze,
                 f.StartMonth.ToString("yyyy-MM-dd"), f.Deadline.ToString("yyyy-MM-dd"), f.Balance.Grosze, f.IsArchived)).ToList(),
@@ -61,6 +65,7 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
         try
         {
             // Clear in FK-safe order
+            await db.Database.ExecuteSqlRawAsync("DELETE FROM IncomePlans", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM Envelopes", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM Transactions", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM Reconciliations", ct);
@@ -112,6 +117,12 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                     await db.Database.ExecuteSqlRawAsync(
                         "INSERT INTO Envelopes (Id, MonthBudgetId, CategoryId, PlannedAmount) VALUES ({0},{1},{2},{3})",
                         Guid.CreateVersion7(), b.Id, e.CategoryId, e.PlannedAmount);
+
+                // Null-safe: kopie sprzed dodania planów przychodów nie mają tej sekcji.
+                foreach (var p in b.IncomePlans ?? [])
+                    await db.Database.ExecuteSqlRawAsync(
+                        "INSERT INTO IncomePlans (Id, MonthBudgetId, CategoryId, PlannedAmount) VALUES ({0},{1},{2},{3})",
+                        Guid.CreateVersion7(), b.Id, p.CategoryId, p.PlannedAmount);
             }
 
             foreach (var f in data.Funds)
@@ -125,6 +136,13 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                     a.Id, a.Name, a.Liquidity, a.Value, a.UpdatedOn, a.IsArchived ? 1 : 0);
 
             await tx.CommitAsync(ct);
+
+            // Powyższe INSERT/DELETE poszły surowym SQL i ominęły tracker EF — jeśli
+            // ten sam (długo żyjący w MAUI) CastellanDbContext śledził jakiekolwiek
+            // encje sprzed importu, teraz odnoszą się do wierszy, których import
+            // już nie zna. Bez wyczyszczenia kolejny zapis na takiej encji kończy się
+            // DbUpdateConcurrencyException, mimo że dane w bazie są poprawne.
+            db.ChangeTracker.Clear();
         }
         catch
         {

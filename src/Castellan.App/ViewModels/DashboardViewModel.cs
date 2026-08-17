@@ -62,4 +62,8 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand]
     private static async Task OpenStatisticsAsync()
         => await Shell.Current.GoToAsync("statistics");
+
+    [RelayCommand]
+    private async Task OpenIncomeAsync()
+        => await Shell.Current.GoToAsync($"income?month={CurrentMonth}");
 }

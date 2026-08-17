@@ -33,7 +33,7 @@ public class SchemaMatchesModelTest
                     () => db.Accounts.ToList(),
                     () => db.Categories.ToList(),
                     () => db.Transactions.ToList(),
-                    () => db.MonthBudgets.Include(b => b.Envelopes).ToList(),
+                    () => db.MonthBudgets.Include(b => b.Envelopes).Include(b => b.IncomePlans).ToList(),
                     () => db.Reconciliations.ToList(),
                     () => db.RawNotifications.ToList(),
                     () => db.CategoryRules.ToList(),

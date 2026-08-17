@@ -64,7 +64,7 @@ public static class InfrastructureServiceExtensions
             };
             var incomes = new[]
             {
-                "Wynagrodzenie", "Premia", "Zwrot kosztów", "800+", "Inne przychody",
+                "Wypłata", "Wpłata małżonka", "800+", "Inne",
             };
 
             foreach (var name in expenses)
@@ -83,10 +83,17 @@ public static class InfrastructureServiceExtensions
         EnsureCategory(db, "Przedszkole", CategoryKind.Expense);
         EnsureCategory(db, "Rezerwy", CategoryKind.Expense);
         EnsureCategory(db, "800+", CategoryKind.Income);
+        EnsureCategory(db, "Wpłata małżonka", CategoryKind.Income);
 
         // Jeden paragon ze sklepu to zwykle jedzenie + chemia + higiena naraz,
         // więc "Jedzenie" zmieniło się w szerszą kategorię zakupową.
         RenameCategory(db, from: "Jedzenie", to: "Produkty do domu");
+
+        // Nazwy przychodów skrócone do tych realnie używanych. Zmiana nazwy (a nie
+        // dodanie nowej kategorii) zachowuje powiązane transakcje i reguły — te
+        // wiążą się po ID, nie po nazwie.
+        RenameCategory(db, from: "Wynagrodzenie", to: "Wypłata");
+        RenameCategory(db, from: "Inne przychody", to: "Inne");
 
         db.SaveChanges();
     }

@@ -31,6 +31,16 @@ internal sealed class MonthBudgetConfiguration : IEntityTypeConfiguration<MonthB
         builder.Navigation(b => b.Envelopes)
             .UsePropertyAccessMode(PropertyAccessMode.Field);
 
+        builder.HasMany(b => b.IncomePlans)
+            .WithOne()
+            .HasForeignKey(p => p.MonthBudgetId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(b => b.IncomePlans)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.Ignore(b => b.TotalPlannedIncome);
+
         builder.HasIndex(b => b.Month).IsUnique();
     }
 }

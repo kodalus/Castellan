@@ -33,6 +33,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     private YearMonth _month;
     private decimal _suggestedReserve;
     private decimal _suggestedFunds;
+    private decimal _plannedIncomeTotal;
 
     [ObservableProperty] private string _monthDisplay = "";
     [ObservableProperty] private string _availableFundsText = "0";
@@ -42,8 +43,11 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     [ObservableProperty] private bool _hasReserveHint;
     [ObservableProperty] private string _incomeHintDisplay = "";
     [ObservableProperty] private bool _hasIncomeHint;
+    [ObservableProperty] private string _plannedIncomeDisplay = "";
+    [ObservableProperty] private bool _hasPlannedIncome;
 
     public ObservableCollection<EnvelopeInputRow> Envelopes { get; } = [];
+    public ObservableCollection<EnvelopeInputRow> Incomes { get; } = [];
 
     partial void OnAvailableFundsTextChanged(string value) => Recalculate();
 
@@ -54,7 +58,17 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
         var remaining = funds - planned;
         IsOverAllocated = remaining < 0;
         RemainingToAllocateDisplay = $"Do zaplanowania: {remaining:N2} zł";
+
+        var plannedIncome = Incomes.Sum(r => ParseAmount(r.PlannedAmountText));
+        PlannedIncomeDisplay = $"Suma planowanych przychodów: {plannedIncome:N2} zł";
+        HasPlannedIncome = plannedIncome > 0;
+        _plannedIncomeTotal = plannedIncome;
     }
+
+    /// <summary>Przepisuje sumę zaplanowanych przychodów do pola środków do dyspozycji.</summary>
+    [RelayCommand]
+    private void ApplyPlannedIncome() =>
+        AvailableFundsText = _plannedIncomeTotal.ToString("F2", CultureInfo.InvariantCulture);
 
     private static decimal ParseAmount(string text) =>
         decimal.TryParse(text.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var v) ? v : 0m;
@@ -157,6 +171,18 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
             Envelopes.Add(row);
         }
 
+        Incomes.Clear();
+        foreach (var c in cats.Where(c => !c.IsSystem && !c.IsArchived && c.Kind == CategoryKind.Income))
+        {
+            var existing = budget?.IncomePlans.FirstOrDefault(p => p.CategoryId == c.Id);
+            var amtText = existing is not null
+                ? (existing.PlannedAmount.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture)
+                : "0";
+            var row = new EnvelopeInputRow(c.Id, c.Name, amtText);
+            row.PropertyChanged += (_, _) => Recalculate();
+            Incomes.Add(row);
+        }
+
         await LoadReserveHintAsync(ct);
         await LoadIncomeHintAsync(ct);
         Recalculate();
@@ -176,9 +202,17 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
             if (grosze > 0) inputs.Add(new PlanMonthUseCase.EnvelopeInput(row.CategoryId, new Money(grosze)));
         }
 
+        var incomeInputs = new List<PlanMonthUseCase.IncomeInput>();
+        foreach (var row in Incomes)
+        {
+            if (!decimal.TryParse(row.PlannedAmountText.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var amt)) continue;
+            var grosze = (long)Math.Round(amt * 100, MidpointRounding.AwayFromZero);
+            if (grosze > 0) incomeInputs.Add(new PlanMonthUseCase.IncomeInput(row.CategoryId, new Money(grosze)));
+        }
+
         try
         {
-            await _plan.ExecuteAsync(new PlanMonthUseCase.Input(_month, funds, inputs), ct);
+            await _plan.ExecuteAsync(new PlanMonthUseCase.Input(_month, funds, inputs, incomeInputs), ct);
             await Shell.Current.GoToAsync("..");
         }
         catch (BudgetOverAllocatedException ex)

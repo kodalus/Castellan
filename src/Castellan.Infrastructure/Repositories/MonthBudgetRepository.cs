@@ -10,11 +10,15 @@ namespace Castellan.Infrastructure.Repositories;
 internal sealed class MonthBudgetRepository(CastellanDbContext db) : IMonthBudgetRepository
 {
     public Task<MonthBudget?> GetAsync(MonthBudgetId id, CancellationToken ct = default)
-        => db.MonthBudgets.Include(b => b.Envelopes).FirstOrDefaultAsync(b => b.Id == id, ct);
+        => db.MonthBudgets
+            .Include(b => b.Envelopes)
+            .Include(b => b.IncomePlans)
+            .FirstOrDefaultAsync(b => b.Id == id, ct);
 
     public Task<MonthBudget?> GetForMonthAsync(YearMonth month, CancellationToken ct = default)
         => db.MonthBudgets
             .Include(b => b.Envelopes)
+            .Include(b => b.IncomePlans)
             .FirstOrDefaultAsync(b => b.Month == month, ct);
 
     public Task AddAsync(MonthBudget budget, CancellationToken ct = default)

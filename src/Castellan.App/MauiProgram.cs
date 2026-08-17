@@ -75,6 +75,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CategoriesViewModel>();
         builder.Services.AddTransient<AddCategoryViewModel>();
         builder.Services.AddTransient<StatisticsViewModel>();
+        builder.Services.AddTransient<IncomeViewModel>();
         builder.Services.AddTransient<AssignCategoryViewModel>();
         builder.Services.AddTransient<FundsViewModel>();
         builder.Services.AddTransient<AddFundViewModel>();
@@ -101,6 +102,7 @@ public static class MauiProgram
         builder.Services.AddTransient<CategoriesPage>();
         builder.Services.AddTransient<AddCategoryPage>();
         builder.Services.AddTransient<StatisticsPage>();
+        builder.Services.AddTransient<IncomePage>();
         builder.Services.AddTransient<AssignCategoryPage>();
         builder.Services.AddTransient<FundsPage>();
         builder.Services.AddTransient<AddFundPage>();

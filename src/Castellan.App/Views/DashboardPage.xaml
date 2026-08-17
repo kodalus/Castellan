@@ -9,7 +9,8 @@
              Title="{x:Static strings:AppResources.Tab_Dashboard}">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Statystyki" Command="{Binding OpenStatisticsCommand}" Order="Secondary" />
+        <ToolbarItem Text="Przychody" Command="{Binding OpenIncomeCommand}" Order="Secondary" Priority="0" />
+        <ToolbarItem Text="Statystyki" Command="{Binding OpenStatisticsCommand}" Order="Secondary" Priority="1" />
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">

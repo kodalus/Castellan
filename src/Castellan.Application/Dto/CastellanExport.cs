@@ -31,9 +31,12 @@ public sealed record TransactionDto(
 
 public sealed record EnvelopeDto(Guid CategoryId, long PlannedAmount);
 
+public sealed record IncomePlanDto(Guid CategoryId, long PlannedAmount);
+
 public sealed record MonthBudgetDto(
     Guid Id, string Month, long AvailableFunds, string PlannedAt,
-    List<EnvelopeDto> Envelopes);
+    List<EnvelopeDto> Envelopes,
+    List<IncomePlanDto>? IncomePlans = null);
 
 public sealed record FundDto(
     Guid Id, string Name, string Kind, long TargetAmount, string StartMonth,
