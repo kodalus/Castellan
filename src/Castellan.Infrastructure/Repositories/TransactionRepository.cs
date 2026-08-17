@@ -63,6 +63,12 @@ internal sealed class TransactionRepository(CastellanDbContext db) : ITransactio
         return [.. all.Where(t => t.PaidFromFundId == fundId)];
     }
 
+    public async Task<IReadOnlyList<Transaction>> ListByTransferGroupAsync(Guid transferGroupId, CancellationToken ct = default)
+    {
+        var all = await db.Transactions.ToListAsync(ct);
+        return [.. all.Where(t => t.TransferGroupId == transferGroupId)];
+    }
+
     public Task AddAsync(Transaction transaction, CancellationToken ct = default)
     {
         db.Transactions.Add(transaction);
