@@ -110,17 +110,28 @@ public sealed partial class IngestRawNotificationUseCase(
         string? merchantKey,
         CancellationToken ct)
     {
-        if (merchantKey is null) return DeduplicateResult.None;
-
         var since = postedAt.AddHours(-25);
         var recent = await transactions.ListRecentAsync(since, ct);
 
-        var candidate = recent.FirstOrDefault(t =>
+        var candidate = merchantKey is null ? null : recent.FirstOrDefault(t =>
             t.AccountId == accountId &&
             !t.SupersededById.HasValue &&
             t.MerchantKey is not null &&
             t.MerchantKey.Equals(merchantKey, StringComparison.OrdinalIgnoreCase) &&
             AmountMatches(t.Amount.Grosze, tx.Amount.Grosze));
+
+        // Portfel Google i apka banku często zgłaszają tę samą płatność NFC pod
+        // zupełnie inną nazwą sprzedawcy — Portfel pokazuje nazwę prawną spółki
+        // ("JMP S.A. BIEDRONKA 591"), a bank markę ("Biedronka") — więc dopasowanie
+        // po kluczu sprzedawcy regularnie zawodzi dla tej pary. Gdy nic nie znajdzie
+        // po nazwie, spróbuj wąskiego okna: ta sama kwota co do grosza, to samo
+        // konto, kilkanaście minut różnicy — wystarczająco rzadki zbieg okoliczności,
+        // żeby bezpiecznie uznać to za tę samą transakcję zgłoszoną z dwóch źródeł.
+        candidate ??= recent.FirstOrDefault(t =>
+            t.AccountId == accountId &&
+            !t.SupersededById.HasValue &&
+            t.Amount.Grosze == tx.Amount.Grosze &&
+            Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= 15);
 
         if (candidate is null) return DeduplicateResult.None;
 

@@ -89,6 +89,40 @@ public class NotificationCaptureIntegrationTests
     }
 
     [Fact]
+    public async Task Wallet_and_bank_notification_collapse_even_when_merchant_names_dont_match()
+    {
+        // Realny przypadek: Portfel Google pokazuje nazwę prawną spółki
+        // ("JMP S.A. BIEDRONKA 591"), Revolut markę ("Biedronka") — ŻADEN rozsądny
+        // normalizator nie uzna tego za ten sam klucz sprzedawcy. Wcześniej to
+        // tworzyło dwie transakcje zamiast jednej.
+        var dbPath = Path.Combine(Path.GetTempPath(), $"castellan_notif_{Guid.NewGuid():N}.db");
+        try
+        {
+            var (db, useCase, _, revolut) = await SetupAsync(dbPath);
+            var now = DateTimeOffset.UtcNow;
+
+            await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(
+                "com.google.android.apps.walletnfcrel", "JMP S.A. BIEDRONKA 591",
+                "Kwota 94,33 zł – karta Revolut Wspólny", now));
+
+            await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(
+                "com.revolut.revolut", "Konto wspólne · Biedronka",
+                "Wydano 94,33 zł.\nSaldo konta „PLN”: 300,00 zł.", now.AddMinutes(1)));
+
+            var txs = await db.Transactions.Where(t => t.AccountId == revolut.Id).ToListAsync();
+
+            txs.Should().ContainSingle();
+            txs[0].Amount.Grosze.Should().Be(-9433);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var path in new[] { dbPath, dbPath + "-wal", dbPath + "-shm" })
+                try { File.Delete(path); } catch (IOException) { }
+        }
+    }
+
+    [Fact]
     public async Task Wallet_only_notification_is_captured_and_routed_to_the_hinted_account()
     {
         // ING doesn't send its own notification for NFC-via-phone payments —
