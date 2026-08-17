@@ -23,6 +23,29 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="0,0,0,16">
 
+                <!-- Wybór trybu pracy stoi na górze Skrzynki, bo to jedyny ekran,
+                     którego zawartość od niego zależy: w trybie ręcznym nic tu
+                     samo nie trafia. -->
+                <Border Style="{StaticResource Card}" Margin="12,10,12,4">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Skąd biorą się transakcje" Style="{StaticResource SectionHeader}" />
+
+                        <VerticalStackLayout Spacing="2">
+                            <RadioButton Content="Z powiadomień bankowych" GroupName="captureMode"
+                                         IsChecked="{Binding UsesNotifications, Mode=TwoWay}" />
+                            <Label Style="{StaticResource Caption}" Margin="36,0,0,0"
+                                   Text="Aplikacja czyta powiadomienia z ING, Revolut i Portfela Google, i sama zakłada transakcje." />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout Spacing="2">
+                            <RadioButton Content="Wpisuję wszystko ręcznie" GroupName="captureMode"
+                                         IsChecked="{Binding UsesManualEntry, Mode=TwoWay}" />
+                            <Label Style="{StaticResource Caption}" Margin="36,0,0,0"
+                                   Text="Powiadomienia są ignorowane, nawet gdy uprawnienie jest przyznane — inaczej ten sam wydatek trafiłby do aplikacji dwa razy. Aplikacja przestaje też upominać się o dostęp." />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
                 <!-- ===== Propozycje przelewów ===== -->
                 <VerticalStackLayout IsVisible="{Binding HasProposals}">
 
@@ -77,7 +100,7 @@
                 <Label Text="Dotknij wiersza, by przypisać kategorię." Style="{StaticResource Caption}"
                        Margin="16,0,16,4" IsVisible="{Binding IsNotEmpty}" />
 
-                <Label Text="Nic nie czeka na kategorię." Style="{StaticResource EmptyState}"
+                <Label Text="{Binding EmptyStateText}" Style="{StaticResource EmptyState}"
                        IsVisible="{Binding IsEmpty}" />
 
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Margin="16,0">

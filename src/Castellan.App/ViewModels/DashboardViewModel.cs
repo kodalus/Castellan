@@ -70,6 +70,14 @@ public partial class DashboardViewModel : ObservableObject
 
     private void CheckNotificationHealth()
     {
+        // W trybie ręcznym cisza w powiadomieniach jest oczekiwana, a nie awarią —
+        // ostrzeżenie byłoby stałym elementem ekranu i nauczyłoby ignorować banery.
+        if (!Services.AppSettings.UsesNotifications)
+        {
+            IsNotificationWarningVisible = false;
+            return;
+        }
+
         var ticks = Preferences.Get("last_notification_at", 0L);
         IsNotificationWarningVisible = ticks == 0 ||
             (DateTimeOffset.UtcNow - new DateTimeOffset(ticks, TimeSpan.Zero)).TotalDays > 1;

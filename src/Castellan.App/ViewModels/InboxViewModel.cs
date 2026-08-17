@@ -46,8 +46,38 @@ public partial class InboxViewModel : ObservableObject
 
     [ObservableProperty] private bool _hasProposals;
 
+    /// <summary>
+    /// Tryb pracy. Bez tego wyboru osoba, która nie ma powiadomień bankowych i nie
+    /// zamierza ich włączać, dostawała w kółko ostrzeżenie o braku uprawnienia —
+    /// czyli nagabywanie o rzecz, której świadomie nie chce.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UsesManualEntry))]
+    [NotifyPropertyChangedFor(nameof(IsPermissionDenied))]
+    [NotifyPropertyChangedFor(nameof(EmptyStateText))]
+    private bool _usesNotifications = Services.AppSettings.UsesNotifications;
+
+    public bool UsesManualEntry
+    {
+        get => !UsesNotifications;
+        set => UsesNotifications = !value;
+    }
+
+    partial void OnUsesNotificationsChanged(bool value)
+    {
+        Services.AppSettings.CaptureMode = value
+            ? Services.CaptureMode.Notifications
+            : Services.CaptureMode.Manual;
+    }
+
     public bool IsNotEmpty => !IsEmpty;
-    public bool IsPermissionDenied => !IsPermissionGranted;
+
+    // W trybie ręcznym brak uprawnienia nie jest usterką, tylko stanem zamierzonym.
+    public bool IsPermissionDenied => UsesNotifications && !IsPermissionGranted;
+
+    public string EmptyStateText => UsesNotifications
+        ? "Nic nie czeka na kategorię."
+        : "W trybie ręcznym nic tu samo nie trafia. Wydatki dodajesz w zakładce Transakcje — „+” albo „⚡”.";
 
     public InboxViewModel(
         ITransactionRepository transactions,

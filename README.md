@@ -34,6 +34,8 @@ Nasłuch przez `NotificationListenerService`. Obsługiwane pakiety:
 
 Powiadomienia z pozostałych aplikacji są odrzucane. Przed zapisem treść jest maskowana — ciągi 4–8 cyfr (numery kart i rachunków) zamieniane na `****`.
 
+Zakładka **Skrzynka** przełącza tryb pracy. W trybie ręcznym nasłuch odrzuca powiadomienie na wejściu, jeszcze przed białą listą pakietów — nawet gdy uprawnienie zostało kiedyś przyznane, bo inaczej osoba wpisująca wydatki sama dostawałaby każdy z nich po raz drugi z banku. Znikają wtedy również oba przypomnienia o powiadomieniach. Ustawienie leży w `Preferences` (klucz `capture_mode`), nie w bazie: dotyczy urządzenia, nie finansów, więc nie ma go w kopii zapasowej.
+
 Ścieżka: powiadomienie → parser danego banku → dopasowanie konta (po nazwie zawierającej „ING” / „Revolut”, dla Portfela Google po podpowiedzi z treści, w ostateczności pierwsze konto rozliczeniowe) → reguła kategorii (wygrywa najdłuższy wzorzec, remis rozstrzyga liczba trafień) → odrzucanie duplikatów → wykrycie przelewu wewnętrznego.
 
 **Odrzucanie duplikatów** działa dwutorowo, bo jedna płatność bywa zgłoszona przez dwa źródła naraz:

@@ -17,6 +17,13 @@ public class CastellanNotificationListenerService : NotificationListenerService
     {
         if (sbn is null) return;
 
+        // Tryb ręczny: użytkownik wpisuje wszystko sam, więc założenie transakcji
+        // z powiadomienia zdublowałoby jego własny wpis. Odcinamy tu, na krawędzi
+        // platformy — use case nie ma prawa wiedzieć o ustawieniach telefonu.
+        // Uprawnienie może zostać przyznane z wcześniejszego użycia, więc nie
+        // wystarczy polegać na tym, że system nas nie zawoła.
+        if (!Castellan.App.Services.AppSettings.UsesNotifications) return;
+
         var packageName = sbn.PackageName ?? "";
 
         // First filter: not in whitelist → discard immediately, no logging
