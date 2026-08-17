@@ -12,6 +12,7 @@ public class Fund
     public DateOnly Deadline { get; private set; }
     public Money Balance { get; private set; }
     public bool IsArchived { get; private set; }
+    public DateOnly? LastContributionMonth { get; private set; }
 
     private Fund() { }
 
@@ -32,8 +33,14 @@ public class Fund
         };
     }
 
-    public void Contribute(Money amount) => Balance = new Money(Balance.Grosze + amount.Grosze);
-    public void Withdraw(Money amount)   => Balance = new Money(Balance.Grosze - amount.Grosze);
+    public void Contribute(Money amount)
+    {
+        Balance = new Money(Balance.Grosze + amount.Grosze);
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        LastContributionMonth = new DateOnly(today.Year, today.Month, 1);
+    }
+
+    public void Withdraw(Money amount) => Balance = new Money(Balance.Grosze - amount.Grosze);
     public void Archive() => IsArchived = true;
 
     /// <summary>
@@ -57,13 +64,23 @@ public class Fund
         ? Math.Min(1.0, (double)Balance.Grosze / TargetAmount.Grosze)
         : 0.0;
 
-    // Upcoming paydates left to contribute before deadline
+    // Upcoming paydates left to contribute before deadline.
+    // Jeśli w tym miesiącu już wpłacono, bieżący okres liczy się jako zrobiony —
+    // inaczej rata przeliczałaby się od nowa i pokazywała, że wciąż trzeba
+    // dołożyć, mimo że wpłata już padła.
     public int PeriodsRemaining(DateOnly today, int paydateDay)
     {
+        var from = HasContributedThisPeriod(today) ? StartOfNextMonth(today) : today;
         if (paydateDay <= 0)
-            return Math.Max(0, (Deadline.Year - today.Year) * 12 + (Deadline.Month - today.Month) + 1);
-        return UpcomingPaydates(today, paydateDay, Deadline);
+            return Math.Max(0, (Deadline.Year - from.Year) * 12 + (Deadline.Month - from.Month) + 1);
+        return UpcomingPaydates(from, paydateDay, Deadline);
     }
+
+    private bool HasContributedThisPeriod(DateOnly today) =>
+        LastContributionMonth is { } m && m.Year == today.Year && m.Month == today.Month;
+
+    private static DateOnly StartOfNextMonth(DateOnly today) =>
+        today.Month == 12 ? new DateOnly(today.Year + 1, 1, 1) : new DateOnly(today.Year, today.Month + 1, 1);
 
     // Suggested contribution per next paycheck = Remaining / periods left
     public Money SuggestedMonthly(DateOnly today, int paydateDay)

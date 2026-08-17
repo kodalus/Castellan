@@ -47,5 +47,10 @@ internal sealed class FundConfiguration : IEntityTypeConfiguration<Fund>
         builder.Property(f => f.IsArchived)
             .IsRequired()
             .HasDefaultValue(false);
+
+        builder.Property(f => f.LastContributionMonth)
+            .HasConversion(
+                d => d == null ? null : d.Value.ToString("yyyy-MM-dd"),
+                v => v == null ? null : DateOnly.ParseExact(v, "yyyy-MM-dd", null));
     }
 }

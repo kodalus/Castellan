@@ -53,7 +53,8 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                 b.IncomePlans.Select(p => new IncomePlanDto(p.CategoryId.Value, p.PlannedAmount.Grosze)).ToList())).ToList(),
             Funds = funds.Select(f => new FundDto(
                 f.Id.Value, f.Name, f.Kind.ToString(), f.TargetAmount.Grosze,
-                f.StartMonth.ToString("yyyy-MM-dd"), f.Deadline.ToString("yyyy-MM-dd"), f.Balance.Grosze, f.IsArchived)).ToList(),
+                f.StartMonth.ToString("yyyy-MM-dd"), f.Deadline.ToString("yyyy-MM-dd"), f.Balance.Grosze, f.IsArchived,
+                f.LastContributionMonth?.ToString("yyyy-MM-dd"))).ToList(),
             Assets = assets.Select(a => new AssetDto(
                 a.Id.Value, a.Name, a.Liquidity.ToString(), a.Value.Grosze,
                 a.UpdatedOn.ToString("yyyy-MM-dd"), a.IsArchived)).ToList(),
@@ -132,8 +133,9 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
 
             foreach (var f in data.Funds)
                 await db.Database.ExecuteSqlRawAsync(
-                    "INSERT INTO Funds (Id, Name, Kind, TargetAmount, StartMonth, Deadline, Balance, IsArchived) VALUES ({0},{1},{2},{3},{4},{5},{6},{7})",
-                    f.Id, f.Name, f.Kind, f.TargetAmount, f.StartMonth, f.Deadline, f.Balance, f.IsArchived ? 1 : 0);
+                    "INSERT INTO Funds (Id, Name, Kind, TargetAmount, StartMonth, Deadline, Balance, IsArchived, LastContributionMonth) VALUES ({0},{1},{2},{3},{4},{5},{6},{7},{8})",
+                    f.Id, f.Name, f.Kind, f.TargetAmount, f.StartMonth, f.Deadline, f.Balance, f.IsArchived ? 1 : 0,
+                    Null(f.LastContributionMonth, SqliteType.Text));
 
             foreach (var a in data.Assets)
                 await db.Database.ExecuteSqlRawAsync(
