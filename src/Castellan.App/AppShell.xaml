@@ -20,6 +20,7 @@
         <ShellContent Title="Fundusze"                                         Icon="tab_funds.png"        Route="funds"        ContentTemplate="{DataTemplate views:FundsPage}" />
         <ShellContent Title="Majątek"                                          Icon="tab_assets.png"       Route="assets"       ContentTemplate="{DataTemplate views:AssetsPage}" />
         <ShellContent Title="Kopia"                                            Icon="tab_backup.png"       Route="backup"       ContentTemplate="{DataTemplate views:BackupPage}" />
+        <ShellContent Title="Pomoc"                                            Icon="tab_help.png"         Route="help"         ContentTemplate="{DataTemplate views:HelpPage}" />
     </TabBar>
 
 </Shell>

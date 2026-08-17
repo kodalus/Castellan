@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.HelpPage"
+             x:DataType="vm:HelpViewModel"
+             Title="Jak to działa">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zwiń wszystko" Command="{Binding CollapseAllCommand}" Order="Secondary" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="12,10,12,32" Spacing="8">
+
+            <Label Style="{StaticResource Secondary}" Margin="4,0,4,6"
+                   Text="Rozdziały są zwinięte — dotknij tytułu, żeby rozwinąć. Zaczynając od zera, przeczytaj „Pierwsze uruchomienie”." />
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Sections}" Spacing="8">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:HelpSection">
+                        <Border Style="{StaticResource Card}" Margin="0">
+                            <VerticalStackLayout Spacing="0">
+
+                                <!-- Cały nagłówek jest celem dotyku, nie sam znak +:
+                                     przy jednoręcznym trzymaniu telefonu trafienie
+                                     w pojedynczy znak na skraju ekranu jest loterią. -->
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Padding="0,2">
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding ToggleCommand}" />
+                                    </Grid.GestureRecognizers>
+                                    <VerticalStackLayout Grid.Column="0" Spacing="3" VerticalOptions="Center">
+                                        <Label Text="{Binding Title}" Style="{StaticResource Title}" />
+                                        <Label Text="{Binding Lead}" Style="{StaticResource Secondary}" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1" Text="{Binding ToggleGlyph}"
+                                           Style="{StaticResource Title}"
+                                           TextColor="{StaticResource Brass}"
+                                           VerticalOptions="Center" WidthRequest="24"
+                                           HorizontalTextAlignment="Center" />
+                                </Grid>
+
+                                <VerticalStackLayout IsVisible="{Binding IsExpanded}" Spacing="0" Margin="0,4,0,0">
+                                    <BoxView Style="{StaticResource Divider}" Margin="0,8,0,0" />
+                                    <VerticalStackLayout BindableLayout.ItemsSource="{Binding Entries}" Spacing="0">
+                                        <BindableLayout.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:HelpEntry">
+                                                <VerticalStackLayout Spacing="4" Padding="0,12,0,0">
+                                                    <Label Text="{Binding Title}" Style="{StaticResource RowTitle}"
+                                                           TextColor="{StaticResource Brass}"
+                                                           FontFamily="OpenSansSemibold"
+                                                           LineBreakMode="WordWrap" />
+                                                    <Label Text="{Binding Body}" Style="{StaticResource Secondary}" />
+                                                </VerticalStackLayout>
+                                            </DataTemplate>
+                                        </BindableLayout.ItemTemplate>
+                                    </VerticalStackLayout>
+                                </VerticalStackLayout>
+
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <Label Style="{StaticResource Caption}" Margin="4,14,4,0"
+                   Text="Dane nie opuszczają telefonu — nie ma konta ani serwera. Jedynym zabezpieczeniem jest kopia zapasowa." />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

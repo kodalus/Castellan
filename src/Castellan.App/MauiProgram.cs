@@ -101,6 +101,7 @@ public static class MauiProgram
         builder.Services.AddTransient<PayDebtViewModel>();
         builder.Services.AddTransient<DebtPlanViewModel>();
         builder.Services.AddTransient<BackupViewModel>();
+        builder.Services.AddTransient<HelpViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
         builder.Services.AddTransient<DashboardPage>();
@@ -134,6 +135,7 @@ public static class MauiProgram
         builder.Services.AddTransient<PayDebtPage>();
         builder.Services.AddTransient<DebtPlanPage>();
         builder.Services.AddTransient<BackupPage>();
+        builder.Services.AddTransient<HelpPage>();
 
 #if DEBUG
         builder.Logging.AddDebug();
