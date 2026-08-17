@@ -109,6 +109,33 @@
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>
 
+            <!-- Funds section — separate from the liquidity tiers on purpose;
+                 fund money is earmarked for a specific future expense, not a
+                 general emergency cushion. -->
+            <VerticalStackLayout IsVisible="{Binding HasFunds}" Margin="0,8,0,0">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,8,16,4">
+                    <Label Grid.Column="0" Text="Fundusze" FontSize="12" FontAttributes="Bold"
+                           TextColor="Gray" VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding FundsTotalDisplay}" FontSize="11"
+                           TextColor="Gray" VerticalOptions="Center" />
+                </Grid>
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding FundRows}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FundRowVm">
+                            <Border Margin="12,2" Padding="14,10" StrokeShape="RoundRectangle 8">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <Label Grid.Column="0" Text="{Binding Name}" FontSize="14"
+                                           VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                                    <Label Grid.Column="1" Text="{Binding ValueDisplay}" FontSize="15"
+                                           FontAttributes="Bold" HorizontalOptions="End" VerticalOptions="Center" />
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
     </ScrollView>
 

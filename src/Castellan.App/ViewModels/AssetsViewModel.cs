@@ -1,7 +1,9 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
+using Castellan.Application.Repositories;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
+using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -52,11 +54,24 @@ public sealed class CushionTierVm
     }
 }
 
+public sealed class FundRowVm
+{
+    public string Name  { get; }
+    public string ValueDisplay { get; }
+
+    public FundRowVm(string name, Money balance)
+    {
+        Name = name;
+        ValueDisplay = $"{balance.Grosze / 100m:N2} zł";
+    }
+}
+
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
 public partial class AssetsViewModel : ObservableObject
 {
     private readonly GetCushionOverviewUseCase _overview;
+    private readonly IFundRepository _funds;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -68,6 +83,9 @@ public partial class AssetsViewModel : ObservableObject
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private ObservableCollection<CushionTierVm> _tiers = [];
+    [ObservableProperty] private ObservableCollection<FundRowVm> _fundRows = [];
+    [ObservableProperty] private string _fundsTotalDisplay = "";
+    [ObservableProperty] private bool _hasFunds;
 
     public bool IsEmpty    => !Tiers.Any(t => t.HasAssets);
     public bool IsNotEmpty => !IsEmpty;
@@ -84,9 +102,10 @@ public partial class AssetsViewModel : ObservableObject
         ? $"razem: {Cushion.TotalValue.Grosze / 100m:N2} zł"
         : "";
 
-    public AssetsViewModel(GetCushionOverviewUseCase overview)
+    public AssetsViewModel(GetCushionOverviewUseCase overview, IFundRepository funds)
     {
         _overview = overview;
+        _funds = funds;
     }
 
     [RelayCommand]
@@ -109,6 +128,16 @@ public partial class AssetsViewModel : ObservableObject
 
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(IsNotEmpty));
+
+            // Fundusze to pieniądze zarezerwowane na konkretny przyszły wydatek, nie
+            // ogólna poduszka awaryjna — pokazane osobno, poza obliczeniem "miesięcy
+            // poduszki" (to zniekształciłoby ten wskaźnik).
+            var activeFunds = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
+            FundRows = new ObservableCollection<FundRowVm>(
+                activeFunds.Select(f => new FundRowVm(f.Name, f.Balance)));
+            HasFunds = activeFunds.Count > 0;
+            var fundsTotal = activeFunds.Sum(f => f.Balance.Grosze);
+            FundsTotalDisplay = $"razem: {fundsTotal / 100m:N2} zł";
         }
         finally
         {

@@ -18,10 +18,13 @@ public sealed record CategoryOption(CategoryId Id, string Name);
 public partial class AddTransactionViewModel : ObservableObject
 {
     private const string DefaultExpenseCategoryName = "Produkty do domu";
+    private const string ReserveCategoryName = "Rezerwy";
 
     private readonly IAccountRepository _accounts;
     private readonly ICategoryRepository _categories;
+    private readonly IFundRepository _funds;
     private readonly AddManualTransactionUseCase _addTx;
+    private readonly ContributeToFundUseCase _contributeToFund;
 
     private IReadOnlyList<Category> _allCategories = [];
 
@@ -51,11 +54,15 @@ public partial class AddTransactionViewModel : ObservableObject
     public AddTransactionViewModel(
         IAccountRepository accounts,
         ICategoryRepository categories,
-        AddManualTransactionUseCase addTx)
+        IFundRepository funds,
+        AddManualTransactionUseCase addTx,
+        ContributeToFundUseCase contributeToFund)
     {
         _accounts = accounts;
         _categories = categories;
+        _funds = funds;
         _addTx = addTx;
+        _contributeToFund = contributeToFund;
     }
 
     [RelayCommand]
@@ -132,11 +139,18 @@ public partial class AddTransactionViewModel : ObservableObject
             categoryId = Category.UnsortedId;
 
         var occurredAt = ManualEntryDateResolver.Resolve(Date, DateTimeOffset.Now);
+        var categoryName = CategoryIndex >= 0 && CategoryIndex < CategoryOptions.Count
+            ? CategoryOptions[CategoryIndex].Name
+            : null;
 
         try
         {
             await _addTx.ExecuteAsync(
                 new AddManualTransactionUseCase.Input(accountId, new Money(grosze), occurredAt, categoryId, Note), ct);
+
+            if (IsExpense && categoryName?.Equals(ReserveCategoryName, StringComparison.OrdinalIgnoreCase) == true)
+                await OfferFundContributionAsync(new Money(magnitude), ct);
+
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
@@ -148,6 +162,28 @@ public partial class AddTransactionViewModel : ObservableObject
             if (Shell.Current?.CurrentPage is Page page)
                 await page.DisplayAlertAsync("Błąd zapisu transakcji", sb.ToString(), "OK");
         }
+    }
+
+    /// <summary>
+    /// Wydatek w kategorii "Rezerwy" to zwykle odkładanie na konkretny fundusz —
+    /// pyta, który, i od razu dolicza kwotę do jego salda, żeby nie trzeba było
+    /// osobno wchodzić na Fundusze i wpłacać ręcznie.
+    /// </summary>
+    private async Task OfferFundContributionAsync(Money amount, CancellationToken ct)
+    {
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        var funds = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
+        if (funds.Count == 0) return;
+
+        var choice = await page.DisplayActionSheet(
+            "Do którego funduszu wpłacić?", "Pomiń", null, [.. funds.Select(f => f.Name)]);
+        if (string.IsNullOrEmpty(choice) || choice == "Pomiń") return;
+
+        var fund = funds.FirstOrDefault(f => f.Name == choice);
+        if (fund is null) return;
+
+        await _contributeToFund.ExecuteAsync(fund.Id, amount, ct);
     }
 
     [RelayCommand]
