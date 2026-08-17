@@ -75,10 +75,13 @@ public partial class TransactionsViewModel : ObservableObject
             var isEditable = tx.Kind != TransactionKind.Transfer
                 && !tx.SupersededById.HasValue
                 && !tx.PaidFromFundId.HasValue;
+            var local = tx.OccurredAt.ToLocalTime();
             Transactions.Add(new TransactionRow(
                 tx.Id,
                 tx.Amount.ToString(),
-                tx.OccurredAt.ToLocalTime().ToString("d"),
+                // Jawny podział wiersza — inaczej wąska kolumna łamie rok w środku
+                // liczby ("17.08.2" / "026").
+                $"{local:dd.MM.}\n{local:yyyy}",
                 catName,
                 tx.Note,
                 tx.IsExcludedFromCalculations,
@@ -117,6 +120,10 @@ public partial class TransactionsViewModel : ObservableObject
     [RelayCommand]
     private static async Task QuickAddAsync()
         => await Shell.Current.GoToAsync("quickAdd");
+
+    [RelayCommand]
+    private static async Task AddTransferAsync()
+        => await Shell.Current.GoToAsync("addTransfer");
 
     [RelayCommand]
     private async Task PayFromFundAsync(TransactionRow row, CancellationToken ct = default)

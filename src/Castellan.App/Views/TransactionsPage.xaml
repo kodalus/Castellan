@@ -8,6 +8,7 @@
              Title="{x:Static strings:AppResources.Tab_Transactions}">
 
     <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Przelew między kontami" Command="{Binding AddTransferCommand}" Order="Secondary" Priority="0" />
         <ToolbarItem Text="Reguły" Command="{Binding ManageRulesCommand}" Order="Secondary" Priority="1" />
         <ToolbarItem Text="Kategorie" Command="{Binding ManageCategoriesCommand}" Order="Secondary" Priority="2" />
         <ToolbarItem Text="⚡" Command="{Binding QuickAddCommand}" Priority="0" />
@@ -49,7 +50,8 @@
                                     CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
                             <Label Grid.Column="0" Text="{Binding DateDisplay}" FontSize="12" TextColor="Gray"
-                                   VerticalOptions="Center" WidthRequest="44" />
+                                   VerticalOptions="Center" WidthRequest="52"
+                                   LineBreakMode="WordWrap" />
                             <VerticalStackLayout Grid.Column="1" Spacing="2">
                                 <Label Text="{Binding CategoryName}" FontSize="14" FontAttributes="Bold" />
                                 <Label Text="{Binding Note}" FontSize="12" TextColor="Gray" />
