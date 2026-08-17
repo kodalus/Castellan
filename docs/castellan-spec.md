@@ -24,7 +24,7 @@ Wszystkie wydatki są płacone kartą, BLIK-iem lub online — gotówki nie ma. 
 
 > Pominięcie danych nie powinno psuć systemu.
 
-Jedynym źródłem prawdy o saldzie jest uzgodnienie z faktycznym stanem konta, a nie suma zapisanych transakcji. Wszystko niezapisane automatycznie trafia do kategorii „Niezidentyfikowane". Zapominalstwo zwiększa jedną liczbę, ale nie przekreśla miesiąca.
+Jedynym źródłem prawdy o saldzie jest uzgodnienie z faktycznym stanem konta, a nie suma zapisanych transakcji. Wszystko niezapisane automatycznie trafia do kategorii „Nierozpoznane". Zapominalstwo zwiększa jedną liczbę, ale nie przekreśla miesiąca.
 
 ### 1.4 Ograniczenia
 
@@ -38,11 +38,19 @@ Nigdy nie wchodzi w zakres: backend, konta użytkowników, synchronizacja w chmu
 |---|---|---|
 | 0 | Szkielet rozwiązania, BD, testy, CI | Pusta aplikacja uruchamia się na telefonie |
 | 1 | Konta, kategorie, transakcje, budżet miesiąca | Działające ręczne prowadzenie budżetu |
-| 2 | Uzgodnienie, „Niezidentyfikowane", szybkie wprowadzanie, widget | Budżet przeżywający pominięcia |
+| 2 | Uzgodnienie, „Nierozpoznane", szybkie wprowadzanie, widget | Budżet przeżywający pominięcia |
 | 3 | Przechwytywanie powiadomień, skrzynka odbiorcza, deduplikacja, autokategoryzacja | Budżet bez ręcznego wprowadzania — stan docelowy |
 | 4 | Fundusze nieregularnych płatności | Ubezpieczenie, podatki, urlop |
 | 5 | Aktywa, płynność, poduszka finansowa | Odpowiedź na pytanie „na ile wystarczy" |
 | 6 | Backup, eksport, publiczne README | Projekt nadaje się do portfolio |
+| 7 | Zobowiązania, plan spłaty, majątek netto | Dług przestaje być tematem omijanym |
+| 8 | Jeden system stylów, ikony, przewodnik w aplikacji | Aplikacja do oddania w cudze ręce |
+
+Etapy 7–8 dołożone po wdrożeniu pierwszych sześciu. Poza tabelą doszły też: planowanie
+przychodów obok kopert, statystyki sześciu miesięcy oraz wybór trybu przechwytywania
+(powiadomienia albo pełne wprowadzanie ręczne) — ten ostatni dlatego, że aplikacji
+zaczęła używać osoba bez powiadomień bankowych, dla której ostrzeżenie o ich braku
+było stałym elementem ekranu.
 
 **Ważne ostrzeżenie dotyczące etapów 1–2.** Dają ręczne wprowadzanie — to samo narzędzie, które zostało już porzucone. Trzeba je przejść szybko i nie próbować „żyć" z nimi: prawdziwa codzienna eksploatacja zaczyna się od etapu 3. Jeśli między etapem 2 a etapem 3 powstanie przerwa miesięczna, istnieje ryzyko rozczarowania projektem zanim zacznie działać zgodnie z przeznaczeniem.
 
@@ -93,11 +101,16 @@ Typ `Money` — value object nad `long Grosze`. Waluta jedna (PLN), nie wynosić
 |---|---|
 | MVVM | `CommunityToolkit.Mvvm` (source generators) |
 | DI | wbudowany `Microsoft.Extensions.DependencyInjection` |
-| Logowanie | `Microsoft.Extensions.Logging` + dostawca plikowy, rotacja 7 dni |
+| Logowanie | `Microsoft.Extensions.Logging.Debug` — **tylko** w kompilacji DEBUG |
 | Testy | `xUnit`, `FluentAssertions` |
 | Serializacja | `System.Text.Json` |
 
 Mediator (MediatR i odpowiedniki) nie jest używany: scenariuszy jest mało, dodatkowa warstwa ukrywa przepływ sterowania, który trzeba umieć wyjaśnić.
+
+Dostawca plikowy z rotacją nie powstał. Wydanie nie pisze żadnych logów, a diagnostyka
+opiera się na tabeli `RawNotifications` (nieparsowalne powiadomienia trafiają tam
+z redakcją) i na `Android.Util.Log` w nasłuchu. Jest to zgodne z 15.6: plik logów nie
+jest chroniony piaskownicą, więc jego brak upraszcza sprawę zamiast ją komplikować.
 
 ---
 
@@ -189,8 +202,8 @@ CurrentBalance = LastReconciledBalance + Σ Transaction.Amount, gdzie OccurredAt
 Kategorie systemowe, tworzone przez migrację, nie są usuwane ani zmieniane:
 
 - **`Unsorted`** — „Nieprzypisane": transakcja przechwycona, kategoria nieprzypisana.
-- **`Unidentified`** — „Niezidentyfikowane": rozbieżność wykryta podczas uzgodnienia.
-- **`Transfer`** — „Przelew między kontami": techniczna, wykluczona ze wszystkich sum.
+- **`Unidentified`** — „Nierozpoznane": rozbieżność wykryta podczas uzgodnienia.
+- **`Transfer`** — „Przelew": techniczna, wykluczona ze wszystkich sum.
 
 ### 5.4 Transaction (agregat)
 
@@ -206,13 +219,25 @@ Kategorie systemowe, tworzone przez migrację, nie są usuwane ani zmieniane:
 | `Note` | `string?` | |
 | `Source` | `Manual` \| `Notification` \| `Reconciliation` | |
 | `Kind` | `Regular` \| `Authorization` \| `Transfer` \| `Unidentified` | |
-| `TransferGroupId` | `Guid?` | łączy obie strony przelewu |
+| `TransferGroupId` | `Guid?` | łączy obie strony potwierdzonego przelewu |
+| `ProposedTransferGroupId` | `Guid?` | łączy parę czekającą na rozstrzygnięcie w skrzynce |
 | `SupersededById` | `TransactionId?` | autoryzacja scalona z obciążeniem |
 | `RawNotificationId` | `Guid?` | odniesienie do źródłowego powiadomienia |
+| `PaidFromFundId` | `FundId?` | wydatek pokryty z funduszu |
 
-Transakcja jest niemodyfikowalna z wyjątkiem `CategoryId`, `Note`, `Kind`, `TransferGroupId`, `SupersededById`. Kwota i data nie są edytowane — błędna transakcja jest usuwana i wprowadzana ponownie, aby historia uzgodnień pozostała odtwarzalna.
+**Odejście od pierwotnego założenia.** Spec zakładał transakcję niemodyfikowalną poza
+kategorią i notatką: błędny wpis miał być usuwany i wprowadzany ponownie, żeby historia
+uzgodnień pozostała odtwarzalna. W praktyce najczęstsza poprawka to literówka w kwocie
+zaraz po wpisaniu, a usuwanie i wpisywanie od nowa okazało się karą za pomyłkę.
+`UpdateTransactionUseCase` edytuje dziś konto, kwotę, datę, kategorię i notatkę.
+Odtwarzalność historii uzgodnień zabezpiecza co innego: uzgodnienie patrzy wyłącznie
+na okno od poprzedniego uzgodnienia (N-6), więc edycja starszej transakcji nie
+przepisuje przeszłych rozliczeń.
 
-**Wykluczone z obliczenia wydatków:** `Kind == Transfer`, `SupersededById != null`.
+**Wykluczone z obliczeń** (`IsExcludedFromCalculations`): `Kind == Transfer`,
+`SupersededById != null`, `PaidFromFundId != null`. Trzeci przypadek doszedł wraz
+z funduszami: odpisy obciążyły koperty w poprzednich miesiącach, więc sama zapłata
+nie może obciążyć budżetu drugi raz.
 
 ### 5.5 MonthBudget (agregat)
 
@@ -222,12 +247,20 @@ Transakcja jest niemodyfikowalna z wyjątkiem `CategoryId`, `Note`, `Kind`, `Tra
 | `Month` | `YearMonth` |
 | `AvailableFunds` | `Money` — migawka dostępnych środków w momencie planowania |
 | `Envelopes` | `List<Envelope>` |
+| `IncomePlans` | `List<IncomePlan>` |
 | `PlannedAt` | `DateTimeOffset` |
 
 `Envelope` (encja wewnątrz agregatu): `CategoryId`, `PlannedAmount`.
+`IncomePlan` (encja wewnątrz agregatu): `CategoryId`, `PlannedAmount`.
 
-Metody agregatu: `Plan(categoryId, amount)`, `Remove(categoryId)`, `RefreshAvailableFunds(money)`.
-Wszystkie sprawdzają niezmiennik N-1 i rzucają `BudgetOverAllocatedException` przy naruszeniu.
+Metody agregatu: `Plan(categoryId, amount)`, `Remove(categoryId)`, `RefreshAvailableFunds(money)`,
+`PlanIncome(categoryId, amount)`, `RemoveIncome(categoryId)`. Metody kopertowe sprawdzają
+niezmiennik N-1 i rzucają `BudgetOverAllocatedException` przy naruszeniu.
+
+**Dlaczego plan przychodu to osobna encja, a nie koperta.** Koperty dzielą pulę
+`AvailableFunds` i podlegają N-1. Plan przychodu jest przewidywaniem wpływu — gdyby
+trafił do tej samej listy, zwiększałby limit do rozdzielenia o pieniądze, których
+jeszcze nie ma.
 
 ### 5.6 Reconciliation (agregat)
 
@@ -275,13 +308,30 @@ Przechowywane po redakcji tekstu wyłącznie dla powiadomień z białej listy pa
 |---|---|---|
 | `Id` | `FundId` | |
 | `Name` | `string` | „OC+AC", „Podatek od nieruchomości", „Urlop" |
-| `TargetAmount` | `Money` | kwota płatności |
-| `Periodicity` | `Monthly` \| `Bimonthly` \| `Quarterly` \| `SemiAnnual` \| `Annual` | |
-| `NextDueDate` | `DateOnly` | |
-| `AccruedBalance` | `Money` | **zgromadzone** — czego nie było w Excelu |
-| `LinkedAccountId` | `AccountId?` | gdzie fizycznie leżą pieniądze |
+| `Kind` | `Insurance` \| `Vacation` \| `Tax` \| `Custom` | |
+| `TargetAmount` | `Money` | kwota do uzbierania |
+| `StartMonth` | `DateOnly` | pierwszy dzień miesiąca założenia — kotwica wyliczeń |
+| `Deadline` | `DateOnly` | pierwszy dzień miesiąca, na kiedy potrzebne są pieniądze |
+| `Balance` | `Money` | zgromadzone |
+| `LastContributionMonth` | `DateOnly?` | miesiąc ostatniej wpłaty |
+| `IsArchived` | `bool` | |
 
-Operacje: `Accrue(money)`, `Spend(money)` (zeruje zgromadzone i przesuwa `NextDueDate`).
+Operacje: `Contribute(money)`, `Withdraw(money)`, `Update(...)`, `Archive()`.
+
+**Odejście od pierwotnego założenia.** Spec zakładał fundusz cykliczny: okresowość plus
+data następnej płatności, a `Spend` zerował zgromadzone i przesuwał termin. Wdrożony
+model jest jednorazowy — cel plus termin — bo realne przypadki (OC auto, podatek,
+urlop) mają różne kwoty w kolejnych latach, a odnawianie funduszu tą samą kwotą
+zakłamywałoby ratę. Zapłata odbywa się dziś przez powiązanie istniejącego wydatku
+z funduszem (`PaidFromFundId`), nie przez metodę `Spend`.
+
+`Update` celowo nie rusza `Balance` ani `StartMonth`: saldo zmienia się wyłącznie
+wpłatami, a `StartMonth` jest kotwicą wyliczenia „ile powinno być odłożone do teraz" —
+przesunięcie go zafałszowałoby historię opóźnień.
+
+`LastContributionMonth` doszedł po zgłoszeniu z eksploatacji: bez niego bieżący okres
+liczył się jako niezrobiony aż do dnia wypłaty, więc rata przeliczała się na nowo zaraz
+po wpłacie, tak jakby trzeba było dołożyć drugi raz.
 
 ### 5.10 Asset (agregat) — etap 5
 
@@ -289,10 +339,45 @@ Operacje: `Accrue(money)`, `Spend(money)` (zeruje zgromadzone i przesuwa `NextDu
 |---|---|
 | `Id` | `AssetId` |
 | `Name` | `string` |
-| `CurrentValue` | `Money` |
-| `ValuedAt` | `DateTimeOffset` |
-| `LiquidityTier` | `Immediate` \| `Month` \| `Locked` |
-| `IsInMonthlyBudget` | `bool` — zawsze `false`, z wyjątkiem szczególnych przypadków |
+| `Liquidity` | `Immediate` \| `Fast` \| `Medium` \| `Slow` |
+| `Value` | `Money` |
+| `UpdatedOn` | `DateOnly` |
+| `IsArchived` | `bool` |
+
+Poziomów płynności są cztery, nie trzy jak zakładał pierwotny spec: między „dostępne
+jutro" a „zamrożone" mieści się zbyt wiele (obligacje, fundusze inwestycyjne, lokaty
+z karą), żeby wrzucać to do jednego worka. Nazwy pokazywane użytkownikowi mówią o
+czasie, nie o kategorii: „Natychmiastowa", „Szybka (1–3 dni)", „Średnia (tygodnie)",
+„Wolna (miesiące)".
+
+Pole `IsInMonthlyBudget` nie powstało — aktywa z założenia nie wchodzą do budżetu
+miesiąca, a flaga „z wyjątkiem szczególnych przypadków" nie miała ani jednego
+zastosowania.
+
+### 5.11 Debt (agregat) — etap 7
+
+| Pole | Typ | Uwaga |
+|---|---|---|
+| `Id` | `DebtId` | |
+| `Name` | `string` | |
+| `Kind` | `Mortgage` \| `CashLoan` \| `Installment` \| `FromFamily` \| `Other` | |
+| `InitialAmount` | `Money` | punkt odniesienia paska postępu |
+| `Balance` | `Money` | pozostało do spłaty |
+| `InstallmentAmount` | `Money` | rata miesięczna; zero znaczy brak harmonogramu |
+| `IsArchived` | `bool` | |
+
+Operacje: `Pay(money)`, `SetBalance(money)`, `Update(...)`, `Archive()`.
+
+Lustrzane odbicie funduszu: saldo maleje do zera zamiast rosnąć do celu. `Pay` przycina
+saldo do zera — ujemny dług nie ma sensu, a nadpłata jest normalną sytuacją.
+
+Termin spłaty nie jest przechowywany, tylko liczony z bieżącego salda i raty
+(`ProjectedPayoff`). Dzięki temu nadpłata natychmiast przesuwa datę wyjścia na zero,
+zamiast zostawiać nieaktualną datę z umowy. `InstallmentsRemaining` jest `null` przy
+racie równej zeru — bez harmonogramu nie ma z czego policzyć odliczania.
+
+Odsetki nie są modelowane. Rozjazd salda względem sumy zapłaconych rat koryguje się
+ręcznie przez `SetBalance`.
 
 ---
 
@@ -302,12 +387,27 @@ Operacje: `Accrue(money)`, `Spend(money)` (zeruje zgromadzone i przesuwa `NextDu
 |---|---|---|
 | **N-1** | `Σ Envelope.PlannedAmount ≤ MonthBudget.AvailableFunds` | `MonthBudget.Plan()` |
 | **N-2** | Transakcja zawsze ma kategorię; nieprzypisana otrzymuje `Unsorted` i **uczestniczy** w sumach wydatków | konstruktor `Transaction` |
-| **N-3** | Obie strony przelewu wewnętrznego mają wspólny `TransferGroupId` i są wykluczone z wydatków i przychodów | `TransferMatcher` |
-| **N-4** | Scalona autoryzacja ma `SupersededById` i nie uczestniczy w obliczeniach; wygrywa obciążenie | `DuplicateMatcher` |
-| **N-5** | Ujemna rozbieżność przy uzgodnieniu nie tworzy automatycznie przychodu — wymaga jawnej decyzji użytkownika | `Reconciliation.Create()` |
-| **N-6** | Uzgodnienie nie modyfikuje przeszłych transakcji, tylko dodaje nową | `Reconciliation.Create()` |
-| **N-7** | `Fund.AccruedBalance ≥ 0` i nie przekracza `TargetAmount` bez jawnego potwierdzenia | `Fund.Accrue()` |
-| **N-8** | Konta, kategorie i fundusze nie są usuwane, lecz archiwizowane: mają historię | repozytoria |
+| **N-3** | Obie strony przelewu wewnętrznego mają wspólny `TransferGroupId` i są wykluczone z wydatków i przychodów | `IngestRawNotificationUseCase`, `ConfirmTransferUseCase` |
+| **N-4** | Scalona autoryzacja ma `SupersededById` i nie uczestniczy w obliczeniach; wygrywa obciążenie | `IngestRawNotificationUseCase` |
+| **N-5** | **Dodatnia** rozbieżność przy uzgodnieniu nie tworzy automatycznie przychodu — wymaga jawnej decyzji użytkownika. Ujemna tworzy wydatek `Nierozpoznane` | `ReconcileAccountUseCase` |
+| **N-6** | Uzgodnienie nie modyfikuje przeszłych transakcji, tylko dodaje nową; patrzy wyłącznie na okno od poprzedniego uzgodnienia | `ReconcileAccountUseCase` |
+| **N-7** | `Debt.Balance ≥ 0` — nadpłata zeruje dług, nie schodzi poniżej | `Debt.Pay()` |
+| **N-8** | Konta i kategorie nie są usuwane, lecz archiwizowane: mają historię | repozytoria |
+
+**Sprostowanie do N-5.** Pierwotne sformułowanie mówiło o rozbieżności ujemnej, co było
+odwróceniem sensu. Decyzji wymaga nadwyżka: pieniędzy jest więcej, niż wynika z zapisów,
+co znaczy albo niezapisany wpływ, albo policzony podwójnie wydatek — i tylko użytkownik
+wie który. Niedobór jest jednoznaczny (wydatek, o którym aplikacja nie wiedziała), więc
+zapisuje się sam.
+
+**Sprostowanie do N-7.** Fundusze nie doczekały się przycięcia salda ani limitu
+`TargetAmount`: cel bywa przekroczony celowo, a `Withdraw` służy pokrywaniu wydatków,
+więc blokada przeszkadzałaby. Przycięcie do zera obowiązuje za to przy zobowiązaniach.
+
+**Sprostowanie do N-8.** Fundusze i zobowiązania **są** usuwane, nie archiwizowane.
+Usunięcie funduszu odpina powiązane transakcje (`PaidFromFundId = null`), więc wracają
+one do kopert — inaczej zostałyby wykluczone z budżetu ze wskaźnikiem donikąd. Ekran
+usuwania wypisuje wprost obie konsekwencje przed potwierdzeniem.
 
 Niezmiennik N-1 jest centralny. Właśnie jego brak w Excelu pozwalał na planowy deficyt, który można było zignorować. W aplikacji operacja naruszająca zostaje odrzucona.
 
@@ -376,7 +476,19 @@ CREATE TABLE Assets (
     IsInMonthlyBudget INTEGER NOT NULL DEFAULT 0);
 ```
 
-Tabele etapów 3–5 tworzone są migracjami odpowiednich etapów, nie z wyprzedzeniem.
+> **Powyższy DDL jest historyczny i nie odpowiada bazie.** Tabele `Funds` i `Assets`
+> mają dziś inne kolumny (patrz 5.9 i 5.10), `Transactions` doszły
+> `ProposedTransferGroupId` i `PaidFromFundId`, doszły też tabele `IncomePlans`
+> i `Debts`. Zostawiony jako zapis pierwotnego zamysłu.
+>
+> **Źródłem prawdy o schemacie są migracje EF Core** w
+> `Castellan.Infrastructure/Data/Migrations/` oraz konfiguracje w
+> `Data/Configurations/`. Ręcznie utrzymywany DDL w dokumencie rozjeżdżał się po
+> każdej migracji, więc nie jest już aktualizowany.
+
+Pełna lista tabel: `Accounts`, `Categories`, `Transactions`, `MonthBudgets`,
+`Envelopes`, `IncomePlans`, `Reconciliations`, `CategoryRules`, `RawNotifications`,
+`Funds`, `Assets`, `Debts`.
 
 ---
 
@@ -391,13 +503,32 @@ Jedna klasa na scenariusz. Nazewnictwo: `<Czasownik><Rzeczownik>UseCase`.
 | `PlanMonthUseCase` | 1 | miesiąc, lista (kategoria, kwota) → `MonthBudgetId`, może rzucić `BudgetOverAllocatedException` |
 | `GetMonthOverviewUseCase` | 1 | miesiąc → dostępne środki, pozostało do rozdzielenia, koperty z plan/fakt/pozostało |
 | `ReconcileAccountUseCase` | 2 | konto, obserwowane saldo, data → `Discrepancy`, utworzona transakcja |
-| `GetDashboardUseCase` | 2 | — → podsumowanie ekranu głównego |
-| `IngestNotificationUseCase` | 3 | surowe powiadomienie → transakcja lub `Unparsed` |
+| `IngestRawNotificationUseCase` | 3 | surowe powiadomienie → transakcja lub `Unparsed` |
 | `AssignCategoryUseCase` | 3 | `TransactionId`, kategoria, flaga „utwórz regułę" → void |
-| `GetInboxUseCase` | 3 | — → transakcje z kategorią `Unsorted` |
-| `AccrueFundsForMonthUseCase` | 4 | miesiąc → naliczenia dla wszystkich funduszy |
-| `GetRunwayUseCase` | 5 | — → miesięcy autonomii według poziomów płynności |
-| `ExportBackupUseCase` / `ImportBackupUseCase` | 6 | → plik JSON |
+| `GetTransferProposalsUseCase` | 3 | — → pary czekające na rozstrzygnięcie |
+| `ConfirmTransferUseCase` / `RejectTransferUseCase` | 3 | `GroupId` → void |
+| `GetFundOverviewUseCase` | 4 | dzień wypłaty → salda, raty, opóźnienia |
+| `ContributeToFundUseCase` | 4 | fundusz, kwota → void |
+| `PayTransactionFromFundUseCase` | 4 | transakcja, fundusz → void (plus `UndoAsync`) |
+| `GetCushionOverviewUseCase` | 5 | liczba miesięcy → poziomy płynności i autonomia |
+| `ExportDataUseCase` / `ImportDataUseCase` | 6 | → plik JSON |
+| `PayDebtInstallmentUseCase` | 7 | zobowiązanie, kwota, konto, kategoria → wydatek **i** niższe saldo |
+| `ApplyDebtPaymentUseCase` | 7 | zobowiązanie, kwota → tylko niższe saldo |
+| `SimulateDebtPayoffUseCase` | 7 | budżet miesięczny → kolejność spłaty i data wyjścia na zero |
+| `GetMonthlyStatsUseCase` | — | — → sześć miesięcy wydatków i przychodów |
+
+Nazwy w tej tabeli były pierwotnie zgadywane; powyższa lista odpowiada plikom w
+`Castellan.Application/UseCases/`. `GetDashboardUseCase`, `GetInboxUseCase`,
+`AccrueFundsForMonthUseCase` i `GetRunwayUseCase` nie powstały: pierwsze dwa okazały
+się zbędne (ekran główny składa `GetMonthOverviewUseCase` z przeglądem długu, a
+skrzynka czyta transakcje `Unsorted` prosto z repozytorium), trzeci odpadł wraz ze
+zmianą modelu funduszu na jednorazowy, czwarty nazywa się `GetCushionOverviewUseCase`.
+
+**Rozróżnienie warte uwagi:** `PayDebtInstallmentUseCase` tworzy transakcję i obniża
+saldo, `ApplyDebtPaymentUseCase` tylko obniża saldo. Drugi obsługuje sytuację, w której
+wydatek już istnieje — został wpisany ręcznie albo złapany z powiadomienia — a
+użytkownik dopiero teraz wskazuje, którego kredytu dotyczył. Użycie tam pierwszego
+zdublowałoby wydatek.
 
 ---
 
@@ -455,27 +586,34 @@ Format powiadomień każdego banku jest inny i zmienia się bez ostrzeżenia. St
 
 ### 10.1 Ekrany
 
-| Ekran | Etap | Zawartość |
-|---|---|---|
-| Główny | 1 → 2 | dostępne środki; pozostało do rozdzielenia; pozostało do wydania; licznik skrzynki; ostrzeżenie o kondycji przechwytywania |
-| Koperty miesiąca | 1 | kategoria, plan, wydano, pozostało, pasek postępu; czerwony przy przekroczeniu |
-| Planowanie | 1 | rozdzielanie do kopert, żywy licznik „pozostało do rozdzielenia", blokada zapisu przy naruszeniu N-1 |
-| Transakcje | 1 | lista według dat, filtry po koncie i kategorii, wyszukiwanie |
-| Konta | 1 → 2 | lista kont z obliczonym saldem, przycisk „uzgodnij" |
-| Uzgodnienie | 2 | wprowadzenie faktycznego salda, wyświetlenie rozbieżności przed potwierdzeniem |
-| Szybkie wprowadzanie | 2 | kwota → kategoria → gotowe |
-| Skrzynka odbiorcza | 3 | transakcje `Unsorted`, przypisanie kategorii jednym dotknięciem, przełącznik „zapamiętaj regułę" |
-| Reguły | 3 | lista reguł, edycja, usuwanie |
-| Fundusze | 4 | cel, termin, zgromadzone, „potrzeba miesięcznie", wskaźnik opóźnienia |
-| Aktywa | 5 | lista z poziomem płynności |
-| Poduszka finansowa | 5 | miesięcy autonomii według trzech poziomów płynności |
-| Ustawienia | 6 | banki i pakiety, eksport/import, dostęp do powiadomień |
+Dziewięć zakładek na pasku. Android pokazuje cztery pierwsze, reszta chowa się pod
+trzema kropkami — stąd kolejność jest decyzją, nie przypadkiem.
+
+| Zakładka | Zawartość |
+|---|---|
+| Główna | „pozostało do wydania" jako jedyna wielka liczba; środki i do przydzielenia jako kafelki; pasek długu; lista kopert; ostrzeżenie o kondycji przechwytywania |
+| Konta | lista kont z obliczonym saldem, „ustaw domyślne", „uzgodnij" |
+| Transakcje | lista miesiąca; przeciągnięcie odsłania „z funduszu" i „usuń"; pod trzema kropkami przelew, reguły, kategorie |
+| Koperty | trzy kafelki miesiąca plus lista kopert z paskami; „Planuj" |
+| Skrzynka | wybór trybu przechwytywania; propozycje przelewów; transakcje `Unsorted` |
+| Fundusze | dzień wypłaty; suma odpisów; cel, termin, zgromadzone, rata, wskaźnik opóźnienia |
+| Majątek | poduszka w miesiącach; wartość netto; aktywa wg płynności; fundusze; zobowiązania |
+| Kopia | eksport i import JSON |
+| Pomoc | przewodnik po wszystkich ścieżkach, rozdziały zwijane |
+
+Ekrany poza paskiem: planowanie miesiąca, przychody, statystyki, plan spłaty, szybkie
+wprowadzanie, uzgodnienie, przypisanie kategorii, reguły, kategorie oraz formularze
+dodawania i edycji.
+
+Osobny ekran ustawień nie powstał — było ich za mało, żeby uzasadnić dziesiątą zakładkę.
+Dzień wypłaty stoi w Funduszach, tryb przechwytywania w Skrzynce, eksport i import
+w Kopii: każde ustawienie tam, gdzie widać jego skutek.
 
 ### 10.2 Zasady wyświetlania
 
 - Wydatek zawsze z minusem i w jednym kolorze; żadnych „czerwone — złe" przy zwykłych wydatkach.
 - Przekroczenie koperty — jedyne miejsce, gdzie dopuszczalny jest kolor alarmowy.
-- „Niezidentyfikowane" pokazywane na równi z innymi kategoriami, bez wyróżnienia i bez sformułowań winy.
+- „Nierozpoznane" pokazywane na równi z innymi kategoriami, bez wyróżnienia i bez sformułowań winy.
 - Żadnego ekranu wymagającego przypominania sobie przeszłości.
 
 ### 10.3 Język i lokalizacja
@@ -553,33 +691,75 @@ Discrepancy = (ObservedBalance − PreviousBalance) − RecordedDelta
 
 Przechowywać `LastNotificationAt` w ustawieniach. Jeśli starsze niż 1 dzień — baner na ekranie głównym ze sprawdzeniem `NotificationManagerCompat.getEnabledListenerPackages()`.
 
-Android może po cichu zabić serwis w tle dla oszczędzania baterii, bez błędu. To najbardziej prawdopodobna awaria systemu w eksploatacji. Drugi poziom ochrony — uzgodnienie: wzrost „Niezidentyfikowanego" wykryje awarię niezależnie od banera.
+Android może po cichu zabić serwis w tle dla oszczędzania baterii, bez błędu. To najbardziej prawdopodobna awaria systemu w eksploatacji. Drugi poziom ochrony — uzgodnienie: wzrost „Nierozpoznanego" wykryje awarię niezależnie od banera.
+
+**Tryb przechwytywania.** Ustawienie `capture_mode` (`notifications` domyślnie albo
+`manual`) rozstrzyga, czy powyższe w ogóle obowiązuje. W trybie ręcznym:
+
+- nasłuch odrzuca powiadomienie na wejściu, przed białą listą pakietów — nawet gdy
+  uprawnienie zostało kiedyś przyznane. Bez tego użytkownik wpisujący wydatki sam
+  dostawałby każdy z nich po raz drugi z banku;
+- baner kondycji na Głównej i pasek braku uprawnienia w Skrzynce są ukryte. Cisza jest
+  tu stanem zamierzonym, a baner stojący zawsze uczy ignorować banery;
+- reszta aplikacji działa bez zmian — koperty, fundusze, zobowiązania i uzgadnianie
+  salda nie zależą od powiadomień.
+
+Ustawienie leży w `Preferences`, nie w bazie: dotyczy tego telefonu, nie finansów, więc
+nie ma czego szukać w kopii zapasowej. Odcięcie następuje w
+`CastellanNotificationListenerService`, a nie w use case — warstwa aplikacji nie ma
+prawa wiedzieć o ustawieniach urządzenia.
+
+Powód powstania jest praktyczny: aplikacji zaczęła używać osoba, która nie ma
+powiadomień bankowych i nie zamierza ich włączać. Dla niej ostrzeżenie o braku
+uprawnienia było nie diagnostyką, lecz nagabywaniem o rzecz świadomie odrzuconą.
 
 ### 11.7 Naliczanie do funduszy (etap 4)
 
+Liczone na **wypłaty**, nie na miesiące kalendarzowe — użytkownik dzieli pieniądze
+w dniu wypłaty, więc liczba wypłat do terminu jest tym, co realnie zostało.
+
 ```
-MiesięcyDoPłatności  = całych miesięcy między dziś a NextDueDate (minimum 1)
-PotrzebaWMiesiącu    = (TargetAmount − AccruedBalance) / MiesięcyDoPłatności
-Opóźnienie           = OczekiwaneNagromadzone − AccruedBalance
+OkresówZostało   = liczba dni wypłaty w przedziale (dziś … Deadline]
+                   pomniejszona o bieżący, jeśli LastContributionMonth == ten miesiąc
+Rata             = (TargetAmount − Balance) / OkresówZostało
+
+OczekiwaneDotąd  = TargetAmount × (minione wypłaty od StartMonth / wszystkie wypłaty)
+Opóźnienie       = max(0, OczekiwaneDotąd − Balance)
 ```
 
-Gdzie `OczekiwaneNagromadzone = TargetAmount × (minione miesiące okresu / łączna liczba miesięcy okresu)`.
+Gdy dzień wypłaty nie jest ustawiony, obie liczby liczą się kalendarzowo — działa,
+ale mniej dokładnie, stąd pasek zachęcający do podania dnia wypłaty.
 
-Suma `PotrzebaWMiesiącu` dla wszystkich funduszy dodawana jest do planu miesiąca jako osobna pozycja i uczestniczy w niezmienniku N-1 — inaczej fundusze pozostają pobożnym życzeniem.
+Pomniejszenie o bieżący okres po wpłacie jest istotne: bez niego rata przeliczała się
+na nowo zaraz po wpłaceniu, pokazując, że wciąż trzeba dołożyć.
+
+Suma rat wszystkich funduszy nie jest doklejana do planu automatycznie — ekran
+planowania podpowiada ją przyciskiem, który jednym tapnięciem wpisuje kwotę do koperty
+„Rezerwy". Kopertę wybiera użytkownik, więc suma normalnie uczestniczy w N-1.
 
 ### 11.8 Poduszka finansowa (etap 5)
 
 ```
-NiereduktowalnyWydatek = Σ PlannedAmount dla kategorii z flagą „obowiązkowa"
-                        + Σ PotrzebaWMiesiącu dla funduszy
+ŚredniWydatek   = średnia z faktycznych wydatków miesięcznych z ostatnich 3 miesięcy
+                  (liczone tylko miesiące z jakimkolwiek wydatkiem)
 
-Płynne(tier)           = Σ Account.CurrentBalance gdzie LiquidityTier ≤ tier
-                        + Σ Asset.CurrentValue   gdzie LiquidityTier ≤ tier
+Płynne(poziom)  = Σ Asset.Value gdzie Liquidity == poziom
+                  + salda kont Checking, gdy poziom == Immediate
 
-Autonomia(tier)        = Płynne(tier) / NiereduktowalnyWydatek   [miesiące]
+Autonomia(poz.) = Płynne(narastająco do poziomu) / ŚredniWydatek   [miesiące]
 ```
 
-Pokazywać trzy liczby według trzech poziomów płynności, nie jedną uśrednioną: „dostępne jutro" i „zamrożone" to zasadniczo różne pieniądze.
+**Odejście od pierwotnego założenia.** Spec zakładał „wydatek nieredukowalny" liczony
+z kopert oznaczonych flagą „obowiązkowa" plus rat funduszy. Flaga nigdy nie powstała —
+wymagałaby od użytkownika rozstrzygnięcia przy każdej kategorii, co jest obowiązkowe,
+a odpowiedź zmienia się z miesiąca na miesiąc. Wdrożony wariant bierze średnią
+z realnych wydatków ostatnich trzech miesięcy: mniej precyzyjny teoretycznie, ale
+oparty na tym, jak faktycznie wygląda życie, i niewymagający żadnej konfiguracji.
+
+Poziomów są cztery, nie trzy, a liczby podawane są narastająco — „ile wytrzymam
+z tego, co mam pod ręką" kontra „ile wytrzymam, jeśli sięgnę też po rzeczy trudniejsze
+do spieniężenia". Fundusze są liczone osobno, poza poziomami: te pieniądze mają już
+przypisany przyszły wydatek, więc nie są rezerwą na czarną godzinę.
 
 ---
 
@@ -603,7 +783,7 @@ Pokazywać trzy liczby według trzech poziomów płynności, nie jedną uśredni
 
 **Prace:** `Reconciliation`, niezmienniki N-5 i N-6; obliczane saldo konta; scenariusze `ReconcileAccount`, `GetDashboard`; ekran uzgodnienia; ekran szybkiego wprowadzania; widget na ekran główny.
 
-**Gotowe, gdy:** wprowadzenie faktycznego salda tworzy „Niezidentyfikowane"; pominięcie kilku dni nie psuje obrazu; wydatek zapisuje się w trzech dotknięciach.
+**Gotowe, gdy:** wprowadzenie faktycznego salda tworzy „Nierozpoznane"; pominięcie kilku dni nie psuje obrazu; wydatek zapisuje się w trzech dotknięciach.
 
 ### Etap 3 — przechwytywanie powiadomień
 
@@ -633,6 +813,28 @@ Kluczowy etap. Dla niego to wszystko zostało zapoczątkowane.
 
 **Gotowe, gdy:** aplikację można przeinstalować na nowym telefonie bez utraty danych, a repozytorium jest czytelne dla postronnej osoby.
 
+**Zrealizowane częściowo.** Eksport i import działają, README jest napisane. Nie powstały:
+przypomnienie o backupie raz w miesiącu, diagramy ani wydania w GitHub Releases — APK
+budowany jest lokalnie i przenoszony ręcznie.
+
+### Etap 7 — zobowiązania i plan spłaty
+
+**Prace:** agregat `Debt` jako lustro funduszu; ekrany dodawania, edycji i płacenia raty;
+powiązanie istniejącego wydatku z kredytem przez kategorię „Kredyty i pożyczki";
+symulacja spłaty metodą kuli śnieżnej; wartość netto i przemianowanie zakładki
+„Aktywa" na „Majątek".
+
+**Gotowe, gdy:** spojrzenie na sumę długu i datę wyjścia na zero nie wymaga wejścia
+w osobną zakładkę — stąd pasek na Głównej, a nie dziewiąta pozycja pod trzema kropkami.
+
+### Etap 8 — wygląd i przewodnik
+
+**Prace:** jedna paleta i jedna skala tekstu na wszystkich ekranach zamiast kolorów
+dobieranych osobno na każdym; ikony zakładek; ciemne okna systemowe Androida; przewodnik
+po aplikacji jako zakładka „Pomoc"; wybór trybu przechwytywania.
+
+**Gotowe, gdy:** aplikację da się podać komuś obcemu bez tłumaczenia jej na głos.
+
 ---
 
 ## 13. Testowanie
@@ -641,11 +843,14 @@ Kluczowy etap. Dla niego to wszystko zostało zapoczątkowane.
 |---|---|---|
 | Domain | niezmienniki N-1…N-8, arytmetyka `Money`, granice `YearMonth`, naliczanie funduszy, autonomia | xUnit, czyste testy bez BD |
 | Application | scenariusze na zaślepkach repozytoriów | xUnit |
-| Infrastructure | konfiguracje EF, konwertery, migracje | xUnit + SQLite in-memory |
+| Infrastructure | konfiguracje EF, konwertery, migracje | xUnit + SQLite na pliku tymczasowym |
 | Parsery | rzeczywiste teksty powiadomień obu banków: zakup, online, przelew, autoryzacja, obciążenie | xUnit, testy tabelaryczne |
 | Algorytmy | deduplikacja i scalanie przelewów na skonstruowanych zestawach, w tym fałszywe trafienia | xUnit |
 
-Testcontainers nie jest potrzebny: brak zewnętrznych zależności.
+Testcontainers nie jest potrzebny: brak zewnętrznych zależności. Baza in-memory
+odpadła — nie odtwarza zachowania migracji ani konwerterów typów, a to właśnie one
+są tu przedmiotem testu. Każdy test zakłada plik w katalogu tymczasowym, wykonuje na
+nim `Database.Migrate()` i kasuje go w `finally` po `SqliteConnection.ClearAllPools()`.
 
 Obowiązkowe testy negatywne: planowanie powyżej środków; uzgodnienie z dodatnią rozbieżnością; podwójne powiadomienie; przelew między własnymi kontami z równymi kwotami; powiadomienie nieznanego formatu.
 
@@ -674,6 +879,23 @@ Trzy obowiązkowe reguły:
 - **Redakcja tekstu przed zapisem.** Powiadomienia bankowe zawierają kody 3D-Secure, hasła BLIK i jednorazowe OTP. Przed zapisem do `RawNotifications` tekst przechodzi przez maskę usuwającą sekwencje 4–8 cyfr niepodobne do kwoty. Powiadomienia rozpoznane jako żądanie autoryzacji (nie zrealizowana operacja) są odrzucane w całości.
 - **Sformułowanie „przechowywane zawsze" w sekcji 5.8** odnosi się wyłącznie do powiadomień z białej listy po redakcji. Powiadomienia spoza listy nie są nigdy zapisywane ani logowane.
 
+**Stan wdrożenia.** Filtr po `PackageName` jest pierwszą operacją — z jednym wyjątkiem
+przed nim: sprawdzeniem trybu przechwytywania (11.6), które również niczego nie czyta.
+Maska działa i usuwa ciągi 4–8 cyfr niebędące kwotą.
+
+Dwa punkty rozminęły się z wdrożeniem:
+
+- **Powiadomienia Portfela Google nie są odrzucane, tylko parsowane.** Przy płatności
+  telefonem zbliżeniowo bywają jedynym śladem transakcji — ING nie wysyła wtedy
+  własnego powiadomienia. Odrzucanie ich gubiło te płatności całkowicie. Konsekwencją
+  jest druga ścieżka deduplikacji (11.1): Portfel podaje nazwę prawną spółki
+  („JMP S.A. BIEDRONKA 591"), a bank markę („Biedronka"), więc dopasowanie po nazwie
+  sprzedawcy dla tej pary zawodzi.
+- **Powiadomienia autoryzacyjne nie są odrzucane w całości.** Żaden parser nie tworzy
+  dziś transakcji `Kind = Authorization`; obsługa zastępowania blokady obciążeniem
+  istnieje w kodzie deduplikacji, ale pozostaje uśpiona, bo banki użytkownika przysyłają
+  wyłącznie powiadomienie o obciążeniu (patrz 19.2).
+
 ### 15.2 Izolacja sieciowa
 
 Aplikacja z dostępem do wszystkich powiadomień i z dostępem do sieci to gotowe narzędzie szpiegowskie. Brak sieci w Castellan musi być wymuszony strukturalnie, nie tylko „niezaimplementowany":
@@ -698,9 +920,15 @@ Plik eksportu to niezaszyfrowana kopia bazy leżąca poza piaskownicą aplikacji
 - Szyfrowanie eksportu hasłem: AES-GCM, klucz wyprowadzany z PBKDF2 lub Argon2.
 - Wyraźne ostrzeżenie na ekranie eksportu: „Ten plik zawiera wszystkie Twoje dane finansowe".
 
+**Stan wdrożenia: zrealizowany jeden punkt z trzech.** Eksport idzie przez systemowy
+arkusz udostępniania, więc miejsce wybiera użytkownik. Plik jest jednak **zwykłym,
+nieszyfrowanym JSON-em**, a ekran eksportu opisuje, co plik zawiera, ale nie ostrzega
+przed konsekwencjami jego wycieku. Do nadrobienia — to najpoważniejsza otwarta luka
+w tej sekcji, bo plik z założenia opuszcza urządzenie.
+
 ### 15.5 Ekran i dostęp fizyczny
 
-- **`FLAG_SECURE`** na oknie głównej aktywności — blokuje zrzuty ekranu i ukrywa zawartość w liście ostatnich aplikacji. Standardowa praktyka dla aplikacji finansowych; ustawić na Etapie 0.
+- **`FLAG_SECURE`** na oknie głównej aktywności — blokuje zrzuty ekranu i ukrywa zawartość w liście ostatnich aplikacji. Standardowa praktyka dla aplikacji finansowych; ustawić na Etapie 0. **Nieustawione.** Świadomy kompromis na czas budowy: zrzuty ekranu są głównym sposobem zgłaszania uwag do wyglądu. Do włączenia, gdy aplikacja przestanie być codziennie przebudowywana.
 - **Biometria przy otwarciu aplikacji** — opcjonalna, z zastrzeżeniem: widget szybkiego wprowadzania nie może wymagać odcisku palca, bo cel „trzy dotknięcia" przestaje działać. Kompromis: biometria chroni podgląd (pełna aplikacja), widget pozwala zapisać transakcję bez wyświetlania salda.
 
 ### 15.6 Logowanie
@@ -743,13 +971,13 @@ Google Play surowo ogranicza aplikacje żądające dostępu do powiadomień i wy
 
 Nie „napisane", lecz dwa miesiące po etapie 3:
 
-- udział „Niezidentyfikowanego" w łącznych wydatkach — poniżej 10%;
+- udział „Nierozpoznanego" w łącznych wydatkach — poniżej 10%;
 - ręczne wprowadzanie — poniżej 20% transakcji;
 - rozgrywanie skrzynki — poniżej minuty dziennie;
 - aplikacja otwierana codziennie bez przypomnień;
 - budżet na miesiąc planowany przed jego początkiem.
 
-Jeśli „Niezidentyfikowane" trwale powyżej 25% — mechanizm przechwytywania nie działa; naprawiać go, a nie dodawać funkcji.
+Jeśli „Nierozpoznane" trwale powyżej 25% — mechanizm przechwytywania nie działa; naprawiać go, a nie dodawać funkcji.
 
 ---
 
@@ -763,8 +991,27 @@ Weryfikacja na każdym etapie: czy da się wyjaśnić głośno, dlaczego zrobion
 
 ## 19. Otwarte pytania
 
-1. Nazwy pakietów aplikacji obu banków i rzeczywiste przykłady powiadomień — **blokuje etap 3**, zebrać wcześniej.
-2. ~~Czy chociaż jeden bank przysyła osobne powiadomienia o autoryzacji i obciążeniu, czy tylko jedno.~~ **Rozwiązane:** bank przysyła tylko powiadomienie o obciążeniu. Przy płatności telefonem (NFC) przychodzą dwa powiadomienia: od banku (parsować) i od Google Portfel (ignorować po `PackageName`).
-3. Lista kategorii: przenieść z polskiego szablonu czy ułożyć od nowa na podstawie rzeczywistych wydatków.
-4. Flaga „obowiązkowa" na kategoriach — wprowadzić na etapie 1 (taniej) czy na etapie 5 (gdy będzie potrzebna).
+1. ~~Nazwy pakietów aplikacji obu banków i rzeczywiste przykłady powiadomień.~~
+   **Rozwiązane:** `pl.ing.mojeing`, `com.revolut.revolut`,
+   `com.google.android.apps.walletnfcrel`.
+2. ~~Czy chociaż jeden bank przysyła osobne powiadomienia o autoryzacji i obciążeniu, czy tylko jedno.~~
+   **Rozwiązane:** bank przysyła tylko powiadomienie o obciążeniu, więc obsługa autoryzacji
+   pozostaje uśpiona. Przy płatności telefonem (NFC) przychodzą dwa powiadomienia: od banku
+   i od Portfela Google. Pierwotna odpowiedź — ignorować Portfel po `PackageName` — okazała
+   się błędna: ING przy zbliżeniówce z telefonu nie wysyła własnego powiadomienia, więc
+   Portfel bywa jedynym śladem. Oba są dziś parsowane, a duplikaty rozstrzyga deduplikacja.
+3. ~~Lista kategorii: przenieść z polskiego szablonu czy ułożyć od nowa.~~
+   **Rozwiązane:** zestaw domyślny zakładany przy pierwszym uruchomieniu, korygowany
+   w eksploatacji. „Jedzenie" ustąpiło „Produktom do domu", bo jeden paragon ze sklepu to
+   zwykle jedzenie plus chemia plus higiena naraz. Kategorie dokładane w kolejnych wersjach
+   trafiają też do istniejących baz, z pominięciem tych zarchiwizowanych przez użytkownika.
+4. ~~Flaga „obowiązkowa" na kategoriach — etap 1 czy etap 5.~~
+   **Rozwiązane: nie wprowadzać.** Wymagałaby rozstrzygnięcia przy każdej kategorii, co jest
+   obowiązkowe, a odpowiedź zmienia się z miesiąca na miesiąc. Poduszka liczy się ze średniej
+   z faktycznych wydatków (11.8).
 5. Czy potrzebna jest historia planów miesięcznych, czy wystarczy bieżący i poprzedni.
+   **Otwarte.** Plany są trzymane bez ograniczenia, a przeglądarka miesięcy sięga dowolnie
+   wstecz; nie wiadomo, czy ktokolwiek tam zagląda.
+6. Czy tryb ręcznego wprowadzania (11.6) wystarcza osobie bez powiadomień bankowych, czy
+   potrzebne są dodatkowe ułatwienia — np. wprowadzanie wielu transakcji jednym ciągiem.
+   **Otwarte, do sprawdzenia w eksploatacji.**
