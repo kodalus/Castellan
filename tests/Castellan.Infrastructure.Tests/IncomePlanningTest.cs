@@ -37,9 +37,11 @@ public class IncomePlanningTest
             var wyplata = Category.Create("Wypłata", CategoryKind.Income);
             var malzonek = Category.Create("Wpłata małżonka", CategoryKind.Income);
             var osiemset = Category.Create("800+", CategoryKind.Income);
+            // Źródło bez planu i bez wpływów — zestawienie i tak ma je pokazać.
+            var inne = Category.Create("Inne", CategoryKind.Income);
 
             db.Accounts.AddRange(ing, revolut);
-            db.Categories.AddRange(wyplata, malzonek, osiemset);
+            db.Categories.AddRange(wyplata, malzonek, osiemset, inne);
             await db.SaveChangesAsync();
             db.ChangeTracker.Clear();
 
@@ -93,6 +95,15 @@ public class IncomePlanningTest
 
             data.Incomes.Single(i => i.CategoryName == "Wpłata małżonka").Actual.Grosze.Should().Be(200_000);
             data.Incomes.Single(i => i.CategoryName == "800+").IsShort.Should().BeFalse();
+
+            // Wszystkie aktywne źródła są na liście, także te puste — inaczej nie
+            // widać, czego jeszcze nie zaplanowano.
+            var inneRow = data.Incomes.Single(i => i.CategoryName == "Inne");
+            inneRow.Planned.Grosze.Should().Be(0);
+            inneRow.Actual.Grosze.Should().Be(0);
+
+            // Puste źródła nie mogą rozbijać listy — trafiają na koniec.
+            data.Incomes.Last().CategoryName.Should().Be("Inne");
         }
         finally
         {

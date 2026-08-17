@@ -108,9 +108,14 @@ public sealed class GetMonthOverviewUseCase(
             .GroupBy(t => t.CategoryId)
             .ToDictionary(g => g.Key, g => new Money(g.Sum(t => t.Amount.Grosze)));
 
-        // Źródła zaplanowane + te, z których coś wpłynęło mimo braku planu —
-        // inaczej niezaplanowany przychód zniknąłby z zestawienia.
-        var incomeCategoryIds = budget.IncomePlans.Select(p => p.CategoryId)
+        // Wszystkie aktywne źródła przychodu — także te bez planu i bez wpływów,
+        // żeby zestawienie od razu pokazywało, czego jeszcze nie zaplanowano.
+        // Do tego zarchiwizowane lub zaplanowane wcześniej źródła, jeśli coś z nich
+        // wpłynęło — inaczej realny przychód zniknąłby z widoku.
+        var incomeCategoryIds = cats
+            .Where(c => !c.IsSystem && !c.IsArchived && c.Kind == CategoryKind.Income)
+            .Select(c => c.Id)
+            .Union(budget.IncomePlans.Select(p => p.CategoryId))
             .Union(incomeByCategory.Keys.Where(id =>
                 catMap.TryGetValue(id, out var c) && c.Kind == CategoryKind.Income))
             .ToList();
@@ -126,7 +131,11 @@ public sealed class GetMonthOverviewUseCase(
                     planned,
                     incomeByCategory.GetValueOrDefault(id, Money.Zero));
             })
+            // Najpierw zaplanowane (od największych), potem nieplanowane wpływy,
+            // a puste źródła alfabetycznie na końcu — żeby nie rozbijały listy.
             .OrderByDescending(i => i.Planned.Grosze)
+            .ThenByDescending(i => i.Actual.Grosze)
+            .ThenBy(i => i.CategoryName)
             .ToList();
 
         return new MonthOverview(
