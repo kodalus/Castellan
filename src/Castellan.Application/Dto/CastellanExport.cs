@@ -11,6 +11,7 @@ public sealed class CastellanExport
     public List<MonthBudgetDto> MonthBudgets { get; init; } = [];
     public List<FundDto> Funds { get; init; } = [];
     public List<AssetDto> Assets { get; init; } = [];
+    public List<DebtDto> Debts { get; init; } = [];
 }
 
 public sealed record AccountDto(
@@ -44,3 +45,7 @@ public sealed record FundDto(
 
 public sealed record AssetDto(
     Guid Id, string Name, string Liquidity, long Value, string UpdatedOn, bool IsArchived);
+
+public sealed record DebtDto(
+    Guid Id, string Name, string Kind, long InitialAmount, long Balance,
+    long InstallmentAmount, bool IsArchived);

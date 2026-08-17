@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.EditDebtPage"
+             x:DataType="vm:EditDebtViewModel"
+             Title="Edytuj zobowiązanie">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Border IsVisible="{Binding HasError}"
+                    BackgroundColor="#FFEBEE" Padding="12,8"
+                    StrokeShape="RoundRectangle 6" Stroke="Transparent">
+                <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
+            </Border>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Nazwa" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding Name}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Rodzaj" FontSize="13" TextColor="Gray" />
+                <Picker ItemsSource="{Binding Kinds}"
+                        SelectedItem="{Binding SelectedKind}"
+                        ItemDisplayBinding="{Binding Display}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Aktualne saldo (zł)" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding BalanceText}" Keyboard="Numeric" />
+                <Label Text="Popraw, gdy bank pokazuje inną kwotę — odsetki potrafią rozjechać saldo względem sumy zapłaconych rat."
+                       FontSize="11" TextColor="Gray" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Kwota początkowa (zł)" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding InitialAmountText}" Keyboard="Numeric" />
+                <Label Text="Punkt odniesienia dla paska postępu."
+                       FontSize="11" TextColor="Gray" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Rata miesięczna (zł)" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding InstallmentText}" Keyboard="Numeric" />
+            </VerticalStackLayout>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

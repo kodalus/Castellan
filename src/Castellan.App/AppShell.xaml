@@ -13,7 +13,7 @@
         <ShellContent Title="{x:Static strings:AppResources.Tab_Envelopes}"    Route="envelopes"    ContentTemplate="{DataTemplate views:EnvelopesPage}" />
         <ShellContent Title="{x:Static strings:AppResources.Tab_Inbox}"       Route="inbox"        ContentTemplate="{DataTemplate views:InboxPage}" />
         <ShellContent Title="Fundusze"                                         Route="funds"        ContentTemplate="{DataTemplate views:FundsPage}" />
-        <ShellContent Title="Aktywa"                                           Route="assets"       ContentTemplate="{DataTemplate views:AssetsPage}" />
+        <ShellContent Title="Majątek"                                          Route="assets"       ContentTemplate="{DataTemplate views:AssetsPage}" />
         <ShellContent Title="Kopia"                                            Route="backup"       ContentTemplate="{DataTemplate views:BackupPage}" />
     </TabBar>
 

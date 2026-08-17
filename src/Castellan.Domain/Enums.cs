@@ -17,3 +17,5 @@ public enum CategoryRuleOrigin { Learned, Manual }
 public enum FundKind { Insurance, Vacation, Tax, Custom }
 
 public enum AssetLiquidity { Immediate, Fast, Medium, Slow }
+
+public enum DebtKind { Mortgage, CashLoan, Installment, FromFamily, Other }

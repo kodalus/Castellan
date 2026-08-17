@@ -66,12 +66,55 @@ public sealed class FundRowVm
     }
 }
 
+public sealed class DebtRowVm
+{
+    public DebtId Id { get; }
+    public string Name { get; }
+    public string KindDisplay { get; }
+    public string BalanceDisplay { get; }
+    public string PaidOffDisplay { get; }
+    public string InstallmentDisplay { get; }
+    public string PayoffDisplay { get; }
+    public double Progress { get; }
+    public bool IsPaidOff { get; }
+    public bool IsNotPaidOff => !IsPaidOff;
+    public ICommand PayCommand { get; }
+    public ICommand EditCommand { get; }
+    public ICommand DeleteCommand { get; }
+
+    public DebtRowVm(DebtSummary d, ICommand pay, ICommand edit, ICommand delete)
+    {
+        Id = d.Id;
+        Name = d.Name;
+        KindDisplay = d.KindDisplay;
+        BalanceDisplay = d.Balance.ToString();
+        PaidOffDisplay = $"spłacone {d.PaidOff} z {d.InitialAmount}";
+        InstallmentDisplay = d.InstallmentAmount.Grosze > 0
+            ? $"Rata: {d.InstallmentAmount}"
+            : "Brak ustalonej raty";
+        // Bez raty nie da się uczciwie podać terminu — lepiej powiedzieć to wprost,
+        // niż pokazać wymyśloną datę.
+        PayoffDisplay = d.IsPaidOff
+            ? "✓ Spłacone"
+            : d.ProjectedPayoff is { } p && d.InstallmentsRemaining is { } n
+                ? $"{n} rat, do {p:MM/yyyy}"
+                : "Termin nieznany — podaj ratę";
+        Progress = d.Progress;
+        IsPaidOff = d.IsPaidOff;
+        PayCommand = pay;
+        EditCommand = edit;
+        DeleteCommand = delete;
+    }
+}
+
 // ── ViewModel ─────────────────────────────────────────────────────────────────
 
 public partial class AssetsViewModel : ObservableObject
 {
     private readonly GetCushionOverviewUseCase _overview;
     private readonly IFundRepository _funds;
+    private readonly GetDebtOverviewUseCase _debtOverview;
+    private readonly DeleteDebtUseCase _deleteDebt;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -86,6 +129,14 @@ public partial class AssetsViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<FundRowVm> _fundRows = [];
     [ObservableProperty] private string _fundsTotalDisplay = "";
     [ObservableProperty] private bool _hasFunds;
+
+    [ObservableProperty] private ObservableCollection<DebtRowVm> _debtRows = [];
+    [ObservableProperty] private string _debtsTotalDisplay = "";
+    [ObservableProperty] private string _debtsInstallmentsDisplay = "";
+    [ObservableProperty] private bool _hasDebts;
+
+    [ObservableProperty] private string _netWorthDisplay = "";
+    [ObservableProperty] private bool _isNetWorthNegative;
 
     public bool IsEmpty    => !Tiers.Any(t => t.HasAssets);
     public bool IsNotEmpty => !IsEmpty;
@@ -102,10 +153,16 @@ public partial class AssetsViewModel : ObservableObject
         ? $"razem: {Cushion.TotalValue.Grosze / 100m:N2} zł"
         : "";
 
-    public AssetsViewModel(GetCushionOverviewUseCase overview, IFundRepository funds)
+    public AssetsViewModel(
+        GetCushionOverviewUseCase overview,
+        IFundRepository funds,
+        GetDebtOverviewUseCase debtOverview,
+        DeleteDebtUseCase deleteDebt)
     {
         _overview = overview;
         _funds = funds;
+        _debtOverview = debtOverview;
+        _deleteDebt = deleteDebt;
     }
 
     [RelayCommand]
@@ -138,12 +195,63 @@ public partial class AssetsViewModel : ObservableObject
             HasFunds = activeFunds.Count > 0;
             var fundsTotal = activeFunds.Sum(f => f.Balance.Grosze);
             FundsTotalDisplay = $"razem: {fundsTotal / 100m:N2} zł";
+
+            var debts = await _debtOverview.ExecuteAsync(ct);
+            DebtRows = new ObservableCollection<DebtRowVm>(debts.Items.Select(d =>
+            {
+                var captured = d;
+                return new DebtRowVm(
+                    d,
+                    new AsyncRelayCommand(() => Shell.Current.GoToAsync($"payDebt?debtId={captured.Id.Value}")),
+                    new AsyncRelayCommand(() => Shell.Current.GoToAsync($"editDebt?debtId={captured.Id.Value}")),
+                    new AsyncRelayCommand(() => DeleteDebtAsync(captured)));
+            }));
+            HasDebts = debts.Items.Count > 0;
+            DebtsTotalDisplay = $"razem: {debts.TotalBalance}";
+            DebtsInstallmentsDisplay = debts.TotalMonthlyInstallments.Grosze > 0
+                ? $"raty: {debts.TotalMonthlyInstallments} / mies."
+                : "";
+
+            // Wartość netto = aktywa + fundusze − długi. Fundusze to realne pieniądze
+            // odłożone na bok, więc wchodzą do majątku, mimo że są poza poduszką.
+            var netGrosze = (Cushion?.TotalValue.Grosze ?? 0) + fundsTotal - debts.TotalBalance.Grosze;
+            IsNetWorthNegative = netGrosze < 0;
+            NetWorthDisplay = new Money(netGrosze).ToString();
         }
         finally
         {
             IsBusy = false;
         }
     }
+
+    private async Task DeleteDebtAsync(DebtSummary debt)
+    {
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        try
+        {
+            var confirmed = await page.DisplayAlertAsync(
+                $"Usunąć „{debt.Name}”?",
+                debt.Balance.Grosze > 0
+                    ? $"Pozostałe {debt.Balance} zniknie z ewidencji zobowiązań. Zapłacone raty zostaną w historii transakcji."
+                    : "Zapłacone raty zostaną w historii transakcji.",
+                "Usuń", "Anuluj");
+            if (!confirmed) return;
+
+            await _deleteDebt.ExecuteAsync(debt.Id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (var e = ex; e != null; e = e.InnerException)
+                sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
+            await page.DisplayAlertAsync("Błąd usuwania zobowiązania", sb.ToString(), "OK");
+        }
+    }
+
+    [RelayCommand]
+    private async Task AddDebtAsync() => await Shell.Current.GoToAsync("addDebt");
 
     [RelayCommand]
     private async Task AddAssetAsync() =>

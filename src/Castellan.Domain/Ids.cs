@@ -53,3 +53,9 @@ public readonly record struct AssetId(Guid Value)
     public static AssetId New() => new(Guid.CreateVersion7());
     public override string ToString() => Value.ToString();
 }
+
+public readonly record struct DebtId(Guid Value)
+{
+    public static DebtId New() => new(Guid.CreateVersion7());
+    public override string ToString() => Value.ToString();
+}

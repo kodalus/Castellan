@@ -26,6 +26,7 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
             .AsNoTracking().ToListAsync(ct);
         var funds        = await db.Funds.AsNoTracking().ToListAsync(ct);
         var assets       = await db.Assets.AsNoTracking().ToListAsync(ct);
+        var debts        = await db.Debts.AsNoTracking().ToListAsync(ct);
 
         return new CastellanExport
         {
@@ -56,6 +57,9 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
             Assets = assets.Select(a => new AssetDto(
                 a.Id.Value, a.Name, a.Liquidity.ToString(), a.Value.Grosze,
                 a.UpdatedOn.ToString("yyyy-MM-dd"), a.IsArchived)).ToList(),
+            Debts = debts.Select(d => new DebtDto(
+                d.Id.Value, d.Name, d.Kind.ToString(), d.InitialAmount.Grosze,
+                d.Balance.Grosze, d.InstallmentAmount.Grosze, d.IsArchived)).ToList(),
         };
     }
 
@@ -72,6 +76,7 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
             await db.Database.ExecuteSqlRawAsync("DELETE FROM MonthBudgets", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM Funds", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM Assets", ct);
+            await db.Database.ExecuteSqlRawAsync("DELETE FROM Debts", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM CategoryRules", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM Categories WHERE IsSystem = 0", ct);
             await db.Database.ExecuteSqlRawAsync("DELETE FROM Accounts", ct);
@@ -134,6 +139,12 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
                 await db.Database.ExecuteSqlRawAsync(
                     "INSERT INTO Assets (Id, Name, Liquidity, Value, UpdatedOn, IsArchived) VALUES ({0},{1},{2},{3},{4},{5})",
                     a.Id, a.Name, a.Liquidity, a.Value, a.UpdatedOn, a.IsArchived ? 1 : 0);
+
+            // Null-safe: kopie sprzed dodania modułu długów nie mają tej sekcji.
+            foreach (var d in data.Debts ?? [])
+                await db.Database.ExecuteSqlRawAsync(
+                    "INSERT INTO Debts (Id, Name, Kind, InitialAmount, Balance, InstallmentAmount, IsArchived) VALUES ({0},{1},{2},{3},{4},{5},{6})",
+                    d.Id, d.Name, d.Kind, d.InitialAmount, d.Balance, d.InstallmentAmount, d.IsArchived ? 1 : 0);
 
             await tx.CommitAsync(ct);
 

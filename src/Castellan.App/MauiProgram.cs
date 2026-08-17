@@ -53,6 +53,14 @@ public static class MauiProgram
         builder.Services.AddTransient<CreateAssetUseCase>();
         builder.Services.AddTransient<UpdateAssetValueUseCase>();
         builder.Services.AddTransient<GetCushionOverviewUseCase>();
+        builder.Services.AddTransient<CreateDebtUseCase>();
+        builder.Services.AddTransient<UpdateDebtUseCase>();
+        builder.Services.AddTransient<DeleteDebtUseCase>();
+        builder.Services.AddTransient<PayDebtInstallmentUseCase>();
+        builder.Services.AddTransient<GetDebtOverviewUseCase>();
+        builder.Services.AddTransient<SimulateDebtPayoffUseCase>();
+        builder.Services.AddTransient<ApplyDebtPaymentUseCase>();
+        builder.Services.AddTransient<CategoryLinkPrompt>();
         builder.Services.AddTransient<ExportDataUseCase>();
         builder.Services.AddTransient<ImportDataUseCase>();
 
@@ -88,6 +96,10 @@ public static class MauiProgram
         builder.Services.AddTransient<AssetsViewModel>();
         builder.Services.AddTransient<AddAssetViewModel>();
         builder.Services.AddTransient<UpdateAssetValueViewModel>();
+        builder.Services.AddTransient<AddDebtViewModel>();
+        builder.Services.AddTransient<EditDebtViewModel>();
+        builder.Services.AddTransient<PayDebtViewModel>();
+        builder.Services.AddTransient<DebtPlanViewModel>();
         builder.Services.AddTransient<BackupViewModel>();
 
         // Pages (tab pages are Transient so Shell reuses cached instances)
@@ -117,6 +129,10 @@ public static class MauiProgram
         builder.Services.AddTransient<AssetsPage>();
         builder.Services.AddTransient<AddAssetPage>();
         builder.Services.AddTransient<UpdateAssetValuePage>();
+        builder.Services.AddTransient<AddDebtPage>();
+        builder.Services.AddTransient<EditDebtPage>();
+        builder.Services.AddTransient<PayDebtPage>();
+        builder.Services.AddTransient<DebtPlanPage>();
         builder.Services.AddTransient<BackupPage>();
 
 #if DEBUG

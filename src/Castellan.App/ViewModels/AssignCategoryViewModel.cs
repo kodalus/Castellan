@@ -3,6 +3,7 @@ using Castellan.Application.Repositories;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
 using Castellan.Domain.Aggregates;
+using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -16,6 +17,9 @@ public partial class AssignCategoryViewModel : ObservableObject
     private readonly ITransactionRepository _transactions;
     private readonly ICategoryRepository _categories;
     private readonly AssignCategoryUseCase _assignCategory;
+    private readonly Castellan.App.Services.CategoryLinkPrompt _categoryLink;
+
+    private Money _amount = Money.Zero;
 
     [ObservableProperty] private string _txId = "";
     [ObservableProperty] private string _merchantDisplay = "—";
@@ -31,11 +35,13 @@ public partial class AssignCategoryViewModel : ObservableObject
     public AssignCategoryViewModel(
         ITransactionRepository transactions,
         ICategoryRepository categories,
-        AssignCategoryUseCase assignCategory)
+        AssignCategoryUseCase assignCategory,
+        Castellan.App.Services.CategoryLinkPrompt categoryLink)
     {
         _transactions = transactions;
         _categories = categories;
         _assignCategory = assignCategory;
+        _categoryLink = categoryLink;
     }
 
     partial void OnTxIdChanged(string value)
@@ -56,6 +62,7 @@ public partial class AssignCategoryViewModel : ObservableObject
 
         MerchantDisplay = tx.RawMerchant ?? tx.MerchantKey ?? "Nieznany sprzedawca";
         AmountDisplay = tx.Amount.ToString();
+        _amount = tx.Amount;
         HasMerchantKey = tx.MerchantKey is not null || tx.RawMerchant is not null;
 
         var cats = await _categories.ListAsync(ct);
@@ -74,6 +81,11 @@ public partial class AssignCategoryViewModel : ObservableObject
             SelectedCategory.Id,
             RememberRule,
             ct);
+
+        // Rata kredytu złapana z powiadomienia trafia tutaj — bez tego pytania
+        // saldo długu nie zmniejszyłoby się mimo zapłaconej raty.
+        if (_amount.IsNegative)
+            await _categoryLink.OfferAsync(SelectedCategory.Name, _amount.Abs(), ct);
 
         await Shell.Current.GoToAsync("..");
     }

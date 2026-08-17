@@ -27,6 +27,10 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("contributeFund",    typeof(ContributeFundPage));
         Routing.RegisterRoute("addAsset",          typeof(AddAssetPage));
         Routing.RegisterRoute("updateAssetValue",  typeof(UpdateAssetValuePage));
+        Routing.RegisterRoute("addDebt",           typeof(AddDebtPage));
+        Routing.RegisterRoute("editDebt",          typeof(EditDebtPage));
+        Routing.RegisterRoute("payDebt",           typeof(PayDebtPage));
+        Routing.RegisterRoute("debtPlan",          typeof(DebtPlanPage));
 
         PendingNavigation.Attach(this);
     }

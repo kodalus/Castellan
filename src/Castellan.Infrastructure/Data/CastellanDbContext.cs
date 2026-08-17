@@ -16,6 +16,7 @@ public sealed class CastellanDbContext : DbContext
     public DbSet<CategoryRule> CategoryRules => Set<CategoryRule>();
     public DbSet<Fund> Funds => Set<Fund>();
     public DbSet<Asset> Assets => Set<Asset>();
+    public DbSet<Debt> Debts => Set<Debt>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -9,6 +9,7 @@ namespace Castellan.App.ViewModels;
 public partial class DashboardViewModel : ObservableObject
 {
     private readonly GetMonthOverviewUseCase _getOverview;
+    private readonly SimulateDebtPayoffUseCase _debtPayoff;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentMonthDisplay))]
@@ -18,11 +19,16 @@ public partial class DashboardViewModel : ObservableObject
     [ObservableProperty] private bool _isLoading;
     [ObservableProperty] private bool _isNotificationWarningVisible;
 
+    [ObservableProperty] private string _debtSummaryDisplay = "";
+    [ObservableProperty] private string _debtFreedomDisplay = "";
+    [ObservableProperty] private bool _hasDebts;
+
     public string CurrentMonthDisplay => CurrentMonth.ToDisplayString();
 
-    public DashboardViewModel(GetMonthOverviewUseCase getOverview)
+    public DashboardViewModel(GetMonthOverviewUseCase getOverview, SimulateDebtPayoffUseCase debtPayoff)
     {
         _getOverview = getOverview;
+        _debtPayoff = debtPayoff;
         CurrentMonth = YearMonth.Current;
     }
 
@@ -34,8 +40,32 @@ public partial class DashboardViewModel : ObservableObject
         {
             MonthData = await _getOverview.ExecuteAsync(CurrentMonth, ct);
             CheckNotificationHealth();
+            await LoadDebtStripAsync(ct);
         }
         finally { IsLoading = false; }
+    }
+
+    /// <summary>
+    /// Dług na ekranie, który i tak otwierasz codziennie — bo najłatwiej unikać tego,
+    /// po co trzeba specjalnie nawigować. Pasek pojawia się tylko wtedy, gdy jest co
+    /// pokazać, i prowadzi do pełnego planu spłaty.
+    /// </summary>
+    private async Task LoadDebtStripAsync(CancellationToken ct)
+    {
+        var plan = await _debtPayoff.ExecuteAsync(ct: ct);
+
+        HasDebts = plan.TotalDebt.Grosze > 0;
+        if (!HasDebts)
+        {
+            DebtSummaryDisplay = "";
+            DebtFreedomDisplay = "";
+            return;
+        }
+
+        DebtSummaryDisplay = $"Długi: {plan.TotalDebt}";
+        DebtFreedomDisplay = plan.FreedomDate is { } d
+            ? $"wolna w {d:MM/yyyy}"
+            : "podaj raty, by poznać termin";
     }
 
     private void CheckNotificationHealth()
@@ -66,4 +96,8 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenIncomeAsync()
         => await Shell.Current.GoToAsync($"income?month={CurrentMonth}");
+
+    [RelayCommand]
+    private static async Task OpenDebtPlanAsync()
+        => await Shell.Current.GoToAsync("debtPlan");
 }

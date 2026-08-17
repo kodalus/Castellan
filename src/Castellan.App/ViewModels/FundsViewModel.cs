@@ -129,7 +129,7 @@ public partial class FundsViewModel : ObservableObject
             // pokryte z tego funduszu wrócą do kopert i znów obciążą budżet miesiąca.
             var warnings = new List<string>();
             if (balance.Grosze != 0)
-                warnings.Add($"Zebrane {balance} przestanie być widoczne w Aktywach.");
+                warnings.Add($"Zebrane {balance} przestanie być widoczne w Majątku.");
             if (linked > 0)
                 warnings.Add($"{linked} transakcji pokrytych z tego funduszu wróci do kopert i znów obciąży budżet.");
 

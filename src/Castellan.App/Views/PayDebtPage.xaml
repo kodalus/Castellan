@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.PayDebtPage"
+             x:DataType="vm:PayDebtViewModel"
+             Title="Zapłać ratę">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Border IsVisible="{Binding HasError}"
+                    BackgroundColor="#FFEBEE" Padding="12,8"
+                    StrokeShape="RoundRectangle 6" Stroke="Transparent">
+                <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
+            </Border>
+
+            <VerticalStackLayout Spacing="2">
+                <Label Text="{Binding DebtName}" FontSize="18" FontAttributes="Bold" />
+                <Label Text="{Binding BalanceDisplay}" FontSize="13" TextColor="#C62828" />
+            </VerticalStackLayout>
+
+            <Label Text="Zapisze wydatek w wybranej kopercie i jednocześnie zmniejszy saldo zobowiązania."
+                   FontSize="12" TextColor="Gray" />
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Amount}" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding AmountText}" Keyboard="Numeric" />
+                <Label Text="Możesz wpisać więcej niż ratę — nadpłata skróci czas spłaty."
+                       FontSize="11" TextColor="Gray" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Account}" FontSize="13" TextColor="Gray" />
+                <Picker ItemsSource="{Binding AccountOptions}" ItemDisplayBinding="{Binding Name}"
+                        SelectedIndex="{Binding AccountIndex}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Category}" FontSize="13" TextColor="Gray" />
+                <Picker ItemsSource="{Binding CategoryOptions}" ItemDisplayBinding="{Binding Name}"
+                        SelectedIndex="{Binding CategoryIndex}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="{x:Static strings:AppResources.Transactions_Date}" FontSize="13" TextColor="Gray" />
+                <DatePicker Date="{Binding Date}" />
+            </VerticalStackLayout>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

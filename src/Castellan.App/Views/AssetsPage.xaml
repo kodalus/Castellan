@@ -4,10 +4,11 @@
              xmlns:vm="clr-namespace:Castellan.App.ViewModels"
              x:Class="Castellan.App.Views.AssetsPage"
              x:DataType="vm:AssetsViewModel"
-             Title="Aktywa">
+             Title="Majątek">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="+" Command="{Binding AddAssetCommand}" />
+        <ToolbarItem Text="+ Aktywo" Command="{Binding AddAssetCommand}" />
+        <ToolbarItem Text="+ Zobowiązanie" Command="{Binding AddDebtCommand}" Order="Secondary" />
     </ContentPage.ToolbarItems>
 
     <ScrollView>
@@ -24,6 +25,26 @@
                     <Label Text="{Binding TotalValueDisplay}"
                            FontSize="14" FontAttributes="Bold" TextColor="#1565C0" />
                     <Label Text="{Binding AvgExpenseDisplay}"
+                           FontSize="11" TextColor="Gray" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Net worth: assets + funds − debts. Shown only when there are debts;
+                 without them it would just repeat the assets total. -->
+            <Border Margin="12,4" Padding="16,14"
+                    StrokeShape="RoundRectangle 12"
+                    IsVisible="{Binding HasDebts}">
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="Wartość netto" FontSize="12" TextColor="Gray" />
+                    <Label Text="{Binding NetWorthDisplay}"
+                           FontSize="24" FontAttributes="Bold" TextColor="#2E7D32">
+                        <Label.Triggers>
+                            <DataTrigger TargetType="Label" Binding="{Binding IsNetWorthNegative}" Value="True">
+                                <Setter Property="TextColor" Value="#C62828" />
+                            </DataTrigger>
+                        </Label.Triggers>
+                    </Label>
+                    <Label Text="aktywa i fundusze minus zobowiązania"
                            FontSize="11" TextColor="Gray" />
                 </VerticalStackLayout>
             </Border>
@@ -131,6 +152,80 @@
                                            FontAttributes="Bold" HorizontalOptions="End" VerticalOptions="Center" />
                                 </Grid>
                             </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+            </VerticalStackLayout>
+
+            <!-- Debts: the mirror image of funds — balance shrinks toward zero.
+                 Ordered smallest-first (debt snowball): clearing one frees its
+                 installment for the next. -->
+            <VerticalStackLayout IsVisible="{Binding HasDebts}" Margin="0,8,0,0">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,8,16,4">
+                    <Label Grid.Column="0" Text="Zobowiązania" FontSize="12" FontAttributes="Bold"
+                           TextColor="Gray" VerticalOptions="Center" />
+                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="0">
+                        <Label Text="{Binding DebtsTotalDisplay}" FontSize="11"
+                               TextColor="#C62828" HorizontalOptions="End" />
+                        <Label Text="{Binding DebtsInstallmentsDisplay}" FontSize="10"
+                               TextColor="Gray" HorizontalOptions="End" />
+                    </VerticalStackLayout>
+                </Grid>
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding DebtRows}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DebtRowVm">
+                          <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Edytuj"
+                                               BackgroundColor="#1565C0"
+                                               Command="{Binding EditCommand}" />
+                                    <SwipeItem Text="Usuń"
+                                               BackgroundColor="#E53935"
+                                               Command="{Binding DeleteCommand}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
+                            <Border Margin="12,4" Padding="14,12" StrokeShape="RoundRectangle 10">
+                                <VerticalStackLayout Spacing="8">
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
+                                            <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold"
+                                                   LineBreakMode="TailTruncation" />
+                                            <Label Text="{Binding KindDisplay}" FontSize="11" TextColor="Gray" />
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="2">
+                                            <Label Text="{Binding BalanceDisplay}" FontSize="16"
+                                                   FontAttributes="Bold" TextColor="#C62828"
+                                                   HorizontalOptions="End" />
+                                            <Label Text="{Binding InstallmentDisplay}" FontSize="11"
+                                                   TextColor="Gray" HorizontalOptions="End" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+
+                                    <ProgressBar Progress="{Binding Progress}"
+                                                 ProgressColor="#2E7D32"
+                                                 HeightRequest="6" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <Label Grid.Column="0" Text="{Binding PaidOffDisplay}"
+                                               FontSize="11" TextColor="Gray" VerticalOptions="Center" />
+                                        <Label Grid.Column="1" Text="{Binding PayoffDisplay}"
+                                               FontSize="11" FontAttributes="Bold" TextColor="#1565C0"
+                                               VerticalOptions="Center" />
+                                    </Grid>
+
+                                    <Button Text="Zapłać ratę"
+                                            Command="{Binding PayCommand}"
+                                            IsVisible="{Binding IsNotPaidOff}"
+                                            FontSize="12" Padding="12,6" CornerRadius="6"
+                                            BackgroundColor="#2196F3" TextColor="White"
+                                            HorizontalOptions="End" />
+
+                                </VerticalStackLayout>
+                            </Border>
+                          </SwipeView>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>

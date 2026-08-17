@@ -31,6 +31,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<ICategoryRuleRepository, CategoryRuleRepository>();
         services.AddScoped<IFundRepository, FundRepository>();
         services.AddScoped<IAssetRepository, AssetRepository>();
+        services.AddScoped<IDebtRepository, DebtRepository>();
 
         services.AddScoped<IBackupService, BackupService>();
 
@@ -61,6 +62,7 @@ public static class InfrastructureServiceExtensions
                 "Rozrywka", "Ubrania i obuwie", "Elektronika", "Edukacja",
                 "Sport i rekreacja", "Higiena i kosmetyki", "Podróże", "Inne wydatki",
                 "Inwestycje", "Dobroczynność", "Dzieci", "Przedszkole", "Rezerwy",
+                "Kredyty i pożyczki",
             };
             var incomes = new[]
             {
@@ -81,6 +83,7 @@ public static class InfrastructureServiceExtensions
         EnsureCategory(db, "Inwestycje", CategoryKind.Expense);
         EnsureCategory(db, "Dobroczynność", CategoryKind.Expense);
         EnsureCategory(db, "Dzieci", CategoryKind.Expense);
+        EnsureCategory(db, "Kredyty i pożyczki", CategoryKind.Expense);
         EnsureCategory(db, "Przedszkole", CategoryKind.Expense);
         EnsureCategory(db, "Rezerwy", CategoryKind.Expense);
         EnsureCategory(db, "800+", CategoryKind.Income);
