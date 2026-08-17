@@ -58,6 +58,17 @@
                                  IsVisible="{Binding IsNotEmpty}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:FundRow">
+                      <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems>
+                                <SwipeItem Text="Edytuj"
+                                           BackgroundColor="#1565C0"
+                                           Command="{Binding EditCommand}" />
+                                <SwipeItem Text="Usuń"
+                                           BackgroundColor="#E53935"
+                                           Command="{Binding DeleteCommand}" />
+                            </SwipeItems>
+                        </SwipeView.RightItems>
                         <Border Margin="12,6" Padding="14,12"
                                 StrokeShape="RoundRectangle 10">
                             <VerticalStackLayout Spacing="8">
@@ -123,6 +134,7 @@
 
                             </VerticalStackLayout>
                         </Border>
+                      </SwipeView>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>

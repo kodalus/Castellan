@@ -19,4 +19,10 @@ internal sealed class FundRepository(CastellanDbContext db) : IFundRepository
         db.Funds.Add(fund);
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(Fund fund, CancellationToken ct = default)
+    {
+        db.Funds.Remove(fund);
+        return Task.CompletedTask;
+    }
 }

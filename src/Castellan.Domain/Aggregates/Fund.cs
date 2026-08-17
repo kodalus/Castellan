@@ -36,6 +36,21 @@ public class Fund
     public void Withdraw(Money amount)   => Balance = new Money(Balance.Grosze - amount.Grosze);
     public void Archive() => IsArchived = true;
 
+    /// <summary>
+    /// Edycja parametrów funduszu. Celowo nie rusza Balance ani StartMonth:
+    /// saldo zmienia się tylko przez wpłaty/wypłaty, a StartMonth jest kotwicą
+    /// dla wyliczeń "ile powinno być odłożone do teraz" — przesunięcie go
+    /// zafałszowałoby historię opóźnień.
+    /// </summary>
+    public void Update(string name, FundKind kind, Money targetAmount, DateOnly deadline)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        Name = name.Trim();
+        Kind = kind;
+        TargetAmount = targetAmount;
+        Deadline = new DateOnly(deadline.Year, deadline.Month, 1);
+    }
+
     public Money Remaining => new(Math.Max(0, TargetAmount.Grosze - Balance.Grosze));
 
     public double Progress => TargetAmount.Grosze > 0

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.EditFundPage"
+             x:DataType="vm:EditFundViewModel"
+             Title="Edytuj fundusz">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Border IsVisible="{Binding HasError}"
+                    BackgroundColor="#FFEBEE" Padding="12,8"
+                    StrokeShape="RoundRectangle 6" Stroke="Transparent">
+                <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
+            </Border>
+
+            <Label Text="{Binding BalanceDisplay}" FontSize="13" TextColor="#1565C0"
+                   FontAttributes="Bold" />
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Nazwa funduszu" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding Name}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Rodzaj" FontSize="13" TextColor="Gray" />
+                <Picker ItemsSource="{Binding Kinds}"
+                        SelectedItem="{Binding SelectedKind}"
+                        ItemDisplayBinding="{Binding Display}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Kwota docelowa (zł)" FontSize="13" TextColor="Gray" />
+                <Entry Text="{Binding TargetAmountText}" Keyboard="Numeric" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Spacing="4">
+                <Label Text="Termin (kiedy potrzebujesz pieniędzy)" FontSize="13" TextColor="Gray" />
+                <DatePicker Date="{Binding Deadline}"
+                            Format="MMMM yyyy"
+                            MinimumDate="2025-01-01"
+                            MaximumDate="2035-12-31" />
+            </VerticalStackLayout>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

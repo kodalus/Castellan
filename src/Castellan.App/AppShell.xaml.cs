@@ -22,6 +22,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("income",            typeof(IncomePage));
         Routing.RegisterRoute("assignCategory",    typeof(AssignCategoryPage));
         Routing.RegisterRoute("addFund",            typeof(AddFundPage));
+        Routing.RegisterRoute("editFund",          typeof(EditFundPage));
         Routing.RegisterRoute("contributeFund",    typeof(ContributeFundPage));
         Routing.RegisterRoute("addAsset",          typeof(AddAssetPage));
         Routing.RegisterRoute("updateAssetValue",  typeof(UpdateAssetValuePage));

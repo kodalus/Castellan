@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
+using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -19,7 +20,9 @@ public sealed record FundRow(
     string DeficitDisplay,
     bool IsDelayed,
     double Progress,
-    ICommand ContributeCommand)
+    ICommand ContributeCommand,
+    ICommand EditCommand,
+    ICommand DeleteCommand)
 {
     public bool IsNotDelayed => !IsDelayed;
 }
@@ -27,6 +30,7 @@ public sealed record FundRow(
 public partial class FundsViewModel : ObservableObject
 {
     private readonly GetFundOverviewUseCase _overview;
+    private readonly DeleteFundUseCase _deleteFund;
 
     public ObservableCollection<FundRow> Items { get; } = [];
 
@@ -48,9 +52,10 @@ public partial class FundsViewModel : ObservableObject
 
     public bool NeedsPaydate => PaydateDay <= 0;
 
-    public FundsViewModel(GetFundOverviewUseCase overview)
+    public FundsViewModel(GetFundOverviewUseCase overview, DeleteFundUseCase deleteFund)
     {
         _overview = overview;
+        _deleteFund = deleteFund;
         PaydateDay = Microsoft.Maui.Storage.Preferences.Get("paydate_day", 0);
         PaydateText = PaydateDay > 0 ? PaydateDay.ToString() : "";
     }
@@ -84,7 +89,10 @@ public partial class FundsViewModel : ObservableObject
                     s.IsDelayed,
                     s.Progress,
                     new AsyncRelayCommand(() =>
-                        Shell.Current.GoToAsync($"contributeFund?fundId={fundId.Value}"))));
+                        Shell.Current.GoToAsync($"contributeFund?fundId={fundId.Value}")),
+                    new AsyncRelayCommand(() =>
+                        Shell.Current.GoToAsync($"editFund?fundId={fundId.Value}")),
+                    new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance))));
             }
             IsEmpty = Items.Count == 0;
         }
@@ -108,4 +116,42 @@ public partial class FundsViewModel : ObservableObject
     [RelayCommand]
     private async Task AddFundAsync()
         => await Shell.Current.GoToAsync("addFund");
+
+    private async Task DeleteFundAsync(FundId id, string name, Money balance)
+    {
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        try
+        {
+            var linked = await _deleteFund.CountLinkedTransactionsAsync(id);
+
+            // Uczciwie wypisz konsekwencje: zebrane saldo znika z ewidencji, a wydatki
+            // pokryte z tego funduszu wrócą do kopert i znów obciążą budżet miesiąca.
+            var warnings = new List<string>();
+            if (balance.Grosze != 0)
+                warnings.Add($"Zebrane {balance} przestanie być widoczne w Aktywach.");
+            if (linked > 0)
+                warnings.Add($"{linked} transakcji pokrytych z tego funduszu wróci do kopert i znów obciąży budżet.");
+
+            var details = warnings.Count > 0
+                ? "\n\n" + string.Join("\n\n", warnings)
+                : "";
+
+            var confirmed = await page.DisplayAlertAsync(
+                $"Usunąć „{name}”?",
+                $"Tej operacji nie można cofnąć.{details}",
+                "Usuń", "Anuluj");
+            if (!confirmed) return;
+
+            await _deleteFund.ExecuteAsync(id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (var e = ex; e != null; e = e.InnerException)
+                sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
+            await page.DisplayAlertAsync("Błąd usuwania funduszu", sb.ToString(), "OK");
+        }
+    }
 }

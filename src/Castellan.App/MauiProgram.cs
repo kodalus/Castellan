@@ -44,6 +44,8 @@ public static class MauiProgram
         builder.Services.AddTransient<ConfirmTransferUseCase>();
         builder.Services.AddTransient<RejectTransferUseCase>();
         builder.Services.AddTransient<CreateFundUseCase>();
+        builder.Services.AddTransient<UpdateFundUseCase>();
+        builder.Services.AddTransient<DeleteFundUseCase>();
         builder.Services.AddTransient<ContributeToFundUseCase>();
         builder.Services.AddTransient<GetFundOverviewUseCase>();
         builder.Services.AddTransient<PayTransactionFromFundUseCase>();
@@ -79,6 +81,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AssignCategoryViewModel>();
         builder.Services.AddTransient<FundsViewModel>();
         builder.Services.AddTransient<AddFundViewModel>();
+        builder.Services.AddTransient<EditFundViewModel>();
         builder.Services.AddTransient<ContributeFundViewModel>();
         builder.Services.AddTransient<AssetsViewModel>();
         builder.Services.AddTransient<AddAssetViewModel>();
@@ -106,6 +109,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AssignCategoryPage>();
         builder.Services.AddTransient<FundsPage>();
         builder.Services.AddTransient<AddFundPage>();
+        builder.Services.AddTransient<EditFundPage>();
         builder.Services.AddTransient<ContributeFundPage>();
         builder.Services.AddTransient<AssetsPage>();
         builder.Services.AddTransient<AddAssetPage>();
