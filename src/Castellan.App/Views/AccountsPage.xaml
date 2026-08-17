@@ -11,32 +11,40 @@
         <ToolbarItem Text="+" Command="{Binding AddAccountCommand}" />
     </ContentPage.ToolbarItems>
 
-    <CollectionView ItemsSource="{Binding Accounts}" Margin="12">
+    <CollectionView ItemsSource="{Binding Accounts}" Margin="0,8,0,0">
         <CollectionView.EmptyView>
-            <Label Text="{x:Static strings:AppResources.Accounts_Empty}"
-                   HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="0,40" />
+            <Label Text="{x:Static strings:AppResources.Accounts_Empty}" Style="{StaticResource EmptyState}" />
         </CollectionView.EmptyView>
         <CollectionView.ItemTemplate>
             <DataTemplate x:DataType="vm:AccountRow">
-                <Grid ColumnDefinitions="*,Auto" Padding="4,12">
-                    <VerticalStackLayout Grid.Column="0" Spacing="2">
-                        <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold" />
-                        <Label Text="{Binding KindDisplay}" FontSize="12" TextColor="Gray" />
+                <Border Style="{StaticResource CardRow}">
+                    <VerticalStackLayout Spacing="10">
+
+                        <!-- Saldo stoi samo w swojej kolumnie: to jedyna liczba w wierszu,
+                             więc nic nie może jej zasłaniać. Akcje schodzą pod spód. -->
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
+                                <Label Text="{Binding KindDisplay}" Style="{StaticResource Caption}" />
+                            </VerticalStackLayout>
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding BalanceDisplay}" Style="{StaticResource RowValue}" />
+                                <Label Text="★ domyślne" Style="{StaticResource RowMeta}"
+                                       TextColor="{StaticResource Brass}"
+                                       IsVisible="{Binding IsDefault}" />
+                            </VerticalStackLayout>
+                        </Grid>
+
+                        <HorizontalStackLayout Spacing="8">
+                            <Button Text="Ustaw domyślne" Command="{Binding SetDefaultCommand}"
+                                    Style="{StaticResource GhostButton}"
+                                    IsVisible="{Binding IsNotDefault}" />
+                            <Button Text="Uzgodnij" Command="{Binding ReconcileCommand}"
+                                    Style="{StaticResource GhostButton}" />
+                        </HorizontalStackLayout>
+
                     </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="4">
-                        <Label Text="{Binding BalanceDisplay}" FontSize="15" HorizontalOptions="End" />
-                        <Label Text="★ Domyślne" FontSize="11" TextColor="#1565C0"
-                               HorizontalOptions="End"
-                               IsVisible="{Binding IsDefault}" />
-                        <Button Text="Ustaw domyślne"
-                                Command="{Binding SetDefaultCommand}"
-                                FontSize="11" HeightRequest="30" Padding="10,0"
-                                IsVisible="{Binding IsNotDefault}" />
-                        <Button Text="Uzgodnij"
-                                Command="{Binding ReconcileCommand}"
-                                FontSize="11" HeightRequest="30" Padding="10,0" />
-                    </VerticalStackLayout>
-                </Grid>
+                </Border>
             </DataTemplate>
         </CollectionView.ItemTemplate>
     </CollectionView>

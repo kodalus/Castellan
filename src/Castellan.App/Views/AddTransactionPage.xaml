@@ -12,42 +12,43 @@
         <ToolbarItem Text="{x:Static strings:AppResources.Button_Cancel}" Command="{Binding CancelCommand}" />
     </ContentPage.ToolbarItems>
 
-    <VerticalStackLayout Padding="16" Spacing="16">
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-        <HorizontalStackLayout Spacing="20">
-            <RadioButton Content="Wydatek" GroupName="txKind"
-                         IsChecked="{Binding IsExpense, Mode=TwoWay}" />
-            <RadioButton Content="Przychód" GroupName="txKind"
-                         IsChecked="{Binding IsIncome, Mode=TwoWay}" />
-        </HorizontalStackLayout>
+            <HorizontalStackLayout Spacing="24">
+                <RadioButton Content="Wydatek" GroupName="txKind"
+                             IsChecked="{Binding IsExpense, Mode=TwoWay}" />
+                <RadioButton Content="Przychód" GroupName="txKind"
+                             IsChecked="{Binding IsIncome, Mode=TwoWay}" />
+            </HorizontalStackLayout>
 
-        <VerticalStackLayout Spacing="4">
-            <Label Text="{x:Static strings:AppResources.Transactions_Account}" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding AccountOptions}" ItemDisplayBinding="{Binding Name}"
-                    SelectedIndex="{Binding AccountIndex}" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Account}" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding AccountOptions}" ItemDisplayBinding="{Binding Name}"
+                        SelectedIndex="{Binding AccountIndex}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Amount}" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding AmountText}" Keyboard="Numeric" Placeholder="100,00" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Date}" Style="{StaticResource FieldLabel}" />
+                <DatePicker Date="{Binding Date}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Category}" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding CategoryOptions}" ItemDisplayBinding="{Binding Name}"
+                        SelectedIndex="{Binding CategoryIndex}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Note}" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Note}" />
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="{x:Static strings:AppResources.Transactions_Amount}" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding AmountText}" Keyboard="Numeric"
-                   Placeholder="100.00" />
-        </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="{x:Static strings:AppResources.Transactions_Date}" FontSize="13" TextColor="Gray" />
-            <DatePicker Date="{Binding Date}" />
-        </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="{x:Static strings:AppResources.Transactions_Category}" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding CategoryOptions}" ItemDisplayBinding="{Binding Name}"
-                    SelectedIndex="{Binding CategoryIndex}" />
-        </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="{x:Static strings:AppResources.Transactions_Note}" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding Note}" />
-        </VerticalStackLayout>
-
-    </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

@@ -7,37 +7,29 @@
              Title="Aktualizacja wartości">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Zapisz"
-                     Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-            <!-- Asset name card -->
-            <Border Padding="14,12" StrokeShape="RoundRectangle 10">
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="{Binding AssetName}"
-                           FontSize="17" FontAttributes="Bold" />
-                    <Label Text="{Binding CurrentValueDisplay}"
-                           FontSize="13" TextColor="Gray" />
-                </VerticalStackLayout>
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
             </Border>
 
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Nowa wartość (zł)" FontSize="13" TextColor="Gray" />
-                <Entry Text="{Binding NewValueText}"
-                       Keyboard="Numeric"
-                       Placeholder="np. 52000"
+            <VerticalStackLayout Spacing="3">
+                <Label Text="{Binding AssetName}" Style="{StaticResource Title}" />
+                <Label Text="{Binding CurrentValueDisplay}" Style="{StaticResource Secondary}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Nowa wartość (zł)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding NewValueText}" Keyboard="Numeric" Placeholder="np. 52000"
+                       FontSize="{StaticResource SizeTitle}"
                        ReturnCommand="{Binding SaveCommand}" />
             </VerticalStackLayout>
 
-            <Label Text="{Binding ErrorMessage}"
-                   TextColor="#F44336" FontSize="13"
-                   IsVisible="{Binding HasError}" />
-
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
         </VerticalStackLayout>

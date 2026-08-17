@@ -12,42 +12,38 @@
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-            <Border IsVisible="{Binding HasError}"
-                    BackgroundColor="#FFEBEE" Padding="12,8"
-                    StrokeShape="RoundRectangle 6" Stroke="Transparent">
-                <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
             </Border>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Nazwa" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Nazwa" Style="{StaticResource FieldLabel}" />
                 <Entry Text="{Binding Name}" Placeholder="np. Kredyt gotówkowy ING" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Rodzaj" FontSize="13" TextColor="Gray" />
-                <Picker ItemsSource="{Binding Kinds}"
-                        SelectedItem="{Binding SelectedKind}"
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Rodzaj" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Kinds}" SelectedItem="{Binding SelectedKind}"
                         ItemDisplayBinding="{Binding Display}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Pozostało do spłaty (zł)" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Pozostało do spłaty (zł)" Style="{StaticResource FieldLabel}" />
                 <Entry Text="{Binding InitialAmountText}" Keyboard="Numeric" Placeholder="np. 12000" />
                 <Label Text="Wpisz kwotę, którą widzisz dziś w banku — od niej liczony jest postęp spłaty."
-                       FontSize="11" TextColor="Gray" />
+                       Style="{StaticResource FieldHint}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Rata miesięczna (zł)" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Rata miesięczna (zł)" Style="{StaticResource FieldLabel}" />
                 <Entry Text="{Binding InstallmentText}" Keyboard="Numeric" Placeholder="np. 350" />
                 <Label Text="Możesz zostawić puste, jeśli nie ma ustalonego harmonogramu — wtedy nie policzymy terminu spłaty."
-                       FontSize="11" TextColor="Gray" />
+                       Style="{StaticResource FieldHint}" />
             </VerticalStackLayout>
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
         </VerticalStackLayout>

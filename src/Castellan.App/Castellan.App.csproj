@@ -20,8 +20,14 @@
 
   <ItemGroup>
     <MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#0F2B5B" />
-    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F2B5B" BaseSize="180,180" />
+    <!-- Tło splashu = Ground z palety. Granat zostaje na ikonie w launcherze (tam
+         jest znakiem rozpoznawczym), ale przy starcie mignięcie granatem tuż przed
+         prawie czarnym ekranem widać jako szew. -->
+    <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0F1216" BaseSize="180,180" />
     <MauiImage Include="Resources\Images\*" />
+    <!-- Ikony zakładek rysowane są na siatce 24×24 — bez tego skalowałyby się
+         od domyślnej podstawy i na pasku wyszłyby rozmyte. -->
+    <MauiImage Update="Resources\Images\tab_*.svg" BaseSize="24,24" />
     <MauiFont Include="Resources\Fonts\*" />
     <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>

@@ -11,48 +11,37 @@
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-            <!-- Error banner -->
-            <Border IsVisible="{Binding HasError}"
-                    BackgroundColor="#FFEBEE" Padding="12,8"
-                    StrokeShape="RoundRectangle 6" Stroke="Transparent">
-                <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
             </Border>
 
-            <!-- Name -->
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Nazwa funduszu" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Nazwa funduszu" Style="{StaticResource FieldLabel}" />
                 <Entry Text="{Binding Name}" Placeholder="np. Podatek dochodowy 2027" />
             </VerticalStackLayout>
 
-            <!-- Kind -->
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Rodzaj" FontSize="13" TextColor="Gray" />
-                <Picker ItemsSource="{Binding Kinds}"
-                        SelectedItem="{Binding SelectedKind}"
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Rodzaj" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Kinds}" SelectedItem="{Binding SelectedKind}"
                         ItemDisplayBinding="{Binding Display}" />
             </VerticalStackLayout>
 
-            <!-- Target amount -->
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Kwota docelowa (zł)" FontSize="13" TextColor="Gray" />
-                <Entry Text="{Binding TargetAmountText}"
-                       Keyboard="Numeric"
-                       Placeholder="np. 3000" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Kwota docelowa (zł)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding TargetAmountText}" Keyboard="Numeric" Placeholder="np. 3000" />
             </VerticalStackLayout>
 
-            <!-- Deadline -->
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Termin (kiedy potrzebujesz pieniędzy)" FontSize="13" TextColor="Gray" />
-                <DatePicker Date="{Binding Deadline}"
-                            Format="MMMM yyyy"
-                            MinimumDate="2025-01-01"
-                            MaximumDate="2035-12-31" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Termin" Style="{StaticResource FieldLabel}" />
+                <DatePicker Date="{Binding Deadline}" Format="MMMM yyyy"
+                            MinimumDate="2025-01-01" MaximumDate="2035-12-31" />
+                <Label Text="Kiedy będą potrzebne pieniądze — od tego liczy się miesięczna rata."
+                       Style="{StaticResource FieldHint}" />
             </VerticalStackLayout>
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
         </VerticalStackLayout>

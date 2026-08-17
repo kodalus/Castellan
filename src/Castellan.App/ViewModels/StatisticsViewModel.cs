@@ -4,6 +4,7 @@ using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.Graphics;
+using Castellan.App.Resources.Styles;
 
 namespace Castellan.App.ViewModels;
 
@@ -56,12 +57,15 @@ public partial class StatisticsViewModel : ObservableObject
                     m.MonthShort,
                     m.Expense.ToString(),
                     maxExp == 0 ? 2.0 : Math.Max(2.0, (double)m.Expense.Grosze / maxExp * maxBarHeight),
-                    isCurrent ? Color.FromArgb("#F44336") : Color.FromArgb("#FFCDD2")));
+                    // Bieżący miesiąc pełnym kolorem, poprzednie przygaszone — na ciemnym
+                    // tle rozjaśnianie starszych słupków (jak w motywie jasnym) dawałoby
+                    // odwrotny efekt: przeszłość krzyczałaby głośniej niż teraźniejszość.
+                    isCurrent ? Palette.Negative : Palette.NegativeDim));
                 IncomeBars.Add(new MonthBar(
                     m.MonthShort,
                     m.Income.ToString(),
                     maxInc == 0 ? 2.0 : Math.Max(2.0, (double)m.Income.Grosze / maxInc * maxBarHeight),
-                    isCurrent ? Color.FromArgb("#4CAF50") : Color.FromArgb("#C8E6C9")));
+                    isCurrent ? Palette.Positive : Palette.PositiveDim));
             }
 
             var totalExp = stats.Months.Select(m => m.Expense).Sum();

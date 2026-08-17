@@ -11,21 +11,21 @@
         <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
     </ContentPage.ToolbarItems>
 
-    <VerticalStackLayout Padding="16" Spacing="20">
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Nazwa" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding Name}"
-                   Placeholder="np. Kawiarnia, Paliwo, Wynagrodzenie"
-                   ClearButtonVisibility="WhileEditing" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Nazwa" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Name}" Placeholder="np. Kawiarnia, Paliwo, Wynagrodzenie"
+                       ClearButtonVisibility="WhileEditing" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Rodzaj" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Kinds}" SelectedIndex="{Binding KindIndex}" />
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Rodzaj" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding Kinds}"
-                    SelectedIndex="{Binding KindIndex}" />
-        </VerticalStackLayout>
-
-    </VerticalStackLayout>
+    </ScrollView>
 
 </ContentPage>

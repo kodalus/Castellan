@@ -14,142 +14,102 @@
     <ScrollView>
         <VerticalStackLayout Padding="0,0,0,16">
 
-            <!-- Summary card: total autonomy -->
-            <Border Margin="12,10,12,4" Padding="16,14"
-                    StrokeShape="RoundRectangle 12">
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="Poduszka finansowa"
-                           FontSize="12" TextColor="Gray" />
-                    <Label Text="{Binding TotalMonthsDisplay}"
-                           FontSize="30" FontAttributes="Bold" />
-                    <Label Text="{Binding TotalValueDisplay}"
-                           FontSize="14" FontAttributes="Bold" TextColor="#1565C0" />
-                    <Label Text="{Binding AvgExpenseDisplay}"
-                           FontSize="11" TextColor="Gray" />
+            <!-- „Ile miesięcy wytrzymam” to jedyna liczba na tym ekranie, po którą
+                 sięga się odruchowo — dlatego jest wielka, a złotówki pod nią. -->
+            <Border Style="{StaticResource Card}" Margin="12,10,12,4">
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="Poduszka finansowa" Style="{StaticResource SectionHeader}" />
+                    <Label Text="{Binding TotalMonthsDisplay}" Style="{StaticResource Hero}" />
+                    <Label Text="{Binding TotalValueDisplay}" Style="{StaticResource Secondary}" />
+                    <Label Text="{Binding AvgExpenseDisplay}" Style="{StaticResource Caption}" />
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Net worth: assets + funds − debts. Shown only when there are debts;
-                 without them it would just repeat the assets total. -->
-            <Border Margin="12,4" Padding="16,14"
-                    StrokeShape="RoundRectangle 12"
-                    IsVisible="{Binding HasDebts}">
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="Wartość netto" FontSize="12" TextColor="Gray" />
-                    <Label Text="{Binding NetWorthDisplay}"
-                           FontSize="24" FontAttributes="Bold" TextColor="#2E7D32">
+            <!-- Bez długów ta karta powtarzałaby tylko sumę aktywów. -->
+            <Border Style="{StaticResource Card}" IsVisible="{Binding HasDebts}">
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="Wartość netto" Style="{StaticResource SectionHeader}" />
+                    <Label Text="{Binding NetWorthDisplay}" Style="{StaticResource SubHero}"
+                           TextColor="{StaticResource Positive}">
                         <Label.Triggers>
                             <DataTrigger TargetType="Label" Binding="{Binding IsNetWorthNegative}" Value="True">
-                                <Setter Property="TextColor" Value="#C62828" />
+                                <Setter Property="TextColor" Value="{StaticResource Negative}" />
                             </DataTrigger>
                         </Label.Triggers>
                     </Label>
-                    <Label Text="aktywa i fundusze minus zobowiązania"
-                           FontSize="11" TextColor="Gray" />
+                    <Label Text="aktywa i fundusze minus zobowiązania" Style="{StaticResource Caption}" />
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Empty state -->
-            <Label Text="Brak aktywów. Dodaj pierwszy tapując +."
-                   HorizontalOptions="Center" TextColor="Gray"
-                   FontSize="14" Margin="0,48"
+            <Label Text="Brak aktywów. Dodaj pierwsze tapując +." Style="{StaticResource EmptyState}"
                    IsVisible="{Binding IsEmpty}" />
 
-            <!-- Tier sections (always 4 tiers shown) -->
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Tiers}"
-                                 IsVisible="{Binding IsNotEmpty}">
+            <!-- ===== Aktywa według płynności ===== -->
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Tiers}" IsVisible="{Binding IsNotEmpty}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:CushionTierVm">
-                        <VerticalStackLayout Margin="0,4,0,0">
+                        <VerticalStackLayout Margin="0,10,0,0">
 
-                            <!-- Tier header -->
-                            <Grid ColumnDefinitions="*,Auto"
-                                  Margin="16,8,16,4">
-                                <Label Grid.Column="0"
-                                       Text="{Binding LiquidityDisplay}"
-                                       FontSize="12" FontAttributes="Bold"
-                                       TextColor="Gray"
-                                       VerticalOptions="Center" />
-                                <Label Grid.Column="1"
-                                       Text="{Binding CumulativeDisplay}"
-                                       FontSize="11" TextColor="Gray"
-                                       VerticalOptions="Center" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="16,0,16,4">
+                                <Label Grid.Column="0" Text="{Binding LiquidityDisplay}"
+                                       Style="{StaticResource SectionHeader}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding CumulativeDisplay}"
+                                       Style="{StaticResource RowMeta}" VerticalOptions="Center" />
                             </Grid>
 
-                            <!-- Assets in this tier -->
                             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Assets}"
                                                  IsVisible="{Binding HasAssets}">
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate x:DataType="vm:AssetRowVm">
-                                        <Border Margin="12,2" Padding="14,10"
-                                                StrokeShape="RoundRectangle 8">
-                                            <Grid ColumnDefinitions="*,Auto">
-                                                <Label Grid.Column="0"
-                                                       Text="{Binding Name}"
-                                                       FontSize="14"
-                                                       VerticalOptions="Center"
-                                                       LineBreakMode="TailTruncation" />
-                                                <VerticalStackLayout Grid.Column="1"
-                                                                     HorizontalOptions="End"
-                                                                     Spacing="2">
-                                                    <Label Text="{Binding ValueDisplay}"
-                                                           FontSize="15" FontAttributes="Bold"
-                                                           HorizontalOptions="End" />
-                                                    <Label Text="{Binding UpdatedDisplay}"
-                                                           FontSize="10" TextColor="Gray"
-                                                           HorizontalOptions="End" />
-                                                </VerticalStackLayout>
+                                        <Border Style="{StaticResource CardRow}">
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                                 <Grid.GestureRecognizers>
-                                                    <TapGestureRecognizer
-                                                        Command="{Binding UpdateCommand}"
-                                                        CommandParameter="{Binding Id}" />
+                                                    <TapGestureRecognizer Command="{Binding UpdateCommand}"
+                                                                          CommandParameter="{Binding Id}" />
                                                 </Grid.GestureRecognizers>
+                                                <Label Grid.Column="0" Text="{Binding Name}"
+                                                       Style="{StaticResource RowTitle}" VerticalOptions="Center" />
+                                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                                    <Label Text="{Binding ValueDisplay}" Style="{StaticResource RowValue}" />
+                                                    <Label Text="{Binding UpdatedDisplay}" Style="{StaticResource RowMeta}" />
+                                                </VerticalStackLayout>
                                             </Grid>
                                         </Border>
                                     </DataTemplate>
                                 </BindableLayout.ItemTemplate>
                             </VerticalStackLayout>
 
-                            <!-- Tier subtotal row -->
-                            <Grid ColumnDefinitions="*,Auto"
-                                  Margin="16,4,16,8">
-                                <Label Grid.Column="0"
-                                       Text="{Binding TierValueDisplay}"
-                                       FontSize="12" TextColor="Gray" />
-                                <Label Grid.Column="1"
-                                       Text="{Binding MonthsTierDisplay}"
-                                       FontSize="12" FontAttributes="Bold"
-                                       TextColor="#1565C0" />
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="16,4,16,0">
+                                <Label Grid.Column="0" Text="{Binding TierValueDisplay}"
+                                       Style="{StaticResource Caption}" VerticalOptions="Center" />
+                                <Label Grid.Column="1" Text="{Binding MonthsTierDisplay}"
+                                       Style="{StaticResource InfoCaption}" VerticalOptions="Center" />
                             </Grid>
-
-                            <BoxView HeightRequest="1" Color="LightGray"
-                                     Margin="12,0" Opacity="0.4" />
 
                         </VerticalStackLayout>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>
 
-            <!-- Funds section — separate from the liquidity tiers on purpose;
-                 fund money is earmarked for a specific future expense, not a
-                 general emergency cushion. -->
-            <VerticalStackLayout IsVisible="{Binding HasFunds}" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="*,Auto" Margin="16,8,16,4">
-                    <Label Grid.Column="0" Text="Fundusze" FontSize="12" FontAttributes="Bold"
-                           TextColor="Gray" VerticalOptions="Center" />
-                    <Label Grid.Column="1" Text="{Binding FundsTotalDisplay}" FontSize="11"
-                           TextColor="Gray" VerticalOptions="Center" />
+            <!-- Fundusze celowo osobno od poduszki: te pieniądze mają już właściciela
+                 (konkretny przyszły wydatek), więc nie są rezerwą na czarną godzinę. -->
+            <VerticalStackLayout IsVisible="{Binding HasFunds}" Margin="0,14,0,0">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="16,0,16,4">
+                    <Label Grid.Column="0" Text="Fundusze" Style="{StaticResource SectionHeader}"
+                           VerticalOptions="Center" />
+                    <Label Grid.Column="1" Text="{Binding FundsTotalDisplay}"
+                           Style="{StaticResource RowMeta}" VerticalOptions="Center" />
                 </Grid>
 
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding FundRows}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:FundRowVm">
-                            <Border Margin="12,2" Padding="14,10" StrokeShape="RoundRectangle 8">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <Label Grid.Column="0" Text="{Binding Name}" FontSize="14"
-                                           VerticalOptions="Center" LineBreakMode="TailTruncation" />
-                                    <Label Grid.Column="1" Text="{Binding ValueDisplay}" FontSize="15"
-                                           FontAttributes="Bold" HorizontalOptions="End" VerticalOptions="Center" />
+                            <Border Style="{StaticResource CardRow}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <Label Grid.Column="0" Text="{Binding Name}"
+                                           Style="{StaticResource RowTitle}" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding ValueDisplay}"
+                                           Style="{StaticResource RowValue}" VerticalOptions="Center" />
                                 </Grid>
                             </Border>
                         </DataTemplate>
@@ -157,75 +117,65 @@
                 </VerticalStackLayout>
             </VerticalStackLayout>
 
-            <!-- Debts: the mirror image of funds — balance shrinks toward zero.
-                 Ordered smallest-first (debt snowball): clearing one frees its
-                 installment for the next. -->
-            <VerticalStackLayout IsVisible="{Binding HasDebts}" Margin="0,8,0,0">
-                <Grid ColumnDefinitions="*,Auto" Margin="16,8,16,4">
-                    <Label Grid.Column="0" Text="Zobowiązania" FontSize="12" FontAttributes="Bold"
-                           TextColor="Gray" VerticalOptions="Center" />
-                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="0">
-                        <Label Text="{Binding DebtsTotalDisplay}" FontSize="11"
-                               TextColor="#C62828" HorizontalOptions="End" />
-                        <Label Text="{Binding DebtsInstallmentsDisplay}" FontSize="10"
-                               TextColor="Gray" HorizontalOptions="End" />
+            <!-- Zobowiązania: lustro funduszy — saldo maleje do zera. Kolejność od
+                 najmniejszego (kula śnieżna): spłacony dług oddaje swoją ratę następnemu. -->
+            <VerticalStackLayout IsVisible="{Binding HasDebts}" Margin="0,14,0,0">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="16,0,16,4">
+                    <Label Grid.Column="0" Text="Zobowiązania" Style="{StaticResource SectionHeader}"
+                           VerticalOptions="Center" />
+                    <VerticalStackLayout Grid.Column="1" Spacing="1">
+                        <Label Text="{Binding DebtsTotalDisplay}" Style="{StaticResource RowMeta}"
+                               TextColor="{StaticResource Negative}" />
+                        <Label Text="{Binding DebtsInstallmentsDisplay}" Style="{StaticResource RowMeta}" />
                     </VerticalStackLayout>
                 </Grid>
 
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding DebtRows}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:DebtRowVm">
-                          <SwipeView>
-                            <SwipeView.RightItems>
-                                <SwipeItems>
-                                    <SwipeItem Text="Edytuj"
-                                               BackgroundColor="#1565C0"
-                                               Command="{Binding EditCommand}" />
-                                    <SwipeItem Text="Usuń"
-                                               BackgroundColor="#E53935"
-                                               Command="{Binding DeleteCommand}" />
-                                </SwipeItems>
-                            </SwipeView.RightItems>
-                            <Border Margin="12,4" Padding="14,12" StrokeShape="RoundRectangle 10">
-                                <VerticalStackLayout Spacing="8">
+                            <SwipeView>
+                                <SwipeView.RightItems>
+                                    <SwipeItems>
+                                        <SwipeItem Text="Edytuj" BackgroundColor="{StaticResource SurfaceRaised}"
+                                                   Command="{Binding EditCommand}" />
+                                        <SwipeItem Text="Usuń" BackgroundColor="{StaticResource NegativeDim}"
+                                                   Command="{Binding DeleteCommand}" />
+                                    </SwipeItems>
+                                </SwipeView.RightItems>
 
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                            <Label Text="{Binding Name}" FontSize="15" FontAttributes="Bold"
-                                                   LineBreakMode="TailTruncation" />
-                                            <Label Text="{Binding KindDisplay}" FontSize="11" TextColor="Gray" />
-                                        </VerticalStackLayout>
-                                        <VerticalStackLayout Grid.Column="1" HorizontalOptions="End" Spacing="2">
-                                            <Label Text="{Binding BalanceDisplay}" FontSize="16"
-                                                   FontAttributes="Bold" TextColor="#C62828"
-                                                   HorizontalOptions="End" />
-                                            <Label Text="{Binding InstallmentDisplay}" FontSize="11"
-                                                   TextColor="Gray" HorizontalOptions="End" />
-                                        </VerticalStackLayout>
-                                    </Grid>
+                                <Border Style="{StaticResource Card}">
+                                    <VerticalStackLayout Spacing="9">
 
-                                    <ProgressBar Progress="{Binding Progress}"
-                                                 ProgressColor="#2E7D32"
-                                                 HeightRequest="6" />
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                                <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
+                                                <Label Text="{Binding KindDisplay}" Style="{StaticResource Caption}" />
+                                            </VerticalStackLayout>
+                                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                                <Label Text="{Binding BalanceDisplay}" Style="{StaticResource NegativeValue}" />
+                                                <Label Text="{Binding InstallmentDisplay}" Style="{StaticResource RowMeta}" />
+                                            </VerticalStackLayout>
+                                        </Grid>
 
-                                    <Grid ColumnDefinitions="*,Auto">
-                                        <Label Grid.Column="0" Text="{Binding PaidOffDisplay}"
-                                               FontSize="11" TextColor="Gray" VerticalOptions="Center" />
-                                        <Label Grid.Column="1" Text="{Binding PayoffDisplay}"
-                                               FontSize="11" FontAttributes="Bold" TextColor="#1565C0"
-                                               VerticalOptions="Center" />
-                                    </Grid>
+                                        <!-- Pasek rośnie w stronę spłaty, więc zieleń jest tu nagrodą,
+                                             a nie ostrzeżeniem — odwrotnie niż przy kopertach. -->
+                                        <ProgressBar Progress="{Binding Progress}" HeightRequest="4"
+                                                     ProgressColor="{StaticResource Positive}" />
 
-                                    <Button Text="Zapłać ratę"
-                                            Command="{Binding PayCommand}"
-                                            IsVisible="{Binding IsNotPaidOff}"
-                                            FontSize="12" Padding="12,6" CornerRadius="6"
-                                            BackgroundColor="#2196F3" TextColor="White"
-                                            HorizontalOptions="End" />
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                            <Label Grid.Column="0" Text="{Binding PaidOffDisplay}"
+                                                   Style="{StaticResource Caption}" VerticalOptions="Center" />
+                                            <Label Grid.Column="1" Text="{Binding PayoffDisplay}"
+                                                   Style="{StaticResource InfoCaption}" VerticalOptions="Center" />
+                                        </Grid>
 
-                                </VerticalStackLayout>
-                            </Border>
-                          </SwipeView>
+                                        <Button Text="Zapłać ratę" Command="{Binding PayCommand}"
+                                                IsVisible="{Binding IsNotPaidOff}"
+                                                Style="{StaticResource RowAction}" HorizontalOptions="End" />
+
+                                    </VerticalStackLayout>
+                                </Border>
+                            </SwipeView>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>

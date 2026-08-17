@@ -6,15 +6,20 @@
     xmlns:views="clr-namespace:Castellan.App.Views"
     xmlns:strings="clr-namespace:Castellan.App.Resources.Strings">
 
+    <!--
+        Osiem zakładek nie mieści się na pasku — Android pokazuje cztery pierwsze,
+        reszta chowa się pod trzema kropkami. Ikony rysowane są jednym obrysem na
+        siatce 24×24, żeby pasek barwił je (mosiądz = wybrana) bez własnych kolorów.
+    -->
     <TabBar>
-        <ShellContent Title="{x:Static strings:AppResources.Tab_Dashboard}"    Route="dashboard"    ContentTemplate="{DataTemplate views:DashboardPage}" />
-        <ShellContent Title="{x:Static strings:AppResources.Tab_Accounts}"     Route="accounts"     ContentTemplate="{DataTemplate views:AccountsPage}" />
-        <ShellContent Title="{x:Static strings:AppResources.Tab_Transactions}" Route="transactions" ContentTemplate="{DataTemplate views:TransactionsPage}" />
-        <ShellContent Title="{x:Static strings:AppResources.Tab_Envelopes}"    Route="envelopes"    ContentTemplate="{DataTemplate views:EnvelopesPage}" />
-        <ShellContent Title="{x:Static strings:AppResources.Tab_Inbox}"       Route="inbox"        ContentTemplate="{DataTemplate views:InboxPage}" />
-        <ShellContent Title="Fundusze"                                         Route="funds"        ContentTemplate="{DataTemplate views:FundsPage}" />
-        <ShellContent Title="Majątek"                                          Route="assets"       ContentTemplate="{DataTemplate views:AssetsPage}" />
-        <ShellContent Title="Kopia"                                            Route="backup"       ContentTemplate="{DataTemplate views:BackupPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Dashboard}"    Icon="tab_dashboard.png"    Route="dashboard"    ContentTemplate="{DataTemplate views:DashboardPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Accounts}"     Icon="tab_accounts.png"     Route="accounts"     ContentTemplate="{DataTemplate views:AccountsPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Transactions}" Icon="tab_transactions.png" Route="transactions" ContentTemplate="{DataTemplate views:TransactionsPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Envelopes}"    Icon="tab_envelopes.png"    Route="envelopes"    ContentTemplate="{DataTemplate views:EnvelopesPage}" />
+        <ShellContent Title="{x:Static strings:AppResources.Tab_Inbox}"        Icon="tab_inbox.png"        Route="inbox"        ContentTemplate="{DataTemplate views:InboxPage}" />
+        <ShellContent Title="Fundusze"                                         Icon="tab_funds.png"        Route="funds"        ContentTemplate="{DataTemplate views:FundsPage}" />
+        <ShellContent Title="Majątek"                                          Icon="tab_assets.png"       Route="assets"       ContentTemplate="{DataTemplate views:AssetsPage}" />
+        <ShellContent Title="Kopia"                                            Icon="tab_backup.png"       Route="backup"       ContentTemplate="{DataTemplate views:BackupPage}" />
     </TabBar>
 
 </Shell>

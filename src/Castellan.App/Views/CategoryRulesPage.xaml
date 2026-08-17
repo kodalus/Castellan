@@ -10,30 +10,27 @@
         <ToolbarItem Text="+" Command="{Binding AddRuleCommand}" />
     </ContentPage.ToolbarItems>
 
-    <CollectionView ItemsSource="{Binding Rules}" Margin="12">
+    <CollectionView ItemsSource="{Binding Rules}" Margin="16,8,16,0">
         <CollectionView.EmptyView>
-            <Label Text="Brak reguł — dodaj pierwszą za pomocą przycisku +."
-                   HorizontalOptions="Center" VerticalOptions="Center"
-                   TextColor="Gray" HorizontalTextAlignment="Center" Margin="24,40" />
+            <Label Text="Brak reguł. Dodaj pierwszą tapując +." Style="{StaticResource EmptyState}" />
         </CollectionView.EmptyView>
         <CollectionView.ItemTemplate>
             <DataTemplate x:DataType="vm:CategoryRuleRow">
                 <SwipeView>
                     <SwipeView.RightItems>
                         <SwipeItems>
-                            <SwipeItem Text="Usuń" BackgroundColor="#E53935"
+                            <SwipeItem Text="Usuń" BackgroundColor="{StaticResource NegativeDim}"
                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CategoryRulesViewModel}}, Path=DeleteRuleCommand}"
                                        CommandParameter="{Binding .}" />
                         </SwipeItems>
                     </SwipeView.RightItems>
-                    <Grid ColumnDefinitions="*,Auto" Padding="4,14" ColumnSpacing="12">
-                        <VerticalStackLayout Grid.Column="0" Spacing="2">
-                            <Label Text="{Binding Pattern}" FontSize="15" FontAttributes="Bold" />
-                            <Label Text="wzorzec (zawiera)" FontSize="11" TextColor="Gray" />
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,13" ColumnSpacing="12">
+                        <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding Pattern}" Style="{StaticResource RowTitle}" />
+                            <Label Text="gdy nazwa sprzedawcy zawiera" Style="{StaticResource Caption}" />
                         </VerticalStackLayout>
                         <Label Grid.Column="1" Text="{Binding CategoryName}"
-                               FontSize="13" TextColor="White" BackgroundColor="#555"
-                               Padding="8,4" VerticalOptions="Center" />
+                               Style="{StaticResource Secondary}" VerticalOptions="Center" />
                     </Grid>
                 </SwipeView>
             </DataTemplate>

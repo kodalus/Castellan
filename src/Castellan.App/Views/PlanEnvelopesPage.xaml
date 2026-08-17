@@ -12,79 +12,77 @@
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="12">
+        <VerticalStackLayout Padding="16,12,16,32" Spacing="10">
 
-            <Label Text="{Binding MonthDisplay}" FontSize="18" FontAttributes="Bold" HorizontalOptions="Center" />
+            <Label Text="{Binding MonthDisplay}" Style="{StaticResource SectionHeader}"
+                   HorizontalTextAlignment="Center" Margin="0,0,0,6" />
 
-            <!-- ── Przychody ─────────────────────────────────────────── -->
-            <Label Text="PRZYCHODY" FontSize="12" FontAttributes="Bold" TextColor="Gray" Margin="0,4,0,0" />
+            <!-- ===== Przychody ===== -->
+            <Label Text="Przychody" Style="{StaticResource SectionHeader}" />
             <Label Text="Ile spodziewasz się dostać z każdego źródła w tym miesiącu."
-                   FontSize="11" TextColor="Gray" />
+                   Style="{StaticResource FieldHint}" />
 
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Incomes}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:EnvelopeInputRow">
-                        <Grid ColumnDefinitions="*,Auto" Padding="4,8" ColumnSpacing="12">
-                            <Label Grid.Column="0" Text="{Binding CategoryName}" FontSize="14" VerticalOptions="Center" />
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,6" ColumnSpacing="12">
+                            <Label Grid.Column="0" Text="{Binding CategoryName}"
+                                   Style="{StaticResource RowTitle}" VerticalOptions="Center" />
                             <Entry Grid.Column="1" Text="{Binding PlannedAmountText, Mode=TwoWay}"
-                                   Keyboard="Numeric" WidthRequest="100" HorizontalOptions="End" />
+                                   Keyboard="Numeric" WidthRequest="110"
+                                   HorizontalTextAlignment="End" />
                         </Grid>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>
 
-            <Button Text="{Binding PlannedIncomeDisplay}"
-                    Command="{Binding ApplyPlannedIncomeCommand}"
+            <!-- Podpowiedzi są przyciskami, bo jedno tapnięcie przepisuje liczbę
+                 w pole niżej — stąd wyciszony wygląd zamiast koloru akcji głównej. -->
+            <Button Text="{Binding PlannedIncomeDisplay}" Command="{Binding ApplyPlannedIncomeCommand}"
                     IsVisible="{Binding HasPlannedIncome}"
-                    FontSize="12" Padding="12,8" CornerRadius="6"
-                    BackgroundColor="#E8F5E9" TextColor="#2E7D32"
-                    HorizontalOptions="Fill" />
+                    Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
 
-            <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#E0E0E0, Dark=#444}" Margin="0,4" />
+            <BoxView Style="{StaticResource Divider}" Margin="0,8" />
 
-            <!-- ── Podział środków ───────────────────────────────────── -->
-            <Label Text="PODZIAŁ ŚRODKÓW" FontSize="12" FontAttributes="Bold" TextColor="Gray" />
+            <!-- ===== Podział środków ===== -->
+            <Label Text="Podział środków" Style="{StaticResource SectionHeader}" />
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Środki do dyspozycji (zł)" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Środki do dyspozycji (zł)" Style="{StaticResource FieldLabel}" />
                 <Entry Text="{Binding AvailableFundsText}" Keyboard="Numeric" />
             </VerticalStackLayout>
 
-            <Label Text="{Binding RemainingToAllocateDisplay}"
-                   FontSize="14" FontAttributes="Bold" TextColor="#2E7D32">
+            <Label Text="{Binding RemainingToAllocateDisplay}" Style="{StaticResource PositiveValue}"
+                   HorizontalTextAlignment="Start">
                 <Label.Triggers>
                     <DataTrigger TargetType="Label" Binding="{Binding IsOverAllocated}" Value="True">
-                        <Setter Property="TextColor" Value="#C62828" />
+                        <Setter Property="TextColor" Value="{StaticResource Negative}" />
                     </DataTrigger>
                 </Label.Triggers>
             </Label>
 
-            <Button Text="{Binding IncomeHintDisplay}"
-                    Command="{Binding ApplyIncomeHintCommand}"
+            <Button Text="{Binding IncomeHintDisplay}" Command="{Binding ApplyIncomeHintCommand}"
                     IsVisible="{Binding HasIncomeHint}"
-                    FontSize="12" Padding="12,8" CornerRadius="6"
-                    BackgroundColor="#E8F5E9" TextColor="#2E7D32"
-                    HorizontalOptions="Fill" />
+                    Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
 
-            <Button Text="{Binding ReserveHintDisplay}"
-                    Command="{Binding ApplyReserveHintCommand}"
+            <Button Text="{Binding ReserveHintDisplay}" Command="{Binding ApplyReserveHintCommand}"
                     IsVisible="{Binding HasReserveHint}"
-                    FontSize="12" Padding="12,8" CornerRadius="6"
-                    BackgroundColor="#E3F2FD" TextColor="#1565C0"
-                    HorizontalOptions="Fill" />
+                    Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
 
-            <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#E0E0E0, Dark=#444}" Margin="0,4" />
+            <BoxView Style="{StaticResource Divider}" Margin="0,8" />
 
-            <!-- ── Koperty wydatkowe ─────────────────────────────────── -->
-            <Label Text="KOPERTY" FontSize="12" FontAttributes="Bold" TextColor="Gray" />
+            <!-- ===== Koperty ===== -->
+            <Label Text="Koperty" Style="{StaticResource SectionHeader}" />
 
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Envelopes}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:EnvelopeInputRow">
-                        <Grid ColumnDefinitions="*,Auto" Padding="4,8" ColumnSpacing="12">
-                            <Label Grid.Column="0" Text="{Binding CategoryName}" FontSize="14" VerticalOptions="Center" />
+                        <Grid ColumnDefinitions="*,Auto" Padding="0,6" ColumnSpacing="12">
+                            <Label Grid.Column="0" Text="{Binding CategoryName}"
+                                   Style="{StaticResource RowTitle}" VerticalOptions="Center" />
                             <Entry Grid.Column="1" Text="{Binding PlannedAmountText, Mode=TwoWay}"
-                                   Keyboard="Numeric" WidthRequest="100" HorizontalOptions="End" />
+                                   Keyboard="Numeric" WidthRequest="110"
+                                   HorizontalTextAlignment="End" />
                         </Grid>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>

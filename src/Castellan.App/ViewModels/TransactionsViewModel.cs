@@ -17,7 +17,8 @@ public sealed record TransactionRow(
     string? Note,
     bool IsExcluded,
     string? FundName = null,
-    bool IsEditable = true)
+    bool IsEditable = true,
+    bool IsIncome = false)
 {
     public bool IsPaidFromFund => FundName is not null;
     public string FundLabel => FundName is not null ? $"⛃ z funduszu: {FundName}" : "";
@@ -86,7 +87,8 @@ public partial class TransactionsViewModel : ObservableObject
                 tx.Note,
                 tx.IsExcludedFromCalculations,
                 fundName,
-                isEditable));
+                isEditable,
+                !tx.Amount.IsNegative));
         }
         IsEmpty = Transactions.Count == 0;
     }

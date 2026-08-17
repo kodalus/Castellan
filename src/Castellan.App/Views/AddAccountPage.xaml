@@ -11,22 +11,26 @@
         <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
     </ContentPage.ToolbarItems>
 
-    <VerticalStackLayout Padding="16" Spacing="16">
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Nazwa" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding Name}" Placeholder="Nazwa konta" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Nazwa" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Name}" Placeholder="np. ING osobiste" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Typ konta" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding KindOptions}" SelectedIndex="{Binding KindIndex}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Saldo (zł)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding BalanceText}" Keyboard="Numeric" />
+                <Label Text="Stan konta na dziś — od niego liczą się kolejne transakcje."
+                       Style="{StaticResource FieldHint}" />
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Typ konta" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding KindOptions}" SelectedIndex="{Binding KindIndex}" />
-        </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Saldo (zł)" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding BalanceText}" Keyboard="Numeric" />
-        </VerticalStackLayout>
-
-    </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

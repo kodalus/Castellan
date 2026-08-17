@@ -13,46 +13,43 @@
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-            <Border IsVisible="{Binding HasError}"
-                    BackgroundColor="#FFEBEE" Padding="12,8"
-                    StrokeShape="RoundRectangle 6" Stroke="Transparent">
-                <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
             </Border>
 
-            <Label Text="Przelew własnych pieniędzy między kontami nie jest ani wydatkiem, ani przychodem — nie wpłynie na koperty ani na podsumowanie przychodów."
-                   FontSize="12" TextColor="Gray" />
+            <Label Style="{StaticResource Secondary}"
+                   Text="Przelew własnych pieniędzy między kontami nie jest ani wydatkiem, ani przychodem — nie ruszy kopert ani podsumowania przychodów." />
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Z konta" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Z konta" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding FromOptions}" ItemDisplayBinding="{Binding Name}"
                         SelectedIndex="{Binding FromIndex}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Na konto" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Na konto" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding ToOptions}" ItemDisplayBinding="{Binding Name}"
                         SelectedIndex="{Binding ToIndex}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Transactions_Amount}" FontSize="13" TextColor="Gray" />
-                <Entry Text="{Binding AmountText}" Keyboard="Numeric" Placeholder="2000.00" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Amount}" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding AmountText}" Keyboard="Numeric" Placeholder="2000,00" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Transactions_Date}" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Date}" Style="{StaticResource FieldLabel}" />
                 <DatePicker Date="{Binding Date}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Transactions_Note}" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Note}" Style="{StaticResource FieldLabel}" />
                 <Entry Text="{Binding Note}" Placeholder="np. wspólne zakupy" />
             </VerticalStackLayout>
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
         </VerticalStackLayout>

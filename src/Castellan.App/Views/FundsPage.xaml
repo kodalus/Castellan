@@ -11,130 +11,88 @@
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout>
+        <VerticalStackLayout Padding="0,0,0,16">
 
-            <!-- Paydate setup banner (shown once until configured) -->
-            <Border IsVisible="{Binding NeedsPaydate}"
-                    BackgroundColor="#FFF9C4" Padding="12,10" Margin="12,8,12,0"
-                    StrokeShape="RoundRectangle 8" Stroke="Transparent">
-                <VerticalStackLayout Spacing="8">
-                    <Label Text="Podaj dzień miesiąca, w którym otrzymujesz wypłatę — pozwoli to dokładnie wyliczyć miesięczne raty."
-                           FontSize="12" TextColor="#5D4037" />
+            <!-- Pytanie o dzień wypłaty: bez niego raty liczą się kalendarzowo,
+                 więc to nie ozdoba, tylko brakujące dane. -->
+            <Border Style="{StaticResource WarningBanner}" IsVisible="{Binding NeedsPaydate}">
+                <VerticalStackLayout Spacing="10">
+                    <Label Style="{StaticResource WarningText}"
+                           Text="Podaj dzień miesiąca, w którym dostajesz wypłatę — wtedy raty policzą się na wypłaty, a nie na kalendarz." />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                        <Entry Grid.Column="0"
-                               Text="{Binding PaydateText}"
-                               Keyboard="Numeric"
-                               Placeholder="np. 25"
-                               MaxLength="2" />
-                        <Button Grid.Column="1"
-                                Text="Zapisz"
-                                Command="{Binding SavePaydateCommand}"
-                                BackgroundColor="#F57F17" TextColor="White"
-                                FontSize="13" Padding="12,6" CornerRadius="6" />
+                        <Entry Grid.Column="0" Text="{Binding PaydateText}" Keyboard="Numeric"
+                               Placeholder="np. 25" MaxLength="2" />
+                        <!-- Pełny mosiądz, nie RowAction: RowAction ma tło BrassWash,
+                             czyli dokładnie tło tego banera — przycisk by w nim zniknął. -->
+                        <Button Grid.Column="1" Text="Zapisz" Command="{Binding SavePaydateCommand}" />
                     </Grid>
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Summary: how much goes into funds every month -->
-            <Border Margin="12,10,12,4" Padding="16,14"
-                    StrokeShape="RoundRectangle 12"
-                    IsVisible="{Binding IsNotEmpty}">
+            <!-- Suma odpisów to liczba, którą przepisuje się do koperty „Rezerwy”,
+                 więc stoi na górze jako jedyna duża na tym ekranie. -->
+            <Border Style="{StaticResource Card}" IsVisible="{Binding IsNotEmpty}" Margin="12,10,12,4">
                 <VerticalStackLayout Spacing="4">
-                    <Label Text="{Binding TotalSuggestedDisplay}"
-                           FontSize="16" FontAttributes="Bold" TextColor="#1565C0" />
-                    <Label Text="{Binding TotalBalanceDisplay}"
-                           FontSize="12" TextColor="Gray" />
-                    <Label Text="Tę kwotę zaplanuj w kopercie „Rezerwy”."
-                           FontSize="11" TextColor="Gray" />
+                    <Label Text="{Binding TotalSuggestedDisplay}" Style="{StaticResource SubHero}" />
+                    <Label Text="{Binding TotalBalanceDisplay}" Style="{StaticResource Secondary}" />
+                    <Label Text="Tę kwotę zaplanuj w kopercie „Rezerwy”." Style="{StaticResource Caption}" />
                 </VerticalStackLayout>
             </Border>
 
-            <Label Text="Brak funduszy. Dodaj pierwszy tapując +."
-                   HorizontalOptions="Center" TextColor="Gray"
-                   FontSize="14" Margin="0,60"
+            <Label Text="Brak funduszy. Dodaj pierwszy tapując +." Style="{StaticResource EmptyState}"
                    IsVisible="{Binding IsEmpty}" />
 
-            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}"
-                                 IsVisible="{Binding IsNotEmpty}">
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" IsVisible="{Binding IsNotEmpty}">
                 <BindableLayout.ItemTemplate>
                     <DataTemplate x:DataType="vm:FundRow">
-                      <SwipeView>
-                        <SwipeView.RightItems>
-                            <SwipeItems>
-                                <SwipeItem Text="Edytuj"
-                                           BackgroundColor="#1565C0"
-                                           Command="{Binding EditCommand}" />
-                                <SwipeItem Text="Usuń"
-                                           BackgroundColor="#E53935"
-                                           Command="{Binding DeleteCommand}" />
-                            </SwipeItems>
-                        </SwipeView.RightItems>
-                        <Border Margin="12,6" Padding="14,12"
-                                StrokeShape="RoundRectangle 10">
-                            <VerticalStackLayout Spacing="8">
+                        <SwipeView>
+                            <SwipeView.RightItems>
+                                <SwipeItems>
+                                    <SwipeItem Text="Edytuj" BackgroundColor="{StaticResource SurfaceRaised}"
+                                               Command="{Binding EditCommand}" />
+                                    <SwipeItem Text="Usuń" BackgroundColor="{StaticResource NegativeDim}"
+                                               Command="{Binding DeleteCommand}" />
+                                </SwipeItems>
+                            </SwipeView.RightItems>
 
-                                <!-- Header: name + kind + balance/target -->
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                        <Label Text="{Binding Name}"
-                                               FontSize="15" FontAttributes="Bold"
-                                               LineBreakMode="TailTruncation" />
-                                        <Label Text="{Binding KindDisplay}"
-                                               FontSize="11" TextColor="Gray" />
-                                    </VerticalStackLayout>
-                                    <VerticalStackLayout Grid.Column="1"
-                                                         HorizontalOptions="End" Spacing="2">
-                                        <Label Text="{Binding BalanceDisplay}"
-                                               FontSize="16" FontAttributes="Bold"
-                                               HorizontalOptions="End" />
-                                        <Label Text="{Binding TargetDisplay}"
-                                               FontSize="11" TextColor="Gray"
-                                               HorizontalOptions="End" />
-                                    </VerticalStackLayout>
-                                </Grid>
+                            <Border Style="{StaticResource Card}">
+                                <VerticalStackLayout Spacing="9">
 
-                                <!-- Progress bar toward target -->
-                                <ProgressBar Progress="{Binding Progress}"
-                                             ProgressColor="#2196F3"
-                                             HeightRequest="6" />
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                            <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
+                                            <Label Text="{Binding KindDisplay}" Style="{StaticResource Caption}" />
+                                        </VerticalStackLayout>
+                                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                            <Label Text="{Binding BalanceDisplay}" Style="{StaticResource RowValue}" />
+                                            <Label Text="{Binding TargetDisplay}" Style="{StaticResource RowMeta}" />
+                                        </VerticalStackLayout>
+                                    </Grid>
 
-                                <!-- Delay indicator + deadline -->
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <Label Grid.Column="0"
-                                           Text="{Binding PeriodsRemainingDisplay}"
-                                           FontSize="11" TextColor="Gray"
-                                           VerticalOptions="Center" />
-                                    <Label Grid.Column="1"
-                                           Text="{Binding DeficitDisplay}"
-                                           FontSize="11" TextColor="#F44336"
-                                           IsVisible="{Binding IsDelayed}"
-                                           VerticalOptions="Center" />
-                                    <Label Grid.Column="1"
-                                           Text="{Binding DeficitDisplay}"
-                                           FontSize="11" TextColor="#4CAF50"
-                                           IsVisible="{Binding IsNotDelayed}"
-                                           VerticalOptions="Center" />
-                                </Grid>
+                                    <ProgressBar Progress="{Binding Progress}" HeightRequest="4"
+                                                 ProgressColor="{StaticResource Info}" />
 
-                                <!-- Suggested monthly + contribute button -->
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <Label Grid.Column="0"
-                                           Text="{Binding SuggestedMonthlyDisplay}"
-                                           FontSize="12" FontAttributes="Bold"
-                                           TextColor="#1565C0"
-                                           VerticalOptions="Center" />
-                                    <Button Grid.Column="1"
-                                            Text="Wpłać"
-                                            Command="{Binding ContributeCommand}"
-                                            FontSize="12" Padding="12,6"
-                                            CornerRadius="6"
-                                            BackgroundColor="#2196F3"
-                                            TextColor="White" />
-                                </Grid>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <Label Grid.Column="0" Text="{Binding PeriodsRemainingDisplay}"
+                                               Style="{StaticResource Caption}" VerticalOptions="Center" />
+                                        <Label Grid.Column="1" Text="{Binding DeficitDisplay}"
+                                               Style="{StaticResource NegativeCaption}"
+                                               IsVisible="{Binding IsDelayed}" VerticalOptions="Center" />
+                                        <Label Grid.Column="1" Text="{Binding DeficitDisplay}"
+                                               Style="{StaticResource PositiveCaption}"
+                                               IsVisible="{Binding IsNotDelayed}" VerticalOptions="Center" />
+                                    </Grid>
 
-                            </VerticalStackLayout>
-                        </Border>
-                      </SwipeView>
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <Label Grid.Column="0" Text="{Binding SuggestedMonthlyDisplay}"
+                                               Style="{StaticResource Secondary}" VerticalOptions="Center" />
+                                        <Button Grid.Column="1" Text="Wpłać" Command="{Binding ContributeCommand}"
+                                                Style="{StaticResource RowAction}" />
+                                    </Grid>
+
+                                </VerticalStackLayout>
+                            </Border>
+                        </SwipeView>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
             </VerticalStackLayout>

@@ -7,42 +7,36 @@
              Title="Kopia zapasowa">
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Padding="12,12,12,24" Spacing="12">
 
-            <!-- Export -->
-            <Border Padding="16" StrokeShape="RoundRectangle 12">
+            <Border Style="{StaticResource Card}" Margin="0">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Eksport danych" FontSize="16" FontAttributes="Bold" />
-                    <Label TextColor="Gray" FontSize="13"
-                           Text="Tworzy plik JSON ze wszystkimi kontami, transakcjami, kopertami, funduszami i aktywami. Możesz go zapisać w chmurze lub przesłać mailem." />
-                    <Button Text="Eksportuj do JSON"
-                            Command="{Binding ExportCommand}"
-                            HorizontalOptions="Start" />
+                    <Label Text="Eksport danych" Style="{StaticResource Title}" />
+                    <Label Style="{StaticResource Secondary}"
+                           Text="Zapisuje wszystko — konta, transakcje, koperty, fundusze, aktywa i zobowiązania — do jednego pliku JSON. Możesz go trzymać w chmurze albo wysłać sobie mailem." />
+                    <Button Text="Eksportuj" Command="{Binding ExportCommand}" HorizontalOptions="Start" />
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Import -->
-            <Border Padding="16" StrokeShape="RoundRectangle 12">
+            <!-- Import kasuje wszystko, co jest w aplikacji, więc karta ma koralową
+                 obwódkę i przycisk w kolorze ostrzeżenia — inaczej wyglądałaby
+                 identycznie jak nieszkodliwy eksport tuż nad nią. -->
+            <Border Style="{StaticResource Card}" Margin="0"
+                    Stroke="{StaticResource NegativeBrush}">
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Import danych" FontSize="16" FontAttributes="Bold" />
-                    <Label TextColor="Gray" FontSize="13"
-                           Text="Wczytuje dane z pliku JSON. UWAGA: zastępuje wszystkie obecne dane. Zalecane po reinstalacji aplikacji lub przeniesieniu na nowe urządzenie." />
-                    <Button Text="Importuj z pliku JSON"
-                            Command="{Binding ImportCommand}"
-                            HorizontalOptions="Start" />
+                    <Label Text="Import danych" Style="{StaticResource Title}" />
+                    <Label Style="{StaticResource Secondary}"
+                           Text="Wczytuje dane z pliku JSON i zastępuje nimi wszystko, co jest teraz w aplikacji. Tej operacji nie da się cofnąć — rób to po reinstalacji albo na nowym telefonie." />
+                    <Button Text="Importuj z pliku" Command="{Binding ImportCommand}"
+                            Style="{StaticResource DangerButton}" HorizontalOptions="Start" />
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Status -->
-            <Border Padding="14,12" StrokeShape="RoundRectangle 10"
-                    IsVisible="{Binding HasStatus}">
-                <Label Text="{Binding StatusMessage}"
-                       FontSize="13" />
+            <Border Style="{StaticResource Card}" Margin="0" IsVisible="{Binding HasStatus}">
+                <Label Text="{Binding StatusMessage}" Style="{StaticResource Secondary}" />
             </Border>
 
-            <!-- Busy -->
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
         </VerticalStackLayout>

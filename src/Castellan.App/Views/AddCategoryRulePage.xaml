@@ -11,24 +11,24 @@
         <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
     </ContentPage.ToolbarItems>
 
-    <VerticalStackLayout Padding="16" Spacing="20">
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Wzorzec (fragment nazwy sprzedawcy)" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding Pattern}"
-                   Placeholder="np. McDonald, ORLEN, Biedronka"
-                   ClearButtonVisibility="WhileEditing" />
-            <Label Text="Transakcja zostanie zakategoryzowana, gdy nazwa sprzedawcy zawiera ten tekst (bez rozróżnienia wielkości liter)."
-                   FontSize="11" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Wzorzec (fragment nazwy sprzedawcy)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Pattern}" Placeholder="np. McDonald, ORLEN, Biedronka"
+                       ClearButtonVisibility="WhileEditing" />
+                <Label Text="Transakcja dostanie tę kategorię, gdy nazwa sprzedawcy zawiera ten tekst — wielkość liter nie ma znaczenia."
+                       Style="{StaticResource FieldHint}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Kategoria" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Categories}" SelectedIndex="{Binding CategoryIndex}"
+                        ItemDisplayBinding="{Binding Name}" />
+            </VerticalStackLayout>
+
         </VerticalStackLayout>
-
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Kategoria" FontSize="13" TextColor="Gray" />
-            <Picker ItemsSource="{Binding Categories}"
-                    SelectedIndex="{Binding CategoryIndex}"
-                    ItemDisplayBinding="{Binding Name}" />
-        </VerticalStackLayout>
-
-    </VerticalStackLayout>
+    </ScrollView>
 
 </ContentPage>

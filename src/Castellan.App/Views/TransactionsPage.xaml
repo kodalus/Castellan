@@ -15,51 +15,70 @@
         <ToolbarItem Text="+" Command="{Binding AddTransactionCommand}" Priority="1" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,*">
+    <Grid RowDefinitions="Auto,*" RowSpacing="0">
 
-        <HorizontalStackLayout Grid.Row="0" HorizontalOptions="Center" Margin="0,12,0,4" Spacing="12">
-            <Button Text="‹" Command="{Binding PreviousMonthCommand}" WidthRequest="40" />
-            <Label Text="{Binding CurrentMonthDisplay}" VerticalOptions="Center" FontSize="16" FontAttributes="Bold" />
-            <Button Text="›" Command="{Binding NextMonthCommand}" WidthRequest="40" />
-        </HorizontalStackLayout>
+        <!-- Ten sam pasek miesiąca co na Głównej — kontekst, nie liczba, więc cichy. -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="8,10,8,4">
+            <Button Grid.Column="0" Text="‹" Style="{StaticResource StepperButton}"
+                    Command="{Binding PreviousMonthCommand}" />
+            <Label Grid.Column="1" Text="{Binding CurrentMonthDisplay}"
+                   Style="{StaticResource SectionHeader}"
+                   HorizontalTextAlignment="Center" VerticalOptions="Center" />
+            <Button Grid.Column="2" Text="›" Style="{StaticResource StepperButton}"
+                    Command="{Binding NextMonthCommand}" />
+        </Grid>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Transactions}" Margin="12,0">
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Transactions}" Margin="16,0">
             <CollectionView.EmptyView>
-                <Label Text="{x:Static strings:AppResources.Transactions_Empty}"
-                       HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray" Margin="0,40" />
+                <Label Text="{x:Static strings:AppResources.Transactions_Empty}" Style="{StaticResource EmptyState}" />
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:TransactionRow">
                     <SwipeView>
                         <SwipeView.RightItems>
                             <SwipeItems>
-                                <SwipeItem Text="Z funduszu"
-                                           BackgroundColor="#1565C0"
+                                <SwipeItem Text="Z funduszu" BackgroundColor="{StaticResource InfoDim}"
                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=PayFromFundCommand}"
                                            CommandParameter="{Binding .}" />
                                 <SwipeItem Text="{x:Static strings:AppResources.Transactions_Delete}"
-                                           BackgroundColor="#E53935"
+                                           BackgroundColor="{StaticResource NegativeDim}"
                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=DeleteTransactionCommand}"
                                            CommandParameter="{Binding .}" />
                             </SwipeItems>
                         </SwipeView.RightItems>
-                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="4,10" ColumnSpacing="10">
+
+                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="0,11" ColumnSpacing="12">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=EditTransactionCommand}"
                                     CommandParameter="{Binding .}" />
                             </Grid.GestureRecognizers>
-                            <Label Grid.Column="0" Text="{Binding DateDisplay}" FontSize="12" TextColor="Gray"
-                                   VerticalOptions="Center" WidthRequest="52"
-                                   LineBreakMode="WordWrap" />
-                            <VerticalStackLayout Grid.Column="1" Spacing="2">
-                                <Label Text="{Binding CategoryName}" FontSize="14" FontAttributes="Bold" />
-                                <Label Text="{Binding Note}" FontSize="12" TextColor="Gray" />
-                                <Label Text="{Binding FundLabel}" FontSize="11" TextColor="#1565C0"
+
+                            <Label Grid.Column="0" Text="{Binding DateDisplay}" Style="{StaticResource Caption}"
+                                   VerticalOptions="Center" WidthRequest="46"
+                                   HorizontalTextAlignment="Center" LineBreakMode="WordWrap" />
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                <Label Text="{Binding CategoryName}" Style="{StaticResource RowTitle}" />
+                                <Label Text="{Binding Note}" Style="{StaticResource Caption}"
+                                       IsVisible="{Binding Note, Converter={StaticResource IsNotEmpty}}" />
+                                <Label Text="{Binding FundLabel}" Style="{StaticResource InfoCaption}"
                                        IsVisible="{Binding IsPaidFromFund}" />
                             </VerticalStackLayout>
-                            <Label Grid.Column="2" Text="{Binding AmountDisplay}" FontSize="15"
-                                   VerticalOptions="Center" HorizontalOptions="End" />
+
+                            <!-- Wpływ na zielono, wydatek neutralnie: w gęstej liście to jedyna
+                                 rzecz, która pozwala odróżnić kierunek bez czytania znaku. -->
+                            <Label Grid.Column="2" Text="{Binding AmountDisplay}" Style="{StaticResource RowValue}"
+                                   VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsIncome}" Value="True">
+                                        <Setter Property="TextColor" Value="{StaticResource Positive}" />
+                                    </DataTrigger>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsExcluded}" Value="True">
+                                        <Setter Property="TextColor" Value="{StaticResource TextMuted}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
                         </Grid>
                     </SwipeView>
                 </DataTemplate>

@@ -10,27 +10,27 @@
         <ToolbarItem Text="+" Command="{Binding AddCategoryCommand}" />
     </ContentPage.ToolbarItems>
 
-    <CollectionView ItemsSource="{Binding Items}" Margin="12">
+    <CollectionView ItemsSource="{Binding Items}" Margin="16,8,16,0">
         <CollectionView.EmptyView>
-            <Label Text="Brak kategorii — dodaj pierwszą za pomocą przycisku +."
-                   HorizontalOptions="Center" VerticalOptions="Center"
-                   TextColor="Gray" HorizontalTextAlignment="Center" Margin="24,40" />
+            <Label Text="Brak kategorii. Dodaj pierwszą tapując +." Style="{StaticResource EmptyState}" />
         </CollectionView.EmptyView>
         <CollectionView.ItemTemplate>
             <DataTemplate x:DataType="vm:CategoryRow">
                 <SwipeView>
                     <SwipeView.RightItems>
                         <SwipeItems>
-                            <SwipeItem Text="Archiwizuj" BackgroundColor="#FF8F00"
+                            <SwipeItem Text="Archiwizuj" BackgroundColor="{StaticResource SurfaceRaised}"
                                        Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CategoriesViewModel}}, Path=ArchiveCategoryCommand}"
                                        CommandParameter="{Binding .}" />
                         </SwipeItems>
                     </SwipeView.RightItems>
-                    <Grid ColumnDefinitions="*,Auto" Padding="4,14" ColumnSpacing="12">
-                        <Label Grid.Column="0" Text="{Binding Name}" FontSize="15" VerticalOptions="Center" />
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,13" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="{Binding Name}" Style="{StaticResource RowTitle}"
+                               VerticalOptions="Center" />
+                        <!-- Rodzaj jako cichy podpis, nie kolorowa plakietka: w liście
+                             czterdziestu kategorii czterdzieści plakietek to szum. -->
                         <Label Grid.Column="1" Text="{Binding KindDisplay}"
-                               FontSize="12" TextColor="White" BackgroundColor="#555"
-                               Padding="8,4" VerticalOptions="Center" />
+                               Style="{StaticResource Caption}" VerticalOptions="Center" />
                     </Grid>
                 </SwipeView>
             </DataTemplate>

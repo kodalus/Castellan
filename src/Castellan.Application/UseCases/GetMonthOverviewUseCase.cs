@@ -57,7 +57,18 @@ public sealed record MonthOverview(
     IReadOnlyList<EnvelopeOverview> Envelopes,
     IReadOnlyList<IncomeOverview> Incomes,
     Money TotalPlannedIncome,
-    Money TotalActualIncome);
+    Money TotalActualIncome)
+{
+    // 0.0–1.0 przycięte (dla ProgressBar.Progress)
+    public double SpentRatio => TotalPlanned.Grosze == 0 ? 0.0
+        : Math.Clamp((double)Math.Abs(TotalSpent.Grosze) / TotalPlanned.Grosze, 0.0, 1.0);
+
+    // nieprzycięte — powyżej 1.0 znaczy przekroczony plan, stąd kolor
+    public double SpentFraction => TotalPlanned.Grosze == 0 ? 0.0
+        : (double)Math.Abs(TotalSpent.Grosze) / TotalPlanned.Grosze;
+
+    public bool IsOverspent => RemainingToSpend.IsNegative;
+}
 
 public sealed class GetMonthOverviewUseCase(
     IMonthBudgetRepository budgets,

@@ -4,93 +4,80 @@
              xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
              xmlns:vm="clr-namespace:Castellan.App.ViewModels"
              xmlns:usecases="clr-namespace:Castellan.Application.UseCases;assembly=Castellan.Application"
-             xmlns:converters="clr-namespace:Castellan.App.Converters"
              x:Class="Castellan.App.Views.EnvelopesPage"
              x:DataType="vm:EnvelopesViewModel"
              Title="{x:Static strings:AppResources.Tab_Envelopes}">
-
-    <ContentPage.Resources>
-        <converters:SpentFractionToColorConverter x:Key="SpentFractionToColor" />
-    </ContentPage.Resources>
 
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="{x:Static strings:AppResources.Envelopes_Plan}" Command="{Binding PlanMonthCommand}" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,Auto,*">
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0">
 
-        <!-- Month navigation -->
-        <HorizontalStackLayout Grid.Row="0" HorizontalOptions="Center" Margin="0,12,0,8" Spacing="12">
-            <Button Text="‹" Command="{Binding PreviousMonthCommand}" WidthRequest="40" />
-            <Label Text="{Binding CurrentMonthDisplay}" VerticalOptions="Center" FontSize="16" FontAttributes="Bold" />
-            <Button Text="›" Command="{Binding NextMonthCommand}" WidthRequest="40" />
-        </HorizontalStackLayout>
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="8,10,8,4">
+            <Button Grid.Column="0" Text="‹" Style="{StaticResource StepperButton}"
+                    Command="{Binding PreviousMonthCommand}" />
+            <Label Grid.Column="1" Text="{Binding CurrentMonthDisplay}"
+                   Style="{StaticResource SectionHeader}"
+                   HorizontalTextAlignment="Center" VerticalOptions="Center" />
+            <Button Grid.Column="2" Text="›" Style="{StaticResource StepperButton}"
+                    Command="{Binding NextMonthCommand}" />
+        </Grid>
 
-        <!-- Summary card -->
-        <Border Grid.Row="1" Margin="12,0,12,8" Padding="14,12"
-                StrokeShape="RoundRectangle 10" IsVisible="{Binding HasData}">
-            <VerticalStackLayout Spacing="10">
-                <Grid ColumnDefinitions="*,*,*">
-                    <VerticalStackLayout Grid.Column="0" HorizontalOptions="Start" Spacing="2">
-                        <Label Text="Wydane" FontSize="11" TextColor="Gray" />
-                        <Label Text="{Binding TotalActualDisplay}" FontSize="15" FontAttributes="Bold" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="1" HorizontalOptions="Center" Spacing="2">
-                        <Label Text="Zaplanowane" FontSize="11" TextColor="Gray" HorizontalOptions="Center" />
-                        <Label Text="{Binding MonthData.TotalPlanned}" FontSize="15" FontAttributes="Bold" HorizontalOptions="Center" />
-                    </VerticalStackLayout>
-                    <VerticalStackLayout Grid.Column="2" HorizontalOptions="End" Spacing="2">
-                        <Label Text="Nieprzydzielone" FontSize="11" TextColor="Gray" HorizontalOptions="End" />
-                        <Label Text="{Binding MonthData.RemainingToAllocate}" FontSize="15" FontAttributes="Bold" HorizontalOptions="End" />
-                    </VerticalStackLayout>
-                </Grid>
-                <ProgressBar Progress="{Binding TotalSpentRatio}" ProgressColor="#2196F3" HeightRequest="6" />
-            </VerticalStackLayout>
-        </Border>
+        <!-- Trzy liczby miesiąca w jednym rzędzie, każda tak samo cicha —
+             żadna z nich nie jest ważniejsza od kopert pod spodem. -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="8" Margin="12,4,12,10"
+              IsVisible="{Binding HasData}">
+            <Border Grid.Column="0" Style="{StaticResource StatTile}">
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="Wydane" Style="{StaticResource Caption}" />
+                    <Label Text="{Binding TotalActualDisplay}" Style="{StaticResource RowValue}"
+                           HorizontalTextAlignment="Start" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Grid.Column="1" Style="{StaticResource StatTile}">
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="W planie" Style="{StaticResource Caption}" />
+                    <Label Text="{Binding MonthData.TotalPlanned}" Style="{StaticResource RowValue}"
+                           HorizontalTextAlignment="Start" />
+                </VerticalStackLayout>
+            </Border>
+            <Border Grid.Column="2" Style="{StaticResource StatTile}">
+                <VerticalStackLayout Spacing="3">
+                    <Label Text="Nieprzydzielone" Style="{StaticResource Caption}" />
+                    <Label Text="{Binding MonthData.RemainingToAllocate}" Style="{StaticResource RowValue}"
+                           HorizontalTextAlignment="Start" />
+                </VerticalStackLayout>
+            </Border>
+        </Grid>
 
-        <!-- Envelopes list -->
-        <CollectionView Grid.Row="2" ItemsSource="{Binding MonthData.Envelopes}" Margin="12,0,12,0">
+        <CollectionView Grid.Row="2" ItemsSource="{Binding MonthData.Envelopes}" Margin="16,0">
             <CollectionView.EmptyView>
-                <Label Text="{x:Static strings:AppResources.Envelopes_Empty}"
-                       HorizontalOptions="Center" VerticalOptions="Center"
-                       TextColor="Gray" Margin="0,40" />
+                <Label Text="{x:Static strings:AppResources.Envelopes_Empty}" Style="{StaticResource EmptyState}" />
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="usecases:EnvelopeOverview">
-                    <Border Margin="0,0,0,8" Padding="14,12" StrokeShape="RoundRectangle 8">
-                        <VerticalStackLayout Spacing="6">
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="5" Padding="0,10">
 
-                            <!-- Category name + remaining amount -->
-                            <Grid ColumnDefinitions="*,Auto">
-                                <Label Grid.Column="0"
-                                       Text="{Binding CategoryName}"
-                                       FontSize="15" FontAttributes="Bold"
-                                       VerticalOptions="Center" />
-                                <Label Grid.Column="1"
-                                       Text="{Binding RemainingDisplay}"
-                                       FontSize="15" FontAttributes="Bold"
-                                       VerticalOptions="Center">
-                                    <Label.Triggers>
-                                        <DataTrigger TargetType="Label"
-                                                     Binding="{Binding IsOverBudget}"
-                                                     Value="True">
-                                            <Setter Property="TextColor" Value="#F44336" />
-                                        </DataTrigger>
-                                    </Label.Triggers>
-                                </Label>
-                            </Grid>
+                        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <Label Grid.Column="0" Text="{Binding CategoryName}"
+                                   Style="{StaticResource RowTitle}" VerticalOptions="Center" />
+                            <Label Grid.Column="1" Text="{Binding RemainingDisplay}"
+                                   Style="{StaticResource RowValue}" VerticalOptions="Center">
+                                <Label.Triggers>
+                                    <DataTrigger TargetType="Label" Binding="{Binding IsOverBudget}" Value="True">
+                                        <Setter Property="TextColor" Value="{StaticResource Negative}" />
+                                    </DataTrigger>
+                                </Label.Triggers>
+                            </Label>
+                        </Grid>
 
-                            <!-- Progress bar -->
-                            <ProgressBar Progress="{Binding SpentRatio}"
-                                         ProgressColor="{Binding SpentFraction, Converter={StaticResource SpentFractionToColor}}"
-                                         HeightRequest="6" />
+                        <ProgressBar Grid.Row="1" Progress="{Binding SpentRatio}" HeightRequest="4"
+                                     ProgressColor="{Binding SpentFraction, Converter={StaticResource SpentFractionToColor}}" />
 
-                            <!-- Spent / planned caption -->
-                            <Label Text="{Binding ProgressLabel}"
-                                   FontSize="11" TextColor="Gray" />
+                        <Label Grid.Row="2" Text="{Binding ProgressLabel}" Style="{StaticResource Caption}" />
 
-                        </VerticalStackLayout>
-                    </Border>
+                    </Grid>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>

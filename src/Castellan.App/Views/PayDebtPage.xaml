@@ -13,48 +13,45 @@
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-            <Border IsVisible="{Binding HasError}"
-                    BackgroundColor="#FFEBEE" Padding="12,8"
-                    StrokeShape="RoundRectangle 6" Stroke="Transparent">
-                <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
             </Border>
 
-            <VerticalStackLayout Spacing="2">
-                <Label Text="{Binding DebtName}" FontSize="18" FontAttributes="Bold" />
-                <Label Text="{Binding BalanceDisplay}" FontSize="13" TextColor="#C62828" />
+            <VerticalStackLayout Spacing="3">
+                <Label Text="{Binding DebtName}" Style="{StaticResource Title}" />
+                <Label Text="{Binding BalanceDisplay}" Style="{StaticResource NegativeCaption}" />
             </VerticalStackLayout>
 
-            <Label Text="Zapisze wydatek w wybranej kopercie i jednocześnie zmniejszy saldo zobowiązania."
-                   FontSize="12" TextColor="Gray" />
+            <Label Style="{StaticResource Secondary}"
+                   Text="Zapisze wydatek w wybranej kopercie i jednocześnie zmniejszy saldo zobowiązania." />
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Transactions_Amount}" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Amount}" Style="{StaticResource FieldLabel}" />
                 <Entry Text="{Binding AmountText}" Keyboard="Numeric" />
                 <Label Text="Możesz wpisać więcej niż ratę — nadpłata skróci czas spłaty."
-                       FontSize="11" TextColor="Gray" />
+                       Style="{StaticResource FieldHint}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Transactions_Account}" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Account}" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding AccountOptions}" ItemDisplayBinding="{Binding Name}"
                         SelectedIndex="{Binding AccountIndex}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Transactions_Category}" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Category}" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding CategoryOptions}" ItemDisplayBinding="{Binding Name}"
                         SelectedIndex="{Binding CategoryIndex}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="4">
-                <Label Text="{x:Static strings:AppResources.Transactions_Date}" FontSize="13" TextColor="Gray" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{x:Static strings:AppResources.Transactions_Date}" Style="{StaticResource FieldLabel}" />
                 <DatePicker Date="{Binding Date}" />
             </VerticalStackLayout>
 
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
         </VerticalStackLayout>

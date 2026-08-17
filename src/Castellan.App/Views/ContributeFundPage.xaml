@@ -10,37 +10,31 @@
         <ToolbarItem Text="Potwierdź" Command="{Binding SaveCommand}" />
     </ContentPage.ToolbarItems>
 
-    <VerticalStackLayout Padding="16" Spacing="16">
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-        <!-- Fund name card -->
-        <Border Padding="14,12" StrokeShape="RoundRectangle 8">
-            <VerticalStackLayout Spacing="4">
-                <Label Text="Fundusz" FontSize="12" TextColor="Gray" />
-                <Label Text="{Binding FundName}"
-                       FontSize="18" FontAttributes="Bold" />
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
+            </Border>
+
+            <VerticalStackLayout Spacing="2">
+                <Label Text="Fundusz" Style="{StaticResource SectionHeader}" />
+                <Label Text="{Binding FundName}" Style="{StaticResource Title}" />
             </VerticalStackLayout>
-        </Border>
 
-        <!-- Error banner -->
-        <Border IsVisible="{Binding HasError}"
-                BackgroundColor="#FFEBEE" Padding="12,8"
-                StrokeShape="RoundRectangle 6" Stroke="Transparent">
-            <Label Text="{Binding ErrorMessage}" TextColor="#C62828" FontSize="13" />
-        </Border>
+            <!-- Kwota to jedyne pole na tym ekranie, więc wolno jej być duża:
+                 nie ma z czym konkurować, a wpisuje się ją w biegu. -->
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Kwota wpłaty (zł)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding AmountText}" Keyboard="Numeric" Placeholder="np. 200"
+                       FontSize="{StaticResource SizeTitle}"
+                       ReturnCommand="{Binding SaveCommand}" />
+            </VerticalStackLayout>
 
-        <!-- Amount -->
-        <VerticalStackLayout Spacing="4">
-            <Label Text="Kwota wpłaty (zł)" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding AmountText}"
-                   Keyboard="Numeric"
-                   Placeholder="np. 200"
-                   FontSize="20" />
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
         </VerticalStackLayout>
-
-        <ActivityIndicator IsRunning="{Binding IsBusy}"
-                           IsVisible="{Binding IsBusy}"
-                           HorizontalOptions="Center" />
-
-    </VerticalStackLayout>
+    </ScrollView>
 
 </ContentPage>

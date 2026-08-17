@@ -7,40 +7,35 @@
              Title="Nowe aktywo">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Zapisz"
-                     Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Nazwa" FontSize="13" TextColor="Gray" />
-                <Entry Text="{Binding Name}"
-                       Placeholder="np. Konto oszczędnościowe PKO"
-                       MaxLength="100" />
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
+            </Border>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Nazwa" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding Name}" Placeholder="np. Konto oszczędnościowe PKO" MaxLength="100" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Poziom płynności" FontSize="13" TextColor="Gray" />
-                <Picker ItemsSource="{Binding Liquidities}"
-                        SelectedItem="{Binding SelectedLiquidity}"
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Poziom płynności" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Liquidities}" SelectedItem="{Binding SelectedLiquidity}"
                         ItemDisplayBinding="{Binding Display}" />
+                <Label Text="Jak szybko dasz radę zamienić to na gotówkę — poduszka liczy się warstwami."
+                       Style="{StaticResource FieldHint}" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Aktualna wartość (zł)" FontSize="13" TextColor="Gray" />
-                <Entry Text="{Binding ValueText}"
-                       Keyboard="Numeric"
-                       Placeholder="np. 50000 lub 50000,00" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Aktualna wartość (zł)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding ValueText}" Keyboard="Numeric" Placeholder="np. 50000" />
             </VerticalStackLayout>
 
-            <Label Text="{Binding ErrorMessage}"
-                   TextColor="#F44336" FontSize="13"
-                   IsVisible="{Binding HasError}" />
-
-            <ActivityIndicator IsRunning="{Binding IsBusy}"
-                               IsVisible="{Binding IsBusy}"
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
         </VerticalStackLayout>

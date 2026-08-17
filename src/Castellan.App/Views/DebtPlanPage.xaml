@@ -7,90 +7,85 @@
              Title="Plan spłaty">
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Padding="12,12,12,32" Spacing="10">
 
-            <!-- Debt-free state: no numbers to confront -->
-            <VerticalStackLayout IsVisible="{Binding IsDebtFree}" Spacing="8" Margin="0,40">
-                <Label Text="Brak zobowiązań" FontSize="20" FontAttributes="Bold"
-                       HorizontalOptions="Center" />
-                <Label Text="Nic nie jesteś nikomu winna."
-                       FontSize="13" TextColor="Gray" HorizontalOptions="Center" />
+            <VerticalStackLayout IsVisible="{Binding IsDebtFree}" Spacing="6" Margin="0,48">
+                <Label Text="Brak zobowiązań" Style="{StaticResource Title}"
+                       HorizontalTextAlignment="Center" />
+                <Label Text="Nic nie jesteś nikomu winna." Style="{StaticResource Secondary}"
+                       HorizontalTextAlignment="Center" />
             </VerticalStackLayout>
 
-            <VerticalStackLayout IsVisible="{Binding HasDebts}" Spacing="16">
+            <VerticalStackLayout IsVisible="{Binding HasDebts}" Spacing="10">
 
-                <!-- The number, stated plainly -->
-                <Border Padding="16,14" StrokeShape="RoundRectangle 12">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="Zostało do spłaty" FontSize="12" TextColor="Gray" />
-                        <Label Text="{Binding TotalDebtDisplay}"
-                               FontSize="30" FontAttributes="Bold" TextColor="#C62828" />
+                <!-- Kwota postawiona wprost — cały sens tego ekranu polega na tym,
+                     żeby na nią spojrzeć, więc nie jest niczym złagodzona. -->
+                <Border Style="{StaticResource Card}" Margin="0">
+                    <VerticalStackLayout Spacing="3">
+                        <Label Text="Zostało do spłaty" Style="{StaticResource SectionHeader}" />
+                        <Label Text="{Binding TotalDebtDisplay}" Style="{StaticResource Hero}"
+                               TextColor="{StaticResource Negative}" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- The way out -->
-                <Border Padding="16,14" StrokeShape="RoundRectangle 12"
-                        BackgroundColor="{AppThemeBinding Light=#E8F5E9, Dark=#1B5E2022}">
-                    <VerticalStackLayout Spacing="4">
-                        <Label Text="{Binding FreedomDisplay}"
-                               FontSize="26" FontAttributes="Bold" TextColor="#2E7D32" />
-                        <Label Text="{Binding FreedomDateDisplay}"
-                               FontSize="14" TextColor="#2E7D32" />
-                        <Label Text="{Binding ComparisonDisplay}"
-                               FontSize="12" TextColor="#1565C0"
+                <!-- ...a zaraz pod nią wyjście, żeby ekran nie kończył się na problemie. -->
+                <Border Style="{StaticResource Card}" Margin="0"
+                        BackgroundColor="{StaticResource PositiveWash}"
+                        Stroke="{StaticResource PositiveDim}">
+                    <VerticalStackLayout Spacing="3">
+                        <Label Text="{Binding FreedomDisplay}" Style="{StaticResource SubHero}"
+                               TextColor="{StaticResource Positive}" />
+                        <Label Text="{Binding FreedomDateDisplay}" Style="{StaticResource Secondary}"
+                               TextColor="{StaticResource Positive}" />
+                        <Label Text="{Binding ComparisonDisplay}" Style="{StaticResource InfoCaption}"
                                IsVisible="{Binding HasComparison}" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- What if I paid more? -->
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="Spłacam miesięcznie (zł)" FontSize="13" TextColor="Gray" />
+                <VerticalStackLayout Style="{StaticResource Field}" Margin="4,10,4,0">
+                    <Label Text="Spłacam miesięcznie (zł)" Style="{StaticResource FieldLabel}" />
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <Entry Grid.Column="0" Text="{Binding MonthlyText}" Keyboard="Numeric" />
-                        <Button Grid.Column="1" Text="Rata"
-                                Command="{Binding ResetToMinimumCommand}"
-                                FontSize="12" Padding="12,6" CornerRadius="6" />
+                        <Button Grid.Column="1" Text="Rata" Command="{Binding ResetToMinimumCommand}"
+                                Style="{StaticResource GhostButton}" />
                     </Grid>
-                    <Label Text="{Binding MinimumHintDisplay}" FontSize="11" TextColor="Gray" />
+                    <Label Text="{Binding MinimumHintDisplay}" Style="{StaticResource FieldHint}" />
                     <Label Text="Podnieś kwotę i zobacz, o ile skróci się droga."
-                           FontSize="11" TextColor="Gray" />
+                           Style="{StaticResource FieldHint}" />
                 </VerticalStackLayout>
 
-                <Border IsVisible="{Binding IsBelowMinimum}"
-                        BackgroundColor="#FFF9C4" Padding="12,8"
-                        StrokeShape="RoundRectangle 6" Stroke="Transparent">
-                    <Label Text="To mniej niż suma rat — przy tej kwocie nie obsłużysz wszystkich zobowiązań."
-                           FontSize="12" TextColor="#5D4037" />
+                <Border Style="{StaticResource WarningBanner}" Margin="0,4,0,0"
+                        IsVisible="{Binding IsBelowMinimum}">
+                    <Label Style="{StaticResource WarningText}"
+                           Text="To mniej niż suma rat — przy tej kwocie nie obsłużysz wszystkich zobowiązań." />
                 </Border>
 
-                <!-- Snowball cascade -->
-                <VerticalStackLayout Spacing="4">
-                    <Label Text="Kolejność znikania" FontSize="12" FontAttributes="Bold" TextColor="Gray" />
+                <VerticalStackLayout Spacing="3" Margin="4,14,4,0">
+                    <Label Text="Kolejność znikania" Style="{StaticResource SectionHeader}" />
                     <Label Text="Najpierw najmniejszy dług — gdy zniknie, jego rata przyspiesza kolejny."
-                           FontSize="11" TextColor="Gray" />
+                           Style="{StaticResource Caption}" />
                 </VerticalStackLayout>
 
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Steps}" Spacing="0">
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Steps}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:PayoffStepVm">
-                            <Border Margin="0,3" Padding="14,10" StrokeShape="RoundRectangle 8">
-                                <Grid ColumnDefinitions="*,Auto">
-                                    <VerticalStackLayout Grid.Column="0" Spacing="2">
-                                        <Label Text="{Binding Name}" FontSize="14"
-                                               LineBreakMode="TailTruncation" />
-                                        <Label Text="{Binding BalanceDisplay}" FontSize="11" TextColor="Gray" />
+                            <Border Style="{StaticResource CardRow}" Margin="0,3">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
+                                        <Label Text="{Binding BalanceDisplay}" Style="{StaticResource Caption}" />
                                     </VerticalStackLayout>
                                     <Label Grid.Column="1" Text="{Binding ClearedDisplay}"
-                                           FontSize="12" FontAttributes="Bold" TextColor="#2E7D32"
-                                           HorizontalOptions="End" VerticalOptions="Center" />
+                                           Style="{StaticResource PositiveCaption}" VerticalOptions="Center"
+                                           HorizontalTextAlignment="End" />
                                 </Grid>
                             </Border>
                         </DataTemplate>
                     </BindableLayout.ItemTemplate>
                 </VerticalStackLayout>
 
-                <Label Text="Wyliczenie nie uwzględnia odsetek — dla oprocentowanych kredytów rzeczywisty czas będzie nieco dłuższy."
-                       FontSize="11" TextColor="Gray" Margin="0,8,0,0" />
+                <Label Text="Wyliczenie nie uwzględnia odsetek — przy oprocentowanych kredytach rzeczywisty czas będzie nieco dłuższy."
+                       Style="{StaticResource Caption}" Margin="4,10,4,0" />
 
             </VerticalStackLayout>
 

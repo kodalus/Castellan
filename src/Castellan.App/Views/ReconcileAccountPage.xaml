@@ -11,27 +11,20 @@
         <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
     </ContentPage.ToolbarItems>
 
-    <VerticalStackLayout Padding="16" Spacing="20">
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource FormBody}">
 
-        <Label Text="{Binding AccountName}"
-               FontSize="20" FontAttributes="Bold"
-               HorizontalOptions="Center" />
+            <Label Text="{Binding AccountName}" Style="{StaticResource Title}" />
 
-        <BoxView HeightRequest="1" Color="{AppThemeBinding Light=#E0E0E0, Dark=#444}" />
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Saldo z aplikacji banku (zł)" Style="{StaticResource FieldLabel}" />
+                <Entry x:Name="BalanceEntry" Text="{Binding ActualBalanceText}" Keyboard="Numeric"
+                       Placeholder="0,00" FontSize="{StaticResource SizeTitle}" />
+                <Label Text="Przepisz dokładnie to, co pokazuje bank. Różnicę zapiszemy jako transakcję „Nierozpoznane”, żeby saldo się zgadzało."
+                       Style="{StaticResource FieldHint}" />
+            </VerticalStackLayout>
 
-        <VerticalStackLayout Spacing="6">
-            <Label Text="Saldo faktyczne z aplikacji banku (zł)"
-                   FontSize="13" TextColor="Gray" />
-            <Entry x:Name="BalanceEntry"
-                   Text="{Binding ActualBalanceText}"
-                   Keyboard="Numeric"
-                   Placeholder="0,00"
-                   FontSize="20" />
         </VerticalStackLayout>
-
-        <Label Text="Podaj dokładne saldo konta widoczne w aplikacji bankowej. Ewentualne rozbieżności zostaną zapisane jako transakcja Niezidentyfikowane."
-               FontSize="12" TextColor="Gray" />
-
-    </VerticalStackLayout>
+    </ScrollView>
 
 </ContentPage>

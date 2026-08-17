@@ -10,43 +10,37 @@
         <ToolbarItem Text="Anuluj" Command="{Binding CancelCommand}" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,*,Auto" Padding="16" RowSpacing="16">
+    <Grid RowDefinitions="Auto,Auto,*,Auto" Padding="16,12,16,16" RowSpacing="12">
 
-        <!-- Amount -->
-        <VerticalStackLayout Grid.Row="0" Spacing="4">
-            <Label Text="Kwota (zł)" FontSize="13" TextColor="Gray" />
-            <Entry Text="{Binding AmountText}"
-                   Keyboard="Numeric"
-                   Placeholder="0,00"
-                   FontSize="28"
-                   FontAttributes="Bold" />
-            <Label Text="{Binding SelectedCategoryName, StringFormat='Kategoria: {0}'}"
-                   FontSize="13" TextColor="Gray" />
+        <!-- Ten ekran obsługuje się jedną ręką przy kasie: kwota jest ogromna,
+             kategorie to duże cele do trafienia kciukiem, potwierdzenie na dole. -->
+        <VerticalStackLayout Grid.Row="0" Style="{StaticResource Field}">
+            <Label Text="Kwota (zł)" Style="{StaticResource FieldLabel}" />
+            <Entry Text="{Binding AmountText}" Keyboard="Numeric" Placeholder="0,00"
+                   FontSize="{StaticResource SizeHero}" FontFamily="OpenSansSemibold" />
         </VerticalStackLayout>
 
-        <!-- Category grid -->
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Categories}">
+        <Label Grid.Row="1" Text="{Binding SelectedCategoryName, StringFormat='Kategoria: {0}'}"
+               Style="{StaticResource Secondary}" />
+
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Categories}">
             <CollectionView.ItemsLayout>
-                <GridItemsLayout Orientation="Vertical" Span="2" HorizontalItemSpacing="8" VerticalItemSpacing="8" />
+                <GridItemsLayout Orientation="Vertical" Span="2"
+                                 HorizontalItemSpacing="8" VerticalItemSpacing="8" />
             </CollectionView.ItemsLayout>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:CategoryButton">
                     <Button Text="{Binding Name}"
                             Command="{Binding Source={RelativeSource AncestorType={x:Type vm:QuickAddTransactionViewModel}}, Path=SelectCategoryCommand}"
                             CommandParameter="{Binding .}"
-                            FontSize="13"
-                            HeightRequest="48" />
+                            Style="{StaticResource GhostButton}"
+                            HeightRequest="52" />
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- Confirm button -->
-        <Button Grid.Row="2"
-                Text="Gotowe"
-                Command="{Binding SaveCommand}"
-                FontSize="17"
-                FontAttributes="Bold"
-                HeightRequest="52" />
+        <Button Grid.Row="3" Text="Gotowe" Command="{Binding SaveCommand}"
+                FontSize="{StaticResource SizeValue}" HeightRequest="54" />
 
     </Grid>
 
