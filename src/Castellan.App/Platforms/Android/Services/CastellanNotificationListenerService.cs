@@ -17,13 +17,6 @@ public class CastellanNotificationListenerService : NotificationListenerService
     {
         if (sbn is null) return;
 
-        // Tryb ręczny: użytkownik wpisuje wszystko sam, więc założenie transakcji
-        // z powiadomienia zdublowałoby jego własny wpis. Odcinamy tu, na krawędzi
-        // platformy — use case nie ma prawa wiedzieć o ustawieniach telefonu.
-        // Uprawnienie może zostać przyznane z wcześniejszego użycia, więc nie
-        // wystarczy polegać na tym, że system nas nie zawoła.
-        if (!Castellan.App.Services.AppSettings.UsesNotifications) return;
-
         var packageName = sbn.PackageName ?? "";
 
         // First filter: not in whitelist → discard immediately, no logging
@@ -42,8 +35,23 @@ public class CastellanNotificationListenerService : NotificationListenerService
                 var services = IPlatformApplication.Current?.Services;
                 if (services is null) return;
 
+                // Znacznik „nasłuch żyje" stawiamy niezależnie od trybu: dowodzi, że
+                // serwis nie został ubity, więc po powrocie do trybu powiadomień
+                // Główna nie wyświetli od razu ostrzeżenia o dobowej ciszy.
                 Microsoft.Maui.Storage.Preferences.Set(
                     "last_notification_at", DateTimeOffset.UtcNow.Ticks);
+
+                // Tryb ręczny: użytkownik wpisuje wszystko sam, więc założenie
+                // transakcji z powiadomienia zdublowałoby jego wpis. Uprawnienie
+                // bywa przyznane z wcześniejszego użycia, więc nie wystarczy liczyć
+                // na to, że system nas nie zawoła.
+                //
+                // Sprawdzenie MUSI być tutaj, wewnątrz try i za kontrolą kontekstu
+                // MAUI. Preferences sięga po MAUI Essentials, a Android wskrzesza
+                // ten serwis bez aktywności — wywołane wyżej, poza siecią
+                // bezpieczeństwa, potrafi rzucić wyjątkiem, który wychodzi
+                // z OnNotificationPosted i cicho wyłącza nasłuch.
+                if (!Castellan.App.Services.AppSettings.UsesNotifications) return;
 
                 using var scope = services.CreateScope();
                 var useCase = scope.ServiceProvider.GetRequiredService<IngestRawNotificationUseCase>();
