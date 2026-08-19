@@ -90,6 +90,21 @@
                                                 Style="{StaticResource RowAction}" />
                                     </Grid>
 
+                                    <BoxView Style="{StaticResource Divider}" />
+
+                                    <!-- Znacznik stoi w wierszu, a nie w formularzu edycji:
+                                         to decyzja, którą zmienia się patrząc na całą listę
+                                         naraz, a nie przy zakładaniu pojedynczego funduszu. -->
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                        <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                            <Label Text="Licz do poduszki finansowej" Style="{StaticResource Secondary}" />
+                                            <Label Text="Wchodzi do „ile miesięcy wytrzymam” w Majątku."
+                                                   Style="{StaticResource Caption}" />
+                                        </VerticalStackLayout>
+                                        <Switch Grid.Column="1" IsToggled="{Binding CountsTowardCushion, Mode=TwoWay}"
+                                                VerticalOptions="Center" />
+                                    </Grid>
+
                                 </VerticalStackLayout>
                             </Border>
                         </SwipeView>

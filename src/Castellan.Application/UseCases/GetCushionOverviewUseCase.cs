@@ -30,6 +30,7 @@ public sealed record CushionOverview(
 
 public sealed class GetCushionOverviewUseCase(
     IAssetRepository assets,
+    IFundRepository funds,
     ITransactionRepository transactions,
     GetAccountsWithBalancesUseCase accountBalances)
 {
@@ -52,6 +53,18 @@ public sealed class GetCushionOverviewUseCase(
                 a.CurrentBalance, today, IsAccount: true))
             .ToList();
 
+        // Do „ile miesięcy wytrzymam" wchodzą tylko fundusze jawnie zaznaczone jako
+        // rezerwa. Domyślnie jest tak zaznaczona poduszka bezpieczeństwa; pozostałe
+        // mają przypisany konkretny przyszły wydatek (OC, urlop, podatek), więc ich
+        // doliczenie zawyżałoby odporność. Ostatnie słowo ma jednak użytkownik —
+        // tylko on wie, co u niego realnie jest rezerwą.
+        var cushionFundRows = (await funds.ListAsync(ct))
+            .Where(f => !f.IsArchived && f.CountsTowardCushion)
+            .Select(f => new AssetRow(
+                default, $"Fundusz: {f.Name}", AssetLiquidity.Immediate,
+                f.Balance, today, IsAccount: true))
+            .ToList();
+
         var cumulative = 0L;
         var tiers = new List<CushionTier>();
 
@@ -63,7 +76,7 @@ public sealed class GetCushionOverviewUseCase(
                 .ToList();
 
             if (liquidity == AssetLiquidity.Immediate)
-                tierAssets = [.. checkingRows, .. tierAssets];
+                tierAssets = [.. checkingRows, .. cushionFundRows, .. tierAssets];
 
             var tierValue = tierAssets.Sum(a => a.Value.Grosze);
             cumulative += tierValue;

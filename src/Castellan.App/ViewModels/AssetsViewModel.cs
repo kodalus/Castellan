@@ -59,10 +59,20 @@ public sealed class FundRowVm
     public string Name  { get; }
     public string ValueDisplay { get; }
 
-    public FundRowVm(string name, Money balance)
+    /// <summary>
+    /// Fundusze wliczone do poduszki zostają na tej liście, tylko z dopiskiem. Wcześniej
+    /// z niej znikały (żeby nie zostać policzone dwa razy w wartości netto) i wychodziło
+    /// z tego coś odwrotnego do napisu na przełączniku: zaznaczenie „licz do poduszki"
+    /// kasowało fundusz z jedynej listy funduszy, jaką widać na tym ekranie.
+    /// </summary>
+    public string CushionNote { get; }
+    public bool HasCushionNote => CushionNote.Length > 0;
+
+    public FundRowVm(string name, Money balance, bool countsTowardCushion)
     {
         Name = name;
         ValueDisplay = $"{balance.Grosze / 100m:N2} zł";
+        CushionNote = countsTowardCushion ? "policzone wyżej w poduszce" : "";
     }
 }
 
@@ -128,6 +138,7 @@ public partial class AssetsViewModel : ObservableObject
     [ObservableProperty] private ObservableCollection<CushionTierVm> _tiers = [];
     [ObservableProperty] private ObservableCollection<FundRowVm> _fundRows = [];
     [ObservableProperty] private string _fundsTotalDisplay = "";
+    [ObservableProperty] private string _fundsCushionNoteDisplay = "";
     [ObservableProperty] private bool _hasFunds;
 
     [ObservableProperty] private ObservableCollection<DebtRowVm> _debtRows = [];
@@ -186,15 +197,24 @@ public partial class AssetsViewModel : ObservableObject
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(IsNotEmpty));
 
-            // Fundusze to pieniądze zarezerwowane na konkretny przyszły wydatek, nie
-            // ogólna poduszka awaryjna — pokazane osobno, poza obliczeniem "miesięcy
-            // poduszki" (to zniekształciłoby ten wskaźnik).
+            // Lista pokazuje WSZYSTKIE aktywne fundusze, także te wliczone do poduszki —
+            // te dostają dopisek, że policzono je wyżej. Ukrywanie ich sprawiało, że
+            // przełącznik „licz do poduszki" wyglądał na odwrócony: zaznaczenie kasowało
+            // fundusz z listy funduszy zamiast go gdziekolwiek dodać.
             var activeFunds = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
             FundRows = new ObservableCollection<FundRowVm>(
-                activeFunds.Select(f => new FundRowVm(f.Name, f.Balance)));
+                activeFunds.Select(f => new FundRowVm(f.Name, f.Balance, f.CountsTowardCushion)));
             HasFunds = activeFunds.Count > 0;
-            var fundsTotal = activeFunds.Sum(f => f.Balance.Grosze);
-            FundsTotalDisplay = $"razem: {fundsTotal / 100m:N2} zł";
+
+            // Do wartości netto wchodzą tylko fundusze spoza poduszki — te wliczone
+            // siedzą już w Cushion.TotalValue, więc dodanie ich tutaj podwoiłoby kwotę.
+            var fundsOutsideCushion = activeFunds.Where(f => !f.CountsTowardCushion).Sum(f => f.Balance.Grosze);
+            var fundsInCushion      = activeFunds.Where(f => f.CountsTowardCushion).Sum(f => f.Balance.Grosze);
+
+            FundsTotalDisplay = $"razem: {(fundsOutsideCushion + fundsInCushion) / 100m:N2} zł";
+            FundsCushionNoteDisplay = fundsInCushion > 0
+                ? $"w tym {fundsInCushion / 100m:N2} zł policzone w poduszce"
+                : "";
 
             var debts = await _debtOverview.ExecuteAsync(ct);
             DebtRows = new ObservableCollection<DebtRowVm>(debts.Items.Select(d =>
@@ -214,7 +234,7 @@ public partial class AssetsViewModel : ObservableObject
 
             // Wartość netto = aktywa + fundusze − długi. Fundusze to realne pieniądze
             // odłożone na bok, więc wchodzą do majątku, mimo że są poza poduszką.
-            var netGrosze = (Cushion?.TotalValue.Grosze ?? 0) + fundsTotal - debts.TotalBalance.Grosze;
+            var netGrosze = (Cushion?.TotalValue.Grosze ?? 0) + fundsOutsideCushion - debts.TotalBalance.Grosze;
             IsNetWorthNegative = netGrosze < 0;
             NetWorthDisplay = new Money(netGrosze).ToString();
         }

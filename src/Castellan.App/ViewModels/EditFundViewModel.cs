@@ -24,6 +24,13 @@ public partial class EditFundViewModel : ObservableObject
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _balanceDisplay = "";
 
+    /// <summary>Fundusz otwarty — cel bez daty. Patrz AddFundViewModel.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeadline))]
+    private bool _isOpenEnded;
+
+    public bool HasDeadline => !IsOpenEnded;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     private string _errorMessage = "";
@@ -35,6 +42,7 @@ public partial class EditFundViewModel : ObservableObject
         new(FundKind.Tax,       "Podatki"),
         new(FundKind.Insurance, "Ubezpieczenie"),
         new(FundKind.Vacation,  "Urlop"),
+        new(FundKind.Emergency, "Poduszka bezpieczeństwa"),
         new(FundKind.Custom,    "Inny"),
     ];
 
@@ -63,7 +71,8 @@ public partial class EditFundViewModel : ObservableObject
         Name = fund.Name;
         SelectedKind = Kinds.FirstOrDefault(k => k.Kind == fund.Kind) ?? Kinds[0];
         TargetAmountText = (fund.TargetAmount.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture);
-        Deadline = fund.Deadline.ToDateTime(TimeOnly.MinValue);
+        IsOpenEnded = fund.Deadline is null;
+        if (fund.Deadline is { } d) Deadline = d.ToDateTime(TimeOnly.MinValue);
         // Saldo tylko do wglądu — zmienia się przez wpłaty i pokrywanie wydatków,
         // nie przez edycję parametrów funduszu.
         BalanceDisplay = $"Zebrane: {fund.Balance}";
@@ -84,8 +93,9 @@ public partial class EditFundViewModel : ObservableObject
         IsBusy = true;
         try
         {
+            DateOnly? deadline = IsOpenEnded ? null : DateOnly.FromDateTime(Deadline);
             await _update.ExecuteAsync(
-                new UpdateFundCommand(id, Name.Trim(), SelectedKind.Kind, new Money(target), DateOnly.FromDateTime(Deadline)), ct);
+                new UpdateFundCommand(id, Name.Trim(), SelectedKind.Kind, new Money(target), deadline), ct);
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)

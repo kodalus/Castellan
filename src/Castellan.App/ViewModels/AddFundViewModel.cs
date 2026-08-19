@@ -19,6 +19,23 @@ public partial class AddFundViewModel : ObservableObject
     [ObservableProperty] private DateTime _deadline = new DateTime(DateTime.Today.Year + 1, 1, 1);
     [ObservableProperty] private bool _isBusy;
 
+    /// <summary>
+    /// Fundusz otwarty — cel bez daty, zbierany aż uzbiera. Tak działa poduszka
+    /// bezpieczeństwa. Bez terminu nie ma raty ani ostrzeżenia o opóźnieniu.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDeadline))]
+    private bool _isOpenEnded;
+
+    public bool HasDeadline => !IsOpenEnded;
+
+    // Wybór poduszki sam proponuje fundusz otwarty: to jej naturalna postać,
+    // a użytkownik i tak może termin włączyć z powrotem.
+    partial void OnSelectedKindChanged(FundKindItem? value)
+    {
+        if (value?.Kind == FundKind.Emergency) IsOpenEnded = true;
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     private string _errorMessage = "";
@@ -30,6 +47,7 @@ public partial class AddFundViewModel : ObservableObject
         new(FundKind.Tax,       "Podatki"),
         new(FundKind.Insurance, "Ubezpieczenie"),
         new(FundKind.Vacation,  "Urlop"),
+        new(FundKind.Emergency, "Poduszka bezpieczeństwa"),
         new(FundKind.Custom,    "Inny"),
     ];
 
@@ -50,11 +68,16 @@ public partial class AddFundViewModel : ObservableObject
         var target = ParseGrosze(TargetAmountText);
         if (target <= 0) { ErrorMessage = "Podaj poprawną kwotę docelową."; return; }
 
-        var deadlineDate = DateOnly.FromDateTime(Deadline);
-        if (deadlineDate <= DateOnly.FromDateTime(DateTime.Today))
+        DateOnly? deadlineDate = null;
+        if (!IsOpenEnded)
         {
-            ErrorMessage = "Termin musi być w przyszłości.";
-            return;
+            var picked = DateOnly.FromDateTime(Deadline);
+            if (picked <= DateOnly.FromDateTime(DateTime.Today))
+            {
+                ErrorMessage = "Termin musi być w przyszłości.";
+                return;
+            }
+            deadlineDate = picked;
         }
 
         IsBusy = true;

@@ -9,14 +9,30 @@ public class Fund
     public FundKind Kind { get; private set; }
     public Money TargetAmount { get; private set; }
     public DateOnly StartMonth { get; private set; }
-    public DateOnly Deadline { get; private set; }
+    /// <summary>
+    /// Brak terminu znaczy fundusz otwarty — zbierany, aż uzbiera. Tak działa
+    /// poduszka bezpieczeństwa: ma cel, ale nie ma daty, na którą pieniądze muszą
+    /// być gotowe. Bez terminu nie da się policzyć raty ani opóźnienia, więc oba
+    /// wychodzą zerowe zamiast zmyślone.
+    /// </summary>
+    public DateOnly? Deadline { get; private set; }
     public Money Balance { get; private set; }
     public bool IsArchived { get; private set; }
     public DateOnly? LastContributionMonth { get; private set; }
 
+    /// <summary>
+    /// Czy saldo funduszu wchodzi do poduszki finansowej w Majątku, czyli do liczby
+    /// „ile miesięcy wytrzymam bez przychodu". Domyślnie tylko poduszka bezpieczeństwa:
+    /// pieniądze w funduszu na OC są już wydane, tylko jeszcze nie zapłacone — OC
+    /// przyjdzie niezależnie od tego, czy dochód zniknie, więc doliczenie ich
+    /// zawyżałoby odporność. Znacznik jest jawnym polem, a nie regułą wyprowadzoną
+    /// z rodzaju, bo o tym, co realnie jest rezerwą, wie tylko właściciel pieniędzy.
+    /// </summary>
+    public bool CountsTowardCushion { get; private set; }
+
     private Fund() { }
 
-    public static Fund Create(string name, FundKind kind, Money targetAmount, DateOnly deadline)
+    public static Fund Create(string name, FundKind kind, Money targetAmount, DateOnly? deadline)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         var today = DateOnly.FromDateTime(DateTime.Today);
@@ -27,9 +43,10 @@ public class Fund
             Kind = kind,
             TargetAmount = targetAmount,
             StartMonth = new DateOnly(today.Year, today.Month, 1),
-            Deadline = new DateOnly(deadline.Year, deadline.Month, 1),
+            Deadline = FirstOfMonth(deadline),
             Balance = Money.Zero,
             IsArchived = false,
+            CountsTowardCushion = kind == FundKind.Emergency,
         };
     }
 
@@ -44,19 +61,28 @@ public class Fund
     public void Archive() => IsArchived = true;
 
     /// <summary>
+    /// Przełączane wprost z listy funduszy. Celowo osobno od Update: zmiana rodzaju
+    /// funduszu nie ma po cichu przestawiać tego, co użytkownik świadomie zaznaczył.
+    /// </summary>
+    public void SetCountsTowardCushion(bool counts) => CountsTowardCushion = counts;
+
+    /// <summary>
     /// Edycja parametrów funduszu. Celowo nie rusza Balance ani StartMonth:
     /// saldo zmienia się tylko przez wpłaty/wypłaty, a StartMonth jest kotwicą
     /// dla wyliczeń "ile powinno być odłożone do teraz" — przesunięcie go
     /// zafałszowałoby historię opóźnień.
     /// </summary>
-    public void Update(string name, FundKind kind, Money targetAmount, DateOnly deadline)
+    public void Update(string name, FundKind kind, Money targetAmount, DateOnly? deadline)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         Name = name.Trim();
         Kind = kind;
         TargetAmount = targetAmount;
-        Deadline = new DateOnly(deadline.Year, deadline.Month, 1);
+        Deadline = FirstOfMonth(deadline);
     }
+
+    private static DateOnly? FirstOfMonth(DateOnly? date) =>
+        date is { } d ? new DateOnly(d.Year, d.Month, 1) : null;
 
     public Money Remaining => new(Math.Max(0, TargetAmount.Grosze - Balance.Grosze));
 
@@ -70,10 +96,12 @@ public class Fund
     // dołożyć, mimo że wpłata już padła.
     public int PeriodsRemaining(DateOnly today, int paydateDay)
     {
+        if (Deadline is not { } deadline) return 0;
+
         var from = HasContributedThisPeriod(today) ? StartOfNextMonth(today) : today;
         if (paydateDay <= 0)
-            return Math.Max(0, (Deadline.Year - from.Year) * 12 + (Deadline.Month - from.Month) + 1);
-        return UpcomingPaydates(from, paydateDay, Deadline);
+            return Math.Max(0, (deadline.Year - from.Year) * 12 + (deadline.Month - from.Month) + 1);
+        return UpcomingPaydates(from, paydateDay, deadline);
     }
 
     private bool HasContributedThisPeriod(DateOnly today) =>
@@ -85,6 +113,11 @@ public class Fund
     // Suggested contribution per next paycheck = Remaining / periods left
     public Money SuggestedMonthly(DateOnly today, int paydateDay)
     {
+        // Fundusz otwarty nie podpowiada raty: bez terminu każda kwota jest tak samo
+        // dobra, a wyrzucenie całej brakującej sumy (jak przy minionym terminie)
+        // sugerowałoby, że trzeba ją wpłacić naraz.
+        if (Deadline is null) return Money.Zero;
+
         var periods = PeriodsRemaining(today, paydateDay);
         if (periods <= 0) return Remaining;
         return new Money((long)Math.Ceiling((double)Remaining.Grosze / periods));
@@ -94,9 +127,12 @@ public class Fund
     // If no paydate has passed since the fund was created, returns 0 (no false "delay").
     public Money ExpectedByNow(DateOnly today, int paydateDay)
     {
+        // Bez terminu nie ma tempa, względem którego można być opóźnionym.
+        if (Deadline is not { } deadline) return Money.Zero;
+
         int totalPeriods = paydateDay > 0
-            ? UpcomingPaydates(StartMonth, paydateDay, Deadline)
-            : Math.Max(1, (Deadline.Year - StartMonth.Year) * 12 + (Deadline.Month - StartMonth.Month) + 1);
+            ? UpcomingPaydates(StartMonth, paydateDay, deadline)
+            : Math.Max(1, (deadline.Year - StartMonth.Year) * 12 + (deadline.Month - StartMonth.Month) + 1);
 
         if (totalPeriods <= 0) return TargetAmount;
 

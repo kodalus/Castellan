@@ -38,13 +38,17 @@ internal sealed class FundConfiguration : IEntityTypeConfiguration<Fund>
                 v => DateOnly.ParseExact(v, "yyyy-MM-dd", null))
             .IsRequired();
 
+        // Nullable: fundusz otwarty (poduszka bezpieczeństwa) nie ma terminu.
         builder.Property(f => f.Deadline)
             .HasConversion(
-                d => d.ToString("yyyy-MM-dd"),
-                v => DateOnly.ParseExact(v, "yyyy-MM-dd", null))
-            .IsRequired();
+                d => d == null ? null : d.Value.ToString("yyyy-MM-dd"),
+                v => v == null ? null : DateOnly.ParseExact(v, "yyyy-MM-dd", null));
 
         builder.Property(f => f.IsArchived)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(f => f.CountsTowardCushion)
             .IsRequired()
             .HasDefaultValue(false);
 

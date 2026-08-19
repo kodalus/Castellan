@@ -14,7 +14,10 @@ public enum ParseStatus { Unparsed, Parsed, Ignored }
 
 public enum CategoryRuleOrigin { Learned, Manual }
 
-public enum FundKind { Insurance, Vacation, Tax, Custom }
+// Emergency stoi osobno od reszty, bo jako jedyny liczy się do poduszki finansowej
+// w Majątku — pozostałe fundusze mają już przypisany konkretny przyszły wydatek,
+// więc nie są rezerwą na czarną godzinę.
+public enum FundKind { Insurance, Vacation, Tax, Custom, Emergency }
 
 public enum AssetLiquidity { Immediate, Fast, Medium, Slow }
 

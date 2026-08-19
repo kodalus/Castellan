@@ -97,8 +97,11 @@
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="16,0,16,4">
                     <Label Grid.Column="0" Text="Fundusze" Style="{StaticResource SectionHeader}"
                            VerticalOptions="Center" />
-                    <Label Grid.Column="1" Text="{Binding FundsTotalDisplay}"
-                           Style="{StaticResource RowMeta}" VerticalOptions="Center" />
+                    <VerticalStackLayout Grid.Column="1" Spacing="1">
+                        <Label Text="{Binding FundsTotalDisplay}" Style="{StaticResource RowMeta}" />
+                        <Label Text="{Binding FundsCushionNoteDisplay}" Style="{StaticResource RowMeta}"
+                               IsVisible="{Binding FundsCushionNoteDisplay, Converter={StaticResource IsNotEmpty}}" />
+                    </VerticalStackLayout>
                 </Grid>
 
                 <VerticalStackLayout BindableLayout.ItemsSource="{Binding FundRows}">
@@ -106,8 +109,13 @@
                         <DataTemplate x:DataType="vm:FundRowVm">
                             <Border Style="{StaticResource CardRow}">
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                    <Label Grid.Column="0" Text="{Binding Name}"
-                                           Style="{StaticResource RowTitle}" VerticalOptions="Center" />
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
+                                        <!-- Fundusz wliczony do poduszki zostaje na liście
+                                             z dopiskiem, zamiast z niej znikać. -->
+                                        <Label Text="{Binding CushionNote}" Style="{StaticResource InfoCaption}"
+                                               IsVisible="{Binding HasCushionNote}" />
+                                    </VerticalStackLayout>
                                     <Label Grid.Column="1" Text="{Binding ValueDisplay}"
                                            Style="{StaticResource RowValue}" VerticalOptions="Center" />
                                 </Grid>

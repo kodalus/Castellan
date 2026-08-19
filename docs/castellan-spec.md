@@ -308,15 +308,17 @@ Przechowywane po redakcji tekstu wyłącznie dla powiadomień z białej listy pa
 |---|---|---|
 | `Id` | `FundId` | |
 | `Name` | `string` | „OC+AC", „Podatek od nieruchomości", „Urlop" |
-| `Kind` | `Insurance` \| `Vacation` \| `Tax` \| `Custom` | |
+| `Kind` | `Insurance` \| `Vacation` \| `Tax` \| `Custom` \| `Emergency` | |
 | `TargetAmount` | `Money` | kwota do uzbierania |
 | `StartMonth` | `DateOnly` | pierwszy dzień miesiąca założenia — kotwica wyliczeń |
-| `Deadline` | `DateOnly` | pierwszy dzień miesiąca, na kiedy potrzebne są pieniądze |
+| `Deadline` | `DateOnly?` | pierwszy dzień miesiąca, na kiedy potrzebne są pieniądze; `null` = fundusz otwarty |
 | `Balance` | `Money` | zgromadzone |
 | `LastContributionMonth` | `DateOnly?` | miesiąc ostatniej wpłaty |
 | `IsArchived` | `bool` | |
+| `CountsTowardCushion` | `bool` | czy saldo wchodzi do poduszki finansowej |
 
-Operacje: `Contribute(money)`, `Withdraw(money)`, `Update(...)`, `Archive()`.
+Operacje: `Contribute(money)`, `Withdraw(money)`, `Update(...)`, `Archive()`,
+`SetCountsTowardCushion(bool)`.
 
 **Odejście od pierwotnego założenia.** Spec zakładał fundusz cykliczny: okresowość plus
 data następnej płatności, a `Spend` zerował zgromadzone i przesuwał termin. Wdrożony
@@ -332,6 +334,34 @@ przesunięcie go zafałszowałoby historię opóźnień.
 `LastContributionMonth` doszedł po zgłoszeniu z eksploatacji: bez niego bieżący okres
 liczył się jako niezrobiony aż do dnia wypłaty, więc rata przeliczała się na nowo zaraz
 po wpłacie, tak jakby trzeba było dołożyć drugi raz.
+
+**Fundusz otwarty (`Deadline == null`).** Poduszka bezpieczeństwa ma cel, ale nie ma
+daty, na którą pieniądze muszą być gotowe — zbiera się ją, aż uzbiera. Bez terminu
+`SuggestedMonthly` i `ExpectedByNow` zwracają zero, więc nie ma ani podpowiadanej raty,
+ani ostrzeżenia o opóźnieniu; zostaje cel, saldo i pasek postępu. `SuggestedMonthly`
+musi zwracać zero jawnie, a nie wpaść w gałąź „termin minął", która podpowiada całą
+brakującą kwotę naraz.
+
+**Wejście do poduszki niesie znacznik, nie rodzaj.** Pierwsza wersja wiązała to
+z `Kind == Emergency`. Reguła była poprawna domyślnie, ale ukryta i sztywna: nie było
+jej widać na ekranie, a fundusz „Wakacje", który u kogoś jest zwykłym oszczędzaniem,
+nie miał jak się załapać. Teraz decyduje `CountsTowardCushion`, przełączany wprost
+z listy funduszy. `Fund.Create` ustawia go na `true` dla rodzaju `Emergency` i `false`
+dla pozostałych, więc domyślne zachowanie zostaje bez zmian.
+
+`Update` celowo go nie rusza: zmiana rodzaju funduszu nie ma po cichu przestawiać tego,
+co użytkownik świadomie zaznaczył. Stąd osobny `SetFundCushionFlagUseCase` — przełącznik
+działa jednym tapnięciem z listy, bez otwierania formularza i bez ryzyka nadpisania
+reszty pól stanem ekranu, którego użytkownik nie widział.
+
+Fundusz wliczony do poduszki znika z osobnej sekcji „Fundusze" — inaczej byłby pokazany
+dwa razy, a wartość netto (poduszka + fundusze − zobowiązania) policzyłaby go podwójnie.
+
+**Decyzja o domyślnej wartości.** Rozważane było domyślne wliczanie wszystkich funduszy
+plus przycisk „zaznacz wszystkie". Odrzucone: poduszka odpowiada na pytanie „ile
+wytrzymam bez przychodu", a pieniądze z przypisanym wydatkiem tej odporności nie dają.
+Domyślne wliczanie wszystkiego zawyżałoby tę liczbę u każdego, kto ma jakikolwiek
+fundusz celowy, i mnożyłoby ryzyko podwójnego liczenia opisane w 11.8.
 
 ### 5.10 Asset (agregat) — etap 5
 
@@ -745,6 +775,7 @@ planowania podpowiada ją przyciskiem, który jednym tapnięciem wpisuje kwotę 
 
 Płynne(poziom)  = Σ Asset.Value gdzie Liquidity == poziom
                   + salda kont Checking, gdy poziom == Immediate
+                  + salda funduszy z CountsTowardCushion, gdy poziom == Immediate
 
 Autonomia(poz.) = Płynne(narastająco do poziomu) / ŚredniWydatek   [miesiące]
 ```
@@ -760,6 +791,16 @@ Poziomów są cztery, nie trzy, a liczby podawane są narastająco — „ile wy
 z tego, co mam pod ręką" kontra „ile wytrzymam, jeśli sięgnę też po rzeczy trudniejsze
 do spieniężenia". Fundusze są liczone osobno, poza poziomami: te pieniądze mają już
 przypisany przyszły wydatek, więc nie są rezerwą na czarną godzinę.
+
+Wyjątkiem są fundusze z zaznaczonym `CountsTowardCushion` — domyślnie poduszka
+bezpieczeństwa, bo jest z definicji tym, co ta liczba mierzy. Doliczają się do płynności
+natychmiastowej i znikają z osobnej sekcji funduszy, żeby nie zostały policzone dwa razy.
+
+**Znane ograniczenie.** Fundusz jest kopertą nad pieniędzmi, które fizycznie leżą na
+koncie albo w aktywie. Jeśli poduszka trzymana jest na koncie rozliczeniowym, którego
+saldo już wchodzi do poziomu natychmiastowego, ta sama kwota policzy się dwa razy.
+Aplikacja nie ma jak tego wykryć — to samo dotyczy aktywa dodanego ręcznie obok konta
+o tym samym saldzie. Przewodnik ostrzega o tym wprost przy opisie poduszki.
 
 ---
 

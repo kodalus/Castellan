@@ -8,29 +8,74 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Castellan.App.ViewModels;
 
-public sealed record FundRow(
-    FundId Id,
-    string Name,
-    string KindDisplay,
-    string BalanceDisplay,
-    string TargetDisplay,
-    string SuggestedMonthlyDisplay,
-    string PeriodsRemainingDisplay,
-    string DeadlineDisplay,
-    string DeficitDisplay,
-    bool IsDelayed,
-    double Progress,
-    ICommand ContributeCommand,
-    ICommand EditCommand,
-    ICommand DeleteCommand)
+/// <summary>
+/// Wiersz listy funduszy. Klasa obserwowalna, a nie rekord, bo znacznik „licz do
+/// poduszki" przełącza się wprost tutaj — Switch potrzebuje wiązania dwustronnego.
+/// </summary>
+public sealed partial class FundRow : ObservableObject
 {
+    public FundId Id { get; }
+    public string Name { get; }
+    public string KindDisplay { get; }
+    public string BalanceDisplay { get; }
+    public string TargetDisplay { get; }
+    public string SuggestedMonthlyDisplay { get; }
+    public string PeriodsRemainingDisplay { get; }
+    public string DeadlineDisplay { get; }
+    public string DeficitDisplay { get; }
+    public bool IsDelayed { get; }
+    public double Progress { get; }
+    public ICommand ContributeCommand { get; }
+    public ICommand EditCommand { get; }
+    public ICommand DeleteCommand { get; }
+
     public bool IsNotDelayed => !IsDelayed;
+
+    private readonly Func<bool, Task> _onCushionChanged;
+    private readonly bool _ready;
+
+    [ObservableProperty] private bool _countsTowardCushion;
+
+    // Wartość początkową ustawiamy przed uzbrojeniem, bo inaczej samo zbudowanie
+    // listy zapisywałoby do bazy każdy wiersz z osobna przy każdym odświeżeniu.
+    partial void OnCountsTowardCushionChanged(bool value)
+    {
+        if (_ready) _ = _onCushionChanged(value);
+    }
+
+    public FundRow(
+        FundId id, string name, string kindDisplay, string balanceDisplay, string targetDisplay,
+        string suggestedMonthlyDisplay, string periodsRemainingDisplay, string deadlineDisplay,
+        string deficitDisplay, bool isDelayed, double progress, bool countsTowardCushion,
+        ICommand contributeCommand, ICommand editCommand, ICommand deleteCommand,
+        Func<bool, Task> onCushionChanged)
+    {
+        Id = id;
+        Name = name;
+        KindDisplay = kindDisplay;
+        BalanceDisplay = balanceDisplay;
+        TargetDisplay = targetDisplay;
+        SuggestedMonthlyDisplay = suggestedMonthlyDisplay;
+        PeriodsRemainingDisplay = periodsRemainingDisplay;
+        DeadlineDisplay = deadlineDisplay;
+        DeficitDisplay = deficitDisplay;
+        IsDelayed = isDelayed;
+        Progress = progress;
+        ContributeCommand = contributeCommand;
+        EditCommand = editCommand;
+        DeleteCommand = deleteCommand;
+
+        _countsTowardCushion = countsTowardCushion;
+        _onCushionChanged = onCushionChanged;
+        _ready = true;
+    }
 }
 
 public partial class FundsViewModel : ObservableObject
 {
     private readonly GetFundOverviewUseCase _overview;
     private readonly DeleteFundUseCase _deleteFund;
+    private readonly SetFundCushionFlagUseCase _setCushionFlag;
 
     public ObservableCollection<FundRow> Items { get; } = [];
 
@@ -52,10 +97,14 @@ public partial class FundsViewModel : ObservableObject
 
     public bool NeedsPaydate => PaydateDay <= 0;
 
-    public FundsViewModel(GetFundOverviewUseCase overview, DeleteFundUseCase deleteFund)
+    public FundsViewModel(
+        GetFundOverviewUseCase overview,
+        DeleteFundUseCase deleteFund,
+        SetFundCushionFlagUseCase setCushionFlag)
     {
         _overview = overview;
         _deleteFund = deleteFund;
+        _setCushionFlag = setCushionFlag;
         PaydateDay = Microsoft.Maui.Storage.Preferences.Get("paydate_day", 0);
         PaydateText = PaydateDay > 0 ? PaydateDay.ToString() : "";
     }
@@ -80,19 +129,29 @@ public partial class FundsViewModel : ObservableObject
                     s.KindDisplay,
                     s.Balance.ToString(),
                     $"Cel: {s.TargetAmount}",
-                    $"Wpłać co miesiąc: {s.SuggestedMonthly}",
-                    s.PeriodsRemaining > 0
-                        ? $"{s.PeriodsRemaining} rat do {s.Deadline:MM/yyyy}"
-                        : $"Termin: {s.Deadline:MM/yyyy}",
-                    s.Deadline.ToString("MM/yyyy"),
-                    s.IsDelayed ? $"⚠ Brakuje {s.Deficit}" : "✓ Na bieżąco",
+                    // Fundusz otwarty nie ma raty do podpowiedzenia, więc zamiast
+                    // „Wpłać co miesiąc: 0,00 zł" pokazuje, ile brakuje do celu.
+                    s.IsOpenEnded
+                        ? $"Do celu brakuje: {Remaining(s)}"
+                        : $"Wpłać co miesiąc: {s.SuggestedMonthly}",
+                    s.IsOpenEnded
+                        ? "Bez terminu — zbierasz, aż uzbiera"
+                        : s.PeriodsRemaining > 0
+                            ? $"{s.PeriodsRemaining} rat do {s.Deadline:MM/yyyy}"
+                            : $"Termin: {s.Deadline:MM/yyyy}",
+                    s.Deadline?.ToString("MM/yyyy") ?? "",
+                    // Bez terminu nie ma tempa, więc ani „brakuje", ani „na bieżąco"
+                    // nic by nie znaczyło — pole zostaje puste.
+                    s.IsOpenEnded ? "" : s.IsDelayed ? $"⚠ Brakuje {s.Deficit}" : "✓ Na bieżąco",
                     s.IsDelayed,
                     s.Progress,
+                    s.CountsTowardCushion,
                     new AsyncRelayCommand(() =>
                         Shell.Current.GoToAsync($"contributeFund?fundId={fundId.Value}")),
                     new AsyncRelayCommand(() =>
                         Shell.Current.GoToAsync($"editFund?fundId={fundId.Value}")),
-                    new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance))));
+                    new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance)),
+                    counts => ToggleCushionAsync(fundId, counts)));
             }
             IsEmpty = Items.Count == 0;
         }
@@ -101,6 +160,26 @@ public partial class FundsViewModel : ObservableObject
             System.Diagnostics.Debug.WriteLine("[Funds.Load] " + ex);
         }
     }
+
+    /// <summary>
+    /// Zapisuje przestawiony znacznik. Lista nie jest przeładowywana — wiersz już
+    /// pokazuje nowy stan, a przeładowanie w trakcie przesuwania przełącznika
+    /// wyrzuciłoby użytkownika na górę listy.
+    /// </summary>
+    private async Task ToggleCushionAsync(FundId id, bool counts)
+    {
+        try
+        {
+            await _setCushionFlag.ExecuteAsync(id, counts);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("[Funds.ToggleCushion] " + ex);
+        }
+    }
+
+    private static Money Remaining(FundSummary s) =>
+        new(Math.Max(0, s.TargetAmount.Grosze - s.Balance.Grosze));
 
     [RelayCommand]
     private void SavePaydate()

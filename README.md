@@ -15,7 +15,7 @@ Pełny przewodnik po działaniu aplikacji jest **w niej samej** — zakładka **
 | Koperty | Plan miesiąca — podział dostępnych środków na kategorie |
 | Przychody | Plan kontra faktyczne wpływy z każdego źródła |
 | Skrzynka | Nieprzypisane transakcje i propozycje przelewów do rozstrzygnięcia |
-| Fundusze | Cel i termin, rata liczona na wypłaty, pokrywanie wydatków z odłożonych pieniędzy |
+| Fundusze | Cel i termin, rata liczona na wypłaty, pokrywanie wydatków z odłożonych pieniędzy; fundusz otwarty (bez terminu) dla poduszki bezpieczeństwa |
 | Zobowiązania | Salda kredytów, raty, plan spłaty metodą kuli śnieżnej |
 | Majątek | Poduszka finansowa w miesiącach wg czterech poziomów płynności, wartość netto |
 | Statystyki | Sześć miesięcy wydatków, przychodów i największych kategorii |

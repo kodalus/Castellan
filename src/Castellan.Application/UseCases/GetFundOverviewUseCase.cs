@@ -15,8 +15,13 @@ public sealed record FundSummary(
     bool IsDelayed,
     Money SuggestedMonthly,
     int PeriodsRemaining,
-    DateOnly Deadline,
-    double Progress);
+    DateOnly? Deadline,
+    double Progress,
+    bool CountsTowardCushion)
+{
+    /// <summary>Fundusz otwarty: cel bez daty, zbierany aż uzbiera.</summary>
+    public bool IsOpenEnded => Deadline is null;
+}
 
 public sealed record FundOverview(
     IReadOnlyList<FundSummary> Items,
@@ -44,7 +49,8 @@ public sealed class GetFundOverviewUseCase(IFundRepository funds)
                 f.SuggestedMonthly(today, paydateDay),
                 f.PeriodsRemaining(today, paydateDay),
                 f.Deadline,
-                f.Progress))
+                f.Progress,
+                f.CountsTowardCushion))
             .OrderBy(s => s.IsDelayed ? 0 : 1)
             .ThenBy(s => s.Deadline)
             .ToList();
@@ -61,6 +67,7 @@ public sealed class GetFundOverviewUseCase(IFundRepository funds)
         FundKind.Insurance => "Ubezpieczenie",
         FundKind.Vacation  => "Urlop",
         FundKind.Tax       => "Podatki",
+        FundKind.Emergency => "Poduszka bezpieczeństwa",
         _                  => "Inny",
     };
 }

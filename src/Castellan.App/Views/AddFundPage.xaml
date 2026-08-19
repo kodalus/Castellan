@@ -34,6 +34,17 @@
             </VerticalStackLayout>
 
             <VerticalStackLayout Style="{StaticResource Field}">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                        <Label Text="Zbieram bez terminu" Style="{StaticResource RowTitle}" />
+                        <Label Text="Dla poduszki bezpieczeństwa: cel bez daty. Nie będzie raty ani ostrzeżeń o opóźnieniu."
+                               Style="{StaticResource Caption}" />
+                    </VerticalStackLayout>
+                    <Switch Grid.Column="1" IsToggled="{Binding IsOpenEnded}" VerticalOptions="Center" />
+                </Grid>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}" IsVisible="{Binding HasDeadline}">
                 <Label Text="Termin" Style="{StaticResource FieldLabel}" />
                 <DatePicker Date="{Binding Deadline}" Format="MMMM yyyy"
                             MinimumDate="2025-01-01" MaximumDate="2035-12-31" />

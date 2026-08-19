@@ -9,7 +9,7 @@ public sealed record UpdateFundCommand(
     string Name,
     FundKind Kind,
     Money TargetAmount,
-    DateOnly Deadline);
+    DateOnly? Deadline);
 
 public sealed class UpdateFundUseCase(IFundRepository funds, IUnitOfWork uow)
 {
