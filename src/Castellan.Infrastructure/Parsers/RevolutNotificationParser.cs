@@ -24,15 +24,20 @@ public sealed partial class RevolutNotificationParser : INotificationParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex AmountCurrencyLast();
 
+    // Formy osobowe („wydał(a)", „otrzymał(a)") sa tu obok bezosobowych, bo na koncie
+    // wspólnym Revolut podaje sprawcę: „Sylwester Rzepka wydał(a) 11,13 zł." zamiast
+    // „Wydano 11,13 zł.". Sam rdzeń wystarcza — obejmuje i „wydał", i „wydała",
+    // i „wydał(a)". Rdzenia „płacił" celowo nie skracamy: pasowałby jednocześnie do
+    // „zapłacił" (wydatek) i „wpłacił" (wpływ), więc oba stoją w pełnym brzmieniu.
     private static readonly string[] IncomeWordsPl =
-        ["otrzymano", "wpłynęło", "zwrot", "doładowano", "cashback", "wpłata"];
+        ["otrzymano", "otrzymał", "wpłynęło", "zwrot", "doładowano", "cashback", "wpłata", "wpłacił"];
     private static readonly string[] ExpenseWordsPl =
-        ["wydano", "zapłacono", "płatność", "obciążenie", "pobrano"];
+        ["wydano", "wydał", "zapłacono", "zapłacił", "płatność", "obciążenie", "pobrano"];
 
     private static readonly string[] IncomeWordsEn =
         ["received", "refund", "cashback", "topped up", "added", "money in"];
     private static readonly string[] ExpenseWordsEn =
-        ["paid", "payment", "sent", "withdrawn", "charge", "declined", "money out"];
+        ["paid", "payment", "spent", "sent", "withdrawn", "charge", "declined", "money out"];
 
     public ParsedTransaction? TryParse(string title, string text)
     {

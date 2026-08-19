@@ -76,4 +76,22 @@ public class NotificationParserTests
         result!.Amount.Grosze.Should().Be(-1250);
         result.AccountHint.Should().BeNull();
     }
+
+    [Fact]
+    public void Revolut_parses_expense_made_by_another_person_on_a_shared_account()
+    {
+        // Konto wspolne: gdy placi wspoluzytkownik, Revolut pisze
+        // "Sylwester Rzepka wydal(a) 11,13 zl." zamiast "Wydano 11,13 zl.".
+        // Slownik znal tylko forme bezosobowa, wiec parser zwracal null
+        // i takie zakupy nie trafialy do skrzynki wcale.
+        var parser = new RevolutNotificationParser();
+
+        var result = parser.TryParse(
+            title: "Konto wspólne · Sklep Firmowy Wiece",
+            text: "Sylwester Rzepka wydał(a) 11,13 zł.\nSaldo konta „PLN”: 192,64 zł.");
+
+        result.Should().NotBeNull();
+        result!.Amount.Grosze.Should().Be(-1113);
+        result.Merchant.Should().Be("Sklep Firmowy Wiece");
+    }
 }
