@@ -29,10 +29,13 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     private readonly PlanMonthUseCase _plan;
     private readonly GetFundOverviewUseCase _fundOverview;
     private readonly ITransactionRepository _transactions;
+    private readonly GetAccountsWithBalancesUseCase _accountBalances;
 
     private YearMonth _month;
     private decimal _suggestedReserve;
     private decimal _suggestedFunds;
+    private decimal _suggestedPreviousFunds;
+    private decimal _suggestedBalance;
     private decimal _plannedIncomeTotal;
 
     [ObservableProperty] private string _monthDisplay = "";
@@ -42,7 +45,29 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     [ObservableProperty] private string _reserveHintDisplay = "";
     [ObservableProperty] private bool _hasReserveHint;
     [ObservableProperty] private string _incomeHintDisplay = "";
-    [ObservableProperty] private bool _hasIncomeHint;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoIncomeHints))]
+    private bool _hasIncomeHint;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoIncomeHints))]
+    private string _previousIncomeHintDisplay = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoIncomeHints))]
+    private bool _hasPreviousIncomeHint;
+
+    [ObservableProperty] private string _balanceHintDisplay = "";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoIncomeHints))]
+    private bool _hasBalanceHint;
+
+    /// <summary>
+    /// Gdy żadna podpowiedź nie ma czego pokazać, ekran przestaje cokolwiek tłumaczyć
+    /// i wygląda tak, jakby podpowiedzi w ogóle nie istniały. Stąd zdanie w ich miejsce.
+    /// </summary>
+    public bool HasNoIncomeHints => !HasIncomeHint && !HasPreviousIncomeHint && !HasBalanceHint;
     [ObservableProperty] private string _plannedIncomeDisplay = "";
     [ObservableProperty] private bool _hasPlannedIncome;
 
@@ -89,13 +114,15 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
         IMonthBudgetRepository budgets,
         PlanMonthUseCase plan,
         GetFundOverviewUseCase fundOverview,
-        ITransactionRepository transactions)
+        ITransactionRepository transactions,
+        GetAccountsWithBalancesUseCase accountBalances)
     {
         _categories = categories;
         _budgets = budgets;
         _plan = plan;
         _fundOverview = fundOverview;
         _transactions = transactions;
+        _accountBalances = accountBalances;
     }
 
     /// <summary>Wpisuje wpływy jako kwotę do rozdysponowania.</summary>
@@ -103,22 +130,56 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     private void ApplyIncomeHint() =>
         AvailableFundsText = _suggestedFunds.ToString("F2", CultureInfo.InvariantCulture);
 
+    /// <summary>
+    /// Obie kwoty pokazywane osobno, każda podpisana miesiącem. Wcześniej była jedna
+    /// podpowiedź, która sięgała po poprzedni miesiąc tylko wtedy, gdy planowany miesiąc
+    /// miał ZERO wpływów — wystarczyło, że wcześniej wpadło 800+, i ta sama kontrolka
+    /// po cichu podmieniała wypłatę na kilkaset złotych.
+    ///
+    /// Rozdzielenie ma jeszcze jeden powód: przy wypłacie pod koniec miesiąca koperty
+    /// finansuje wypłata z miesiąca POPRZEDNIEGO, więc to nie jest sytuacja awaryjna,
+    /// tylko normalny sposób pracy — i musi mieć własny, stały przycisk.
+    /// </summary>
     private async Task LoadIncomeHintAsync(CancellationToken ct)
     {
-        var income = await SumIncomeAsync(_month, ct);
-        var label  = "Wpływy w tym miesiącu";
+        var thisMonth = await SumIncomeAsync(_month, ct);
+        var previous  = await SumIncomeAsync(_month.Previous(), ct);
 
-        // Plan powstaje zwykle przed wypłatą, więc gdy w bieżącym miesiącu
-        // nic jeszcze nie wpłynęło, bierzemy poprzedni miesiąc jako szacunek.
-        if (income == 0)
-        {
-            income = await SumIncomeAsync(_month.Previous(), ct);
-            label  = "Wpływy z poprzedniego miesiąca";
-        }
+        _suggestedFunds   = thisMonth;
+        HasIncomeHint     = thisMonth > 0;
+        IncomeHintDisplay = $"Wpływy w tym miesiącu: {thisMonth:N2} zł — wstaw jako środki";
 
-        _suggestedFunds  = income;
-        HasIncomeHint    = income > 0;
-        IncomeHintDisplay = $"{label}: {income:N2} zł — wstaw jako środki";
+        _suggestedPreviousFunds   = previous;
+        HasPreviousIncomeHint     = previous > 0;
+        PreviousIncomeHintDisplay = $"Wpływy z poprzedniego miesiąca: {previous:N2} zł — wstaw jako środki";
+    }
+
+    /// <summary>Dla wypłaty pod koniec miesiąca: to ona finansuje ten plan.</summary>
+    [RelayCommand]
+    private void ApplyPreviousIncomeHint() =>
+        AvailableFundsText = _suggestedPreviousFunds.ToString("F2", CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Jedyna podpowiedź, która jest pomiarem, a nie sumą z okresu: tyle pieniędzy
+    /// realnie leży na kontach rozliczeniowych. Sama uwzględnia wydatki zrobione po
+    /// wypłacie, więc działa też w miesiącu przejściowym, zanim uzbiera się bufor.
+    ///
+    /// Konta oszczędnościowe są pominięte celowo — tam zwykle leżą rezerwy i fundusze,
+    /// czyli pieniądze, które mają już przypisane zadanie.
+    /// </summary>
+    [RelayCommand]
+    private void ApplyBalanceHint() =>
+        AvailableFundsText = _suggestedBalance.ToString("F2", CultureInfo.InvariantCulture);
+
+    private async Task LoadBalanceHintAsync(CancellationToken ct)
+    {
+        var grosze = (await _accountBalances.ExecuteAsync(ct))
+            .Where(a => !a.IsArchived && a.Kind == AccountKind.Checking)
+            .Sum(a => a.CurrentBalance.Grosze);
+
+        _suggestedBalance  = grosze / 100m;
+        HasBalanceHint     = grosze > 0;
+        BalanceHintDisplay = $"Na kontach rozliczeniowych: {_suggestedBalance:N2} zł — wstaw jako środki";
     }
 
     private async Task<decimal> SumIncomeAsync(YearMonth month, CancellationToken ct)
@@ -185,6 +246,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
 
         await LoadReserveHintAsync(ct);
         await LoadIncomeHintAsync(ct);
+        await LoadBalanceHintAsync(ct);
         Recalculate();
     }
 

@@ -65,6 +65,21 @@
                     IsVisible="{Binding HasIncomeHint}"
                     Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
 
+            <!-- Przy wypłacie pod koniec miesiąca to ta kwota finansuje ten plan. -->
+            <Button Text="{Binding PreviousIncomeHintDisplay}" Command="{Binding ApplyPreviousIncomeHintCommand}"
+                    IsVisible="{Binding HasPreviousIncomeHint}"
+                    Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
+
+            <!-- Pomiar, nie suma z okresu: sam uwzględnia wydatki zrobione po wypłacie. -->
+            <Button Text="{Binding BalanceHintDisplay}" Command="{Binding ApplyBalanceHintCommand}"
+                    IsVisible="{Binding HasBalanceHint}"
+                    Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
+
+            <!-- Bez tego zdania ekran po prostu milczy i wygląda, jakby podpowiedzi
+                 nigdy nie było. -->
+            <Label Style="{StaticResource FieldHint}" IsVisible="{Binding HasNoIncomeHints}"
+                   Text="Brak zapisanych wpływów w tym i poprzednim miesiącu, więc nie ma czego podpowiedzieć — wpisz środki ręcznie. Podpowiedź pojawi się sama, gdy wypłata wpłynie." />
+
             <Button Text="{Binding ReserveHintDisplay}" Command="{Binding ApplyReserveHintCommand}"
                     IsVisible="{Binding HasReserveHint}"
                     Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
