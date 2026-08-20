@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.NotificationAuditPage"
+             x:DataType="vm:NotificationAuditViewModel"
+             Title="Sprawdź kwoty">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="12,12,12,32" Spacing="12">
+
+            <Border Style="{StaticResource Card}" Margin="0">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Kwoty kontra powiadomienia" Style="{StaticResource Title}" />
+                    <Label Style="{StaticResource Secondary}"
+                           Text="Aplikacja przechowuje treść każdego przechwyconego powiadomienia. To sprawdzenie czyta je ponownie aktualnym kodem i porównuje wynik z kwotą zapisanej transakcji." />
+                    <Label Style="{StaticResource Caption}"
+                           Text="Poprawiasz wybrane pozycje pojedynczo, każdą osobnym tapnięciem — nic nie dzieje się hurtem. Transakcje, które już poprawiłaś, nie pojawią się tutaj: ich kwota zgadza się z powiadomieniem, więc nie ma czego zgłaszać." />
+                    <Button Text="Sprawdź" Command="{Binding RunCommand}" HorizontalOptions="Start" />
+                </VerticalStackLayout>
+            </Border>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+            <Border Style="{StaticResource Card}" Margin="0" IsVisible="{Binding HasRun}">
+                <VerticalStackLayout Spacing="6">
+                    <Label Text="{Binding SummaryDisplay}" Style="{StaticResource Secondary}" />
+                    <Label Text="{Binding UnreadableDisplay}" Style="{StaticResource Caption}"
+                           IsVisible="{Binding HasUnreadable}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <Label Style="{StaticResource EmptyState}" IsVisible="{Binding HasNoResults}"
+                   Text="Nic do poprawienia." />
+
+            <!-- Najpierw największe różnice: przy długiej liście to one kosztują najwięcej. -->
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" Spacing="0">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DiscrepancyRow">
+                        <Border Style="{StaticResource CardRow}" Margin="0,4">
+                            <VerticalStackLayout Spacing="10">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <!-- Dotknięcie wiersza otwiera pełną edycję: potrzebne tam,
+                                         gdzie różnica jest zamierzona i trzeba zobaczyć kontekst. -->
+                                    <Grid.GestureRecognizers>
+                                        <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                                    </Grid.GestureRecognizers>
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding Merchant}" Style="{StaticResource RowTitle}" />
+                                        <Label Text="{Binding DateDisplay}" Style="{StaticResource Caption}" />
+                                        <Label Text="{Binding StoredDisplay}" Style="{StaticResource Caption}" />
+                                        <Label Text="{Binding ExpectedDisplay}" Style="{StaticResource InfoCaption}" />
+                                    </VerticalStackLayout>
+                                    <Label Grid.Column="1" Text="{Binding DifferenceDisplay}"
+                                           Style="{StaticResource NegativeValue}" VerticalOptions="Center" />
+                                </Grid>
+
+                                <Button Text="{Binding CorrectLabel}" Command="{Binding CorrectCommand}"
+                                        IsVisible="{Binding IsCorrectable}"
+                                        Style="{StaticResource RowAction}" HorizontalOptions="End" />
+
+                                <Label Style="{StaticResource Caption}" IsVisible="{Binding IsNotCorrectable}"
+                                       Text="Tej nie poprawisz stąd — jest powiązana z funduszem, przelewem albo zastąpiona. Dotknij wiersza, żeby zobaczyć szczegóły." />
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <Label Style="{StaticResource Caption}" Margin="4,8,4,0" IsVisible="{Binding HasResults}"
+                   Text="Wiersz na liście nie musi znaczyć błędu. Jeśli kwotę zmieniłaś świadomie — bo płatność została rozbita albo częściowo zwrócona — różnica względem powiadomienia jest prawidłowa. Poprawiaj tylko to, co faktycznie się nie zgadza — poprawiony wiersz zniknie z listy." />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

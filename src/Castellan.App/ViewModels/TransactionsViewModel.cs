@@ -116,6 +116,10 @@ public partial class TransactionsViewModel : ObservableObject
         => await Shell.Current.GoToAsync("categoryRules");
 
     [RelayCommand]
+    private static async Task AuditAmountsAsync()
+        => await Shell.Current.GoToAsync("notificationAudit");
+
+    [RelayCommand]
     private static async Task ManageCategoriesAsync()
         => await Shell.Current.GoToAsync("categories");
 
