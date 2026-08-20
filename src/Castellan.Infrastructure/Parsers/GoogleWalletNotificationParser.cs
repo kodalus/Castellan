@@ -22,6 +22,9 @@ public sealed partial class GoogleWalletNotificationParser : INotificationParser
 
     public ParsedTransaction? TryParse(string title, string text)
     {
+        title = NotificationText.Normalize(title);
+        text  = NotificationText.Normalize(text);
+
         var m = KwotaPattern().Match(text);
         if (!m.Success) return null;
 

@@ -41,6 +41,9 @@ public sealed partial class RevolutNotificationParser : INotificationParser
 
     public ParsedTransaction? TryParse(string title, string text)
     {
+        title = NotificationText.Normalize(title);
+        text  = NotificationText.Normalize(text);
+
         var combined = $"{title} {text}";
         var lower = combined.ToLowerInvariant();
 

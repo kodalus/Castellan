@@ -13,8 +13,12 @@ public sealed partial class IngNotificationParser : INotificationParser
     // Text: "69,57 PLN mniej na Twoim koncie - Direct Rika - płatność BLIK"
     // Text: "1 500,00 PLN więcej na Twoim koncie - Jan Kowalski - przelew przychodzący"
     // Text: "345,67 PLN mniej na Twoim koncie"  (no merchant segment)
+    // Text: "1 600,00 PLN więcej na Twoim koncie - Direct Rika"  (merchant, no suffix)
+    // Ogon jest rozbity na dwie osobne opcjonalne grupy, bo wariant z samą nazwą
+    // (jeden myślnik) wcześniej nie pasował do niczego i spadał do parsera ogólnego,
+    // który za sprzedawcę bierze całą treść powiadomienia.
     [GeneratedRegex(
-        @"^(\d[\d ]*),(\d{2})\s+PLN\s+(mniej|więcej)\s+na\s+Twoim\s+koncie(?:\s*-\s*(.+?)\s*-\s*.+)?$",
+        @"^(\d[\d ]*),(\d{2})\s+PLN\s+(mniej|więcej)\s+na\s+Twoim\s+koncie(?:\s*-\s*(.+?))?(?:\s*-\s*.+)?$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex AssistantPattern();
 
@@ -30,6 +34,9 @@ public sealed partial class IngNotificationParser : INotificationParser
 
     public ParsedTransaction? TryParse(string title, string text)
     {
+        title = NotificationText.Normalize(title);
+        text  = NotificationText.Normalize(text);
+
         // Try specific "Twój Asystent" format first — gives clean merchant extraction
         if (title.Contains("Asystent", StringComparison.OrdinalIgnoreCase))
         {

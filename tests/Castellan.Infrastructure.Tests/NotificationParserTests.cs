@@ -94,4 +94,39 @@ public class NotificationParserTests
         result!.Amount.Grosze.Should().Be(-1113);
         result.Merchant.Should().Be("Sklep Firmowy Wiece");
     }
+
+    [Fact]
+    public void Ing_parses_amount_with_non_breaking_thousands_separator()
+    {
+        // Polskie formatowanie kwot uzywa TWARDEJ spacji (U+00A0) miedzy tysiacami.
+        // Wzorce akceptowaly tylko zwykla spacje, wiec "1<NBSP>600,00" bylo czytane
+        // od drugiej czesci: 600 zamiast 1600.
+        var parser = new IngNotificationParser();
+
+        var result = parser.TryParse(
+            title: "Moje ING. Twój Asystent",
+            text: "1 600,00 PLN więcej na Twoim koncie - Direct Rika");
+
+        result.Should().NotBeNull();
+        result!.Amount.Grosze.Should().Be(160_000);
+        // Jeden mysalnik zamiast dwoch: wczesniej wzorzec "Asystenta" nie pasowal
+        // i wpis spadal do parsera ogolnego, ktory za sprzedawce bierze cala tresc.
+        result.Merchant.Should().Be("Direct Rika");
+    }
+
+    [Fact]
+    public void Ing_still_extracts_merchant_when_the_suffix_is_present()
+    {
+        // Kontrola negatywna dla rozluznionego wzorca: wariant z dwoma myslnikami
+        // ma dalej dawac sama nazwe, bez doklejonego ogona.
+        var parser = new IngNotificationParser();
+
+        var result = parser.TryParse(
+            title: "Moje ING. Twój Asystent",
+            text: "69,57 PLN mniej na Twoim koncie - Direct Rika - płatność BLIK");
+
+        result.Should().NotBeNull();
+        result!.Amount.Grosze.Should().Be(-6957);
+        result.Merchant.Should().Be("Direct Rika");
+    }
 }
