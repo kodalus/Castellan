@@ -59,7 +59,7 @@ public static class InfrastructureServiceExtensions
             {
                 "Produkty do domu", "Restauracje i kawiarnie", "Transport", "Paliwo",
                 "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
-                "Rozrywka", "Ubrania i obuwie", "Elektronika", "Edukacja",
+                "Rozrywka", "Subskrypcje", "Ubrania i obuwie", "Elektronika", "Edukacja",
                 "Sport i rekreacja", "Higiena i kosmetyki", "Podróże", "Inne wydatki",
                 "Inwestycje", "Dobroczynność", "Dzieci", "Przedszkole", "Rezerwy",
                 "Kredyty i pożyczki",
@@ -86,6 +86,7 @@ public static class InfrastructureServiceExtensions
         EnsureCategory(db, "Kredyty i pożyczki", CategoryKind.Expense);
         EnsureCategory(db, "Przedszkole", CategoryKind.Expense);
         EnsureCategory(db, "Rezerwy", CategoryKind.Expense);
+        EnsureCategory(db, "Subskrypcje", CategoryKind.Expense);
         EnsureCategory(db, "800+", CategoryKind.Income);
         EnsureCategory(db, "Wpłata małżonka", CategoryKind.Income);
 
