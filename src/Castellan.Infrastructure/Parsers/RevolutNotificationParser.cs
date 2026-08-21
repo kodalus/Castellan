@@ -11,7 +11,10 @@ public sealed partial class RevolutNotificationParser : INotificationParser
 
     // Format polski (domyślny w aplikacji): "Wydano 136,39 zł.", "Otrzymano 50,00 zł."
     // Tytuł: "Konto wspólne · Lidl" — segment po " · " to nazwa odbiorcy/sprzedawcy.
-    [GeneratedRegex(@"(\d[\d ]*),(\d{2})\s*zł", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    // Grosze są opcjonalne: bank pisze „Wydano 9 zł.", nie „9,00 zł". Gdy wzorzec
+    // ich wymagał, kwota transakcji nie pasowała i pierwszą pasującą liczbą w treści
+    // stawało się SALDO KONTA z drugiej linii — to ono lądowało jako kwota wydatku.
+    [GeneratedRegex(@"(\d[\d ]*)(?:,(\d{2}))?\s*zł", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex PolishAmount();
 
     // Format angielski/międzynarodowy — starszy wariant apki: "PLN 123.45", "-EUR 1,234.56"
@@ -59,7 +62,7 @@ public sealed partial class RevolutNotificationParser : INotificationParser
         if (!m.Success) return null;
 
         var intPart = m.Groups[1].Value.Replace(" ", "");
-        var decPart = m.Groups[2].Value;
+        var decPart = m.Groups[2].Success ? m.Groups[2].Value : "00";
         if (!decimal.TryParse($"{intPart}.{decPart}", NumberStyles.Number,
                 CultureInfo.InvariantCulture, out var dec) || dec <= 0)
             return null;

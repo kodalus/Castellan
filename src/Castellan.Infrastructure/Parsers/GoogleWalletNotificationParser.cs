@@ -16,7 +16,7 @@ public sealed partial class GoogleWalletNotificationParser : INotificationParser
     public string PackageName => "com.google.android.apps.walletnfcrel";
 
     [GeneratedRegex(
-        @"Kwota\s+(\d[\d ]*),(\d{2})\s*zł(?:.*?karta\s+(.+))?",
+        @"Kwota\s+(\d[\d ]*)(?:,(\d{2}))?\s*zł(?:.*?karta\s+(.+))?",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Singleline)]
     private static partial Regex KwotaPattern();
 
@@ -29,7 +29,7 @@ public sealed partial class GoogleWalletNotificationParser : INotificationParser
         if (!m.Success) return null;
 
         var intPart = m.Groups[1].Value.Replace(" ", "");
-        var decPart = m.Groups[2].Value;
+        var decPart = m.Groups[2].Success ? m.Groups[2].Value : "00";
         if (!decimal.TryParse($"{intPart}.{decPart}", NumberStyles.Number,
                 CultureInfo.InvariantCulture, out var dec) || dec <= 0)
             return null;

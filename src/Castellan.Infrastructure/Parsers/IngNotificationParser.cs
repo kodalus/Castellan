@@ -18,12 +18,12 @@ public sealed partial class IngNotificationParser : INotificationParser
     // (jeden myślnik) wcześniej nie pasował do niczego i spadał do parsera ogólnego,
     // który za sprzedawcę bierze całą treść powiadomienia.
     [GeneratedRegex(
-        @"^(\d[\d ]*),(\d{2})\s+PLN\s+(mniej|więcej)\s+na\s+Twoim\s+koncie(?:\s*-\s*(.+?))?(?:\s*-\s*.+)?$",
+        @"^(\d[\d ]*)(?:,(\d{2}))?\s+PLN\s+(mniej|więcej)\s+na\s+Twoim\s+koncie(?:\s*-\s*(.+?))?(?:\s*-\s*.+)?$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex AssistantPattern();
 
     // Generic fallback: matches amounts anywhere in title+text
-    [GeneratedRegex(@"([+-]?)\s*((?:\d[\d ]*)\d|\d),(\d{2})\s*(?:PLN|zł)",
+    [GeneratedRegex(@"([+-]?)\s*((?:\d[\d ]*)\d|\d)(?:,(\d{2}))?\s*(?:PLN|zł)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex PolishAmount();
 
@@ -54,7 +54,7 @@ public sealed partial class IngNotificationParser : INotificationParser
         if (!m.Success) return null;
 
         var intPart = m.Groups[1].Value.Replace(" ", "");
-        var decPart = m.Groups[2].Value;
+        var decPart = m.Groups[2].Success ? m.Groups[2].Value : "00";
         if (!decimal.TryParse($"{intPart}.{decPart}", NumberStyles.Number,
                 CultureInfo.InvariantCulture, out var dec) || dec <= 0)
             return null;
@@ -75,7 +75,7 @@ public sealed partial class IngNotificationParser : INotificationParser
         if (!m.Success) return null;
 
         var intPart = m.Groups[2].Value.Replace(" ", "");
-        var decPart = m.Groups[3].Value;
+        var decPart = m.Groups[3].Success ? m.Groups[3].Value : "00";
         if (!decimal.TryParse($"{intPart}.{decPart}", NumberStyles.Number,
                 CultureInfo.InvariantCulture, out var dec) || dec <= 0)
             return null;
