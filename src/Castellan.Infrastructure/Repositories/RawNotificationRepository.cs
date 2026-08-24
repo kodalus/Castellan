@@ -31,6 +31,15 @@ internal sealed class RawNotificationRepository(CastellanDbContext db) : IRawNot
         return [.. all.OrderByDescending(r => r.PostedAt)];
     }
 
+    public async Task<IReadOnlyList<RawNotification>> ListParsedSinceAsync(
+        DateTimeOffset since, CancellationToken ct = default)
+    {
+        var all = await db.RawNotifications
+            .Where(r => r.ParseStatus == ParseStatus.Parsed && r.TransactionId != null)
+            .ToListAsync(ct);
+        return [.. all.Where(r => r.PostedAt >= since)];
+    }
+
     public Task<int> CountByStatusAsync(ParseStatus status, CancellationToken ct = default)
         => db.RawNotifications.CountAsync(r => r.ParseStatus == status, ct);
 }

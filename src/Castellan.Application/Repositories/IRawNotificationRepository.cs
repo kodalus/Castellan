@@ -14,4 +14,11 @@ public interface IRawNotificationRepository
     /// odczyt po poprawce wzorca i porównać go z tym, co wtedy zapisano.
     /// </summary>
     Task<IReadOnlyList<RawNotification>> ListParsedAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Sparsowane powiadomienia z okna czasowego. Deduplikacja potrzebuje z nich
+    /// nazwy pakietu, żeby odróżnić „ta sama płatność zgłoszona przez dwie aplikacje"
+    /// od „dwie różne płatności na tę samą kwotę".
+    /// </summary>
+    Task<IReadOnlyList<RawNotification>> ListParsedSinceAsync(DateTimeOffset since, CancellationToken ct = default);
 }

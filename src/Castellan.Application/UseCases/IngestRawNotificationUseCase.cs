@@ -15,6 +15,11 @@ public sealed partial class IngestRawNotificationUseCase(
     IUnitOfWork uow,
     IEnumerable<INotificationParser> parsers)
 {
+    private static readonly string[] BankKeywords = ["ING", "Revolut"];
+
+    /// <summary>Okno na parę „bank + Portfel Google" dla jednej płatności.</summary>
+    private const int CrossSourceWindowMinutes = 180;
+
     public static readonly IReadOnlySet<string> AllowedPackages = new HashSet<string>(StringComparer.Ordinal)
     {
         "pl.ing.mojeing",
@@ -85,7 +90,7 @@ public sealed partial class IngestRawNotificationUseCase(
         }
 
         // Deduplication check (spec 11.1)
-        var dedupResult = await TryDeduplicateAsync(tx, account.Id, postedAt, merchantKey, ct);
+        var dedupResult = await TryDeduplicateAsync(tx, account.Id, postedAt, merchantKey, packageName, ct);
         if (dedupResult == DeduplicateResult.ExactDuplicate)
         {
             // Drop silently — notification still marked as parsed below
@@ -108,6 +113,7 @@ public sealed partial class IngestRawNotificationUseCase(
         AccountId accountId,
         DateTimeOffset postedAt,
         string? merchantKey,
+        string packageName,
         CancellationToken ct)
     {
         var since = postedAt.AddHours(-25);
@@ -127,6 +133,30 @@ public sealed partial class IngestRawNotificationUseCase(
         // po nazwie, spróbuj wąskiego okna: ta sama kwota co do grosza, to samo
         // konto, kilkanaście minut różnicy — wystarczająco rzadki zbieg okoliczności,
         // żeby bezpiecznie uznać to za tę samą transakcję zgłoszoną z dwóch źródeł.
+        // Ta sama kwota co do grosza, to samo konto, ale zgłoszona przez INNĄ aplikację
+        // — to para bank plus Portfel Google dla jednej płatności. Okno może być tu
+        // szerokie, bo warunek „różne źródła" sam w sobie odsiewa przypadkowe zbiegi:
+        // żeby wpaść fałszywie, dwie RÓŻNE płatności na identyczną kwotę musiałyby
+        // zostać zgłoszone, każda tylko przez jedno źródło, i to inne dla każdej.
+        //
+        // Szerokie okno jest konieczne, bo „Twój Asystent" z ING nie przychodzi od razu
+        // po płatności — przy oknie kilkunastominutowym para gubiła się i powstawał
+        // duplikat.
+        var sourcePackage = (await rawNotifications.ListParsedSinceAsync(since, ct))
+            .Where(r => r.TransactionId is not null)
+            .GroupBy(r => r.TransactionId!.Value)
+            .ToDictionary(g => g.Key, g => g.First().PackageName);
+
+        candidate ??= recent.FirstOrDefault(t =>
+            t.AccountId == accountId &&
+            !t.SupersededById.HasValue &&
+            t.Amount.Grosze == tx.Amount.Grosze &&
+            sourcePackage.TryGetValue(t.Id, out var pkg) &&
+            !string.Equals(pkg, packageName, StringComparison.Ordinal) &&
+            Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= CrossSourceWindowMinutes);
+
+        // Zapasowo wąskie okno bez rozróżniania źródła — na wypadek powiadomień,
+        // dla których nie znamy pakietu (np. sprzed dodania tego zapisu).
         candidate ??= recent.FirstOrDefault(t =>
             t.AccountId == accountId &&
             !t.SupersededById.HasValue &&
@@ -200,9 +230,31 @@ public sealed partial class IngestRawNotificationUseCase(
         // zdradza to dopiero treść powiadomienia ("karta Revolut Wspólny").
         if (!string.IsNullOrWhiteSpace(accountHint))
         {
-            var byHint = active.FirstOrDefault(a =>
-                accountHint.Contains(a.Name, StringComparison.OrdinalIgnoreCase));
+            // Zawieranie MUSI działać w obie strony. Wcześniej sprawdzane było tylko
+            // „podpowiedź zawiera nazwę konta", więc konto nazwane szerzej niż karta
+            // (np. „ING Konto z Lwem" przy podpowiedzi „ING") nie dawało trafienia
+            // i płatność lądowała na pierwszym koncie rozliczeniowym — potencjalnie
+            // zupełnie innym banku. Wtedy deduplikacja nie miała szans: porównuje
+            // kandydatów w obrębie jednego konta, a te dwa były różne.
+            //
+            // Przy kilku trafieniach wygrywa najdłuższa nazwa konta, czyli
+            // najbardziej szczegółowe dopasowanie.
+            var byHint = active
+                .Where(a => accountHint.Contains(a.Name, StringComparison.OrdinalIgnoreCase)
+                         || a.Name.Contains(accountHint, StringComparison.OrdinalIgnoreCase))
+                .OrderByDescending(a => a.Name.Length)
+                .FirstOrDefault();
             if (byHint is not null) return byHint;
+
+            // Ostatnia szansa: sama nazwa banku w podpowiedzi, gdy nazwa konta i nazwa
+            // karty nie mają ze sobą nic wspólnego poza bankiem.
+            foreach (var bank in BankKeywords)
+            {
+                if (!accountHint.Contains(bank, StringComparison.OrdinalIgnoreCase)) continue;
+                var byBank = active.FirstOrDefault(a =>
+                    a.Name.Contains(bank, StringComparison.OrdinalIgnoreCase));
+                if (byBank is not null) return byBank;
+            }
         }
 
         return active.FirstOrDefault(a => a.Kind == AccountKind.Checking)
