@@ -165,7 +165,9 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     /// wypłacie, więc działa też w miesiącu przejściowym, zanim uzbiera się bufor.
     ///
     /// Konta oszczędnościowe są pominięte celowo — tam zwykle leżą rezerwy i fundusze,
-    /// czyli pieniądze, które mają już przypisane zadanie.
+    /// czyli pieniądze, które mają już przypisane zadanie. To świadoma różnica względem
+    /// Majątku, gdzie liczą się salda wszystkich kont: tam pytanie brzmi „ile mam",
+    /// a tutaj „ile mogę rozdysponować w tym miesiącu".
     /// </summary>
     [RelayCommand]
     private void ApplyBalanceHint() =>

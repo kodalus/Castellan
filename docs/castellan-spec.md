@@ -774,7 +774,7 @@ planowania podpowiada ją przyciskiem, który jednym tapnięciem wpisuje kwotę 
                   (liczone tylko miesiące z jakimkolwiek wydatkiem)
 
 Płynne(poziom)  = Σ Asset.Value gdzie Liquidity == poziom
-                  + salda kont Checking, gdy poziom == Immediate
+                  + salda wszystkich kont, gdy poziom == Immediate
                   + salda funduszy z CountsTowardCushion, gdy poziom == Immediate
 
 Autonomia(poz.) = Płynne(narastająco do poziomu) / ŚredniWydatek   [miesiące]
@@ -797,8 +797,14 @@ bezpieczeństwa, bo jest z definicji tym, co ta liczba mierzy. Doliczają się d
 natychmiastowej i znikają z osobnej sekcji funduszy, żeby nie zostały policzone dwa razy.
 
 **Znane ograniczenie.** Fundusz jest kopertą nad pieniędzmi, które fizycznie leżą na
-koncie albo w aktywie. Jeśli poduszka trzymana jest na koncie rozliczeniowym, którego
-saldo już wchodzi do poziomu natychmiastowego, ta sama kwota policzy się dwa razy.
+koncie albo w aktywie. Salda wszystkich kont wchodzą do poziomu natychmiastowego, więc
+fundusz zaznaczony jako rezerwa, trzymany na którymkolwiek z nich, policzy się dwa razy.
+
+Pierwotnie do poduszki wchodziły wyłącznie konta rozliczeniowe — miało to ograniczać
+właśnie to ryzyko. W praktyce znaczyło jednak, że pieniądze z konta oszczędnościowego
+nie pojawiały się w Majątku w ogóle, ani w poduszce, ani w wartości netto. Dla ekranu
+odpowiadającego na pytanie „ile mam" pomijanie realnych pieniędzy jest gorsze niż
+ryzyko podwójnego zliczenia, które użytkownik widzi i może wyłączyć znacznikiem.
 Aplikacja nie ma jak tego wykryć — to samo dotyczy aktywa dodanego ręcznie obok konta
 o tym samym saldzie. Przewodnik ostrzega o tym wprost przy opisie poduszki.
 

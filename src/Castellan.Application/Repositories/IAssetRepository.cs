@@ -8,4 +8,5 @@ public interface IAssetRepository
     Task<Asset?> GetAsync(AssetId id, CancellationToken ct = default);
     Task<IReadOnlyList<Asset>> ListAsync(CancellationToken ct = default);
     Task AddAsync(Asset asset, CancellationToken ct = default);
+    Task RemoveAsync(Asset asset, CancellationToken ct = default);
 }

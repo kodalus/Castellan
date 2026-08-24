@@ -18,10 +18,17 @@ public sealed class AssetRowVm
     public string ValueDisplay   { get; }
     public string UpdatedDisplay { get; }
     public ICommand UpdateCommand { get; }
+    public ICommand DeleteCommand { get; }
 
+    /// <summary>
+    /// Wiersze kont i funduszy trafiają do tej samej listy co aktywa, ale nie są
+    /// aktywami — nie mają własnego Id i nie wolno ich stąd usuwać. Saldo konta bierze
+    /// się z transakcji, a fundusz ma własną zakładkę.
+    /// </summary>
     public bool IsAccount { get; }
+    public bool IsDeletable => !IsAccount;
 
-    public AssetRowVm(AssetRow row, ICommand updateCommand)
+    public AssetRowVm(AssetRow row, ICommand updateCommand, ICommand deleteCommand)
     {
         Id             = row.Id;
         Name           = row.Name;
@@ -29,6 +36,7 @@ public sealed class AssetRowVm
         ValueDisplay   = $"{row.Value.Grosze / 100m:N2} zł";
         UpdatedDisplay = row.IsAccount ? "saldo konta" : row.UpdatedOn.ToString("d.MM.yyyy");
         UpdateCommand  = updateCommand;
+        DeleteCommand  = deleteCommand;
     }
 }
 
@@ -41,7 +49,7 @@ public sealed class CushionTierVm
     public bool   HasAssets         { get; }
     public IReadOnlyList<AssetRowVm> Assets { get; }
 
-    public CushionTierVm(CushionTier tier, ICommand updateCommand)
+    public CushionTierVm(CushionTier tier, ICommand updateCommand, ICommand deleteCommand)
     {
         LiquidityDisplay  = tier.LiquidityDisplay;
         MonthsTierDisplay = tier.MonthsTier > 0 ? $"{tier.MonthsTier:N1} mies." : "—";
@@ -50,7 +58,7 @@ public sealed class CushionTierVm
             ? $"{tier.TierValue.Grosze / 100m:N2} zł"
             : "brak aktywów";
         HasAssets         = tier.Assets.Count > 0;
-        Assets            = tier.Assets.Select(r => new AssetRowVm(r, updateCommand)).ToList();
+        Assets            = tier.Assets.Select(r => new AssetRowVm(r, updateCommand, deleteCommand)).ToList();
     }
 }
 
@@ -125,6 +133,7 @@ public partial class AssetsViewModel : ObservableObject
     private readonly IFundRepository _funds;
     private readonly GetDebtOverviewUseCase _debtOverview;
     private readonly DeleteDebtUseCase _deleteDebt;
+    private readonly DeleteAssetUseCase _deleteAsset;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
@@ -168,12 +177,54 @@ public partial class AssetsViewModel : ObservableObject
         GetCushionOverviewUseCase overview,
         IFundRepository funds,
         GetDebtOverviewUseCase debtOverview,
-        DeleteDebtUseCase deleteDebt)
+        DeleteDebtUseCase deleteDebt,
+        DeleteAssetUseCase deleteAsset)
     {
         _overview = overview;
         _funds = funds;
         _debtOverview = debtOverview;
         _deleteDebt = deleteDebt;
+        _deleteAsset = deleteAsset;
+    }
+
+    /// <summary>
+    /// Usuwa aktywo po potwierdzeniu. Komunikat podaje kwotę, bo skutek jest natychmiast
+    /// widoczny na tym samym ekranie: poduszka finansowa maleje o tę wartość.
+    /// </summary>
+    private async Task DeleteAssetAsync(AssetRowVm? row)
+    {
+        if (row is null) return;
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        // Wiersz konta wygląda jak aktywo, ale nim nie jest. Zamiast milczeć, powiedz
+        // gdzie to zmienić — inaczej wygląda to na zepsuty przycisk.
+        if (row.IsAccount)
+        {
+            await page.DisplayAlertAsync(
+                "To nie jest aktywo",
+                "Ten wiersz to saldo konta, liczone z transakcji. Konto usuniesz w zakładce Konta.",
+                "OK");
+            return;
+        }
+
+        try
+        {
+            var confirmed = await page.DisplayAlertAsync(
+                $"Usunąć „{row.Name}”?",
+                $"Poduszka finansowa zmniejszy się o {row.ValueDisplay}. Tej operacji nie można cofnąć.",
+                "Usuń", "Anuluj");
+            if (!confirmed) return;
+
+            await _deleteAsset.ExecuteAsync(row.Id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            for (var e = ex; e != null; e = e.InnerException)
+                sb.AppendLine($"[{e.GetType().Name}] {e.Message}");
+            await page.DisplayAlertAsync("Błąd usuwania aktywa", sb.ToString(), "OK");
+        }
     }
 
     [RelayCommand]
@@ -191,8 +242,10 @@ public partial class AssetsViewModel : ObservableObject
                 await Shell.Current.GoToAsync($"updateAssetValue?assetId={id}");
             });
 
+            var deleteCmd = new AsyncRelayCommand<AssetRowVm>(DeleteAssetAsync);
+
             Tiers = new ObservableCollection<CushionTierVm>(
-                Cushion.Tiers.Select(t => new CushionTierVm(t, updateCmd)));
+                Cushion.Tiers.Select(t => new CushionTierVm(t, updateCmd, deleteCmd)));
 
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(IsNotEmpty));

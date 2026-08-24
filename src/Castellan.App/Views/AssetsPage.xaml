@@ -61,20 +61,32 @@
                                                  IsVisible="{Binding HasAssets}">
                                 <BindableLayout.ItemTemplate>
                                     <DataTemplate x:DataType="vm:AssetRowVm">
-                                        <Border Style="{StaticResource CardRow}">
-                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                                <Grid.GestureRecognizers>
-                                                    <TapGestureRecognizer Command="{Binding UpdateCommand}"
-                                                                          CommandParameter="{Binding Id}" />
-                                                </Grid.GestureRecognizers>
-                                                <Label Grid.Column="0" Text="{Binding Name}"
-                                                       Style="{StaticResource RowTitle}" VerticalOptions="Center" />
-                                                <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
-                                                    <Label Text="{Binding ValueDisplay}" Style="{StaticResource RowValue}" />
-                                                    <Label Text="{Binding UpdatedDisplay}" Style="{StaticResource RowMeta}" />
-                                                </VerticalStackLayout>
-                                            </Grid>
-                                        </Border>
+                                        <!-- Wiersze sald kont trafiają do tej samej listy, ale nie są
+                                             aktywami — dla nich gest jest wyłączony. -->
+                                        <SwipeView IsEnabled="{Binding IsDeletable}">
+                                            <SwipeView.RightItems>
+                                                <SwipeItems>
+                                                    <SwipeItem Text="Usuń" BackgroundColor="{StaticResource NegativeDim}"
+                                                               Command="{Binding DeleteCommand}"
+                                                               CommandParameter="{Binding .}" />
+                                                </SwipeItems>
+                                            </SwipeView.RightItems>
+
+                                            <Border Style="{StaticResource CardRow}">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                    <Grid.GestureRecognizers>
+                                                        <TapGestureRecognizer Command="{Binding UpdateCommand}"
+                                                                              CommandParameter="{Binding Id}" />
+                                                    </Grid.GestureRecognizers>
+                                                    <Label Grid.Column="0" Text="{Binding Name}"
+                                                           Style="{StaticResource RowTitle}" VerticalOptions="Center" />
+                                                    <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                                                        <Label Text="{Binding ValueDisplay}" Style="{StaticResource RowValue}" />
+                                                        <Label Text="{Binding UpdatedDisplay}" Style="{StaticResource RowMeta}" />
+                                                    </VerticalStackLayout>
+                                                </Grid>
+                                            </Border>
+                                        </SwipeView>
                                     </DataTemplate>
                                 </BindableLayout.ItemTemplate>
                             </VerticalStackLayout>

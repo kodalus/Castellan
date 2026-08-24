@@ -55,6 +55,7 @@ public static class MauiProgram
         builder.Services.AddTransient<PayTransactionFromFundUseCase>();
         builder.Services.AddTransient<CreateAssetUseCase>();
         builder.Services.AddTransient<UpdateAssetValueUseCase>();
+        builder.Services.AddTransient<DeleteAssetUseCase>();
         builder.Services.AddTransient<GetCushionOverviewUseCase>();
         builder.Services.AddTransient<CreateDebtUseCase>();
         builder.Services.AddTransient<UpdateDebtUseCase>();

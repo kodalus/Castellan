@@ -44,10 +44,18 @@ public sealed class GetCushionOverviewUseCase(
 
         var (avgExpense, monthsUsed) = await ComputeAvgExpenseAsync(expenseMonths, ct);
 
-        // Salda kont rozliczeniowych liczą się do płynności natychmiastowej.
+        // Salda WSZYSTKICH kont liczą się do płynności natychmiastowej — także
+        // oszczędnościowych. Wcześniej brane były tylko rozliczeniowe, więc pieniądze
+        // z konta oszczędnościowego nie pojawiały się w Majątku w ogóle: ani w poduszce,
+        // ani w wartości netto. Dla ekranu, który ma odpowiadać na pytanie „ile mam",
+        // pomijanie realnych pieniędzy jest gorsze niż ryzyko, że ktoś doda to samo konto
+        // drugi raz jako aktywo.
+        //
+        // Poziom natychmiastowy, bo przelew z konta oszczędnościowego na własne konto
+        // rozliczeniowe jest w praktyce natychmiastowy.
         var today = DateOnly.FromDateTime(DateTime.Today);
         var checkingRows = (await accountBalances.ExecuteAsync(ct))
-            .Where(a => !a.IsArchived && a.Kind == AccountKind.Checking)
+            .Where(a => !a.IsArchived)
             .Select(a => new AssetRow(
                 default, $"Konto: {a.Name}", AssetLiquidity.Immediate,
                 a.CurrentBalance, today, IsAccount: true))

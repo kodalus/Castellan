@@ -22,4 +22,10 @@ internal sealed class AssetRepository(CastellanDbContext db) : IAssetRepository
         db.Assets.Add(asset);
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(Asset asset, CancellationToken ct = default)
+    {
+        db.Assets.Remove(asset);
+        return Task.CompletedTask;
+    }
 }
