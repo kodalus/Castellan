@@ -11,12 +11,14 @@ public sealed class CreateAccountUseCase(IAccountRepository accounts, IUnitOfWor
         string Name,
         AccountKind Kind,
         Money InitialBalance,
-        DateTimeOffset ReconciledAt);
+        DateTimeOffset ReconciledAt,
+        string? BankKey = null);
 
     public async Task<AccountId> ExecuteAsync(Input input, CancellationToken ct = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(input.Name);
-        var account = Account.Create(input.Name, input.Kind, input.InitialBalance, input.ReconciledAt);
+        var account = Account.Create(
+            input.Name, input.Kind, input.InitialBalance, input.ReconciledAt, input.BankKey);
         await accounts.AddAsync(account, ct);
         await uow.SaveChangesAsync(ct);
         return account.Id;

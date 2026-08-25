@@ -22,7 +22,7 @@ public partial class EditFundViewModel : ObservableObject
     [ObservableProperty] private string _targetAmountText = "";
     [ObservableProperty] private DateTime _deadline = DateTime.Today.AddYears(1);
     [ObservableProperty] private bool _isBusy;
-    [ObservableProperty] private string _balanceDisplay = "";
+    [ObservableProperty] private string _balanceText = "";
 
     /// <summary>Fundusz otwarty — cel bez daty. Patrz AddFundViewModel.</summary>
     [ObservableProperty]
@@ -73,9 +73,7 @@ public partial class EditFundViewModel : ObservableObject
         TargetAmountText = (fund.TargetAmount.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture);
         IsOpenEnded = fund.Deadline is null;
         if (fund.Deadline is { } d) Deadline = d.ToDateTime(TimeOnly.MinValue);
-        // Saldo tylko do wglądu — zmienia się przez wpłaty i pokrywanie wydatków,
-        // nie przez edycję parametrów funduszu.
-        BalanceDisplay = $"Zebrane: {fund.Balance}";
+        BalanceText = (fund.Balance.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture);
     }
 
     [RelayCommand]
@@ -90,12 +88,21 @@ public partial class EditFundViewModel : ObservableObject
         var target = ParseGrosze(TargetAmountText);
         if (target <= 0) { ErrorMessage = "Podaj poprawną kwotę docelową."; return; }
 
+        // Zero jest tu poprawną wartością (wyzerowanie funduszu), więc parsowanie salda
+        // musi je odróżnić od tekstu, którego nie da się odczytać.
+        if (!TryParseGrosze(BalanceText, out var balance) || balance < 0)
+        {
+            ErrorMessage = "Podaj poprawną zebraną kwotę.";
+            return;
+        }
+
         IsBusy = true;
         try
         {
             DateOnly? deadline = IsOpenEnded ? null : DateOnly.FromDateTime(Deadline);
             await _update.ExecuteAsync(
-                new UpdateFundCommand(id, Name.Trim(), SelectedKind.Kind, new Money(target), deadline), ct);
+                new UpdateFundCommand(
+                    id, Name.Trim(), SelectedKind.Kind, new Money(target), deadline, new Money(balance)), ct);
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)
@@ -110,6 +117,17 @@ public partial class EditFundViewModel : ObservableObject
 
     [RelayCommand]
     private static async Task CancelAsync() => await Shell.Current.GoToAsync("..");
+
+    private static bool TryParseGrosze(string text, out long grosze)
+    {
+        grosze = 0;
+        var normalized = text.Trim().Replace(',', '.').Replace(" ", "");
+        if (!decimal.TryParse(normalized, NumberStyles.Number, CultureInfo.InvariantCulture, out var d))
+            return false;
+
+        grosze = (long)Math.Round(d * 100, MidpointRounding.AwayFromZero);
+        return true;
+    }
 
     private static long ParseGrosze(string text)
     {

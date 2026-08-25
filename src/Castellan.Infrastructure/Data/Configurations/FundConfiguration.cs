@@ -48,10 +48,6 @@ internal sealed class FundConfiguration : IEntityTypeConfiguration<Fund>
             .IsRequired()
             .HasDefaultValue(false);
 
-        builder.Property(f => f.CountsTowardCushion)
-            .IsRequired()
-            .HasDefaultValue(false);
-
         builder.Property(f => f.LastContributionMonth)
             .HasConversion(
                 d => d == null ? null : d.Value.ToString("yyyy-MM-dd"),

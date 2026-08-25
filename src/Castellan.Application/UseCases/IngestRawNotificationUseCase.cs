@@ -1,9 +1,12 @@
+using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Castellan.Application.Parsers;
 using Castellan.Application.Repositories;
 using Castellan.Application.Services;
 using Castellan.Domain;
 using Castellan.Domain.Aggregates;
+using Castellan.Domain.ValueObjects;
 
 namespace Castellan.Application.UseCases;
 
@@ -15,10 +18,16 @@ public sealed partial class IngestRawNotificationUseCase(
     IUnitOfWork uow,
     IEnumerable<INotificationParser> parsers)
 {
-    private static readonly string[] BankKeywords = ["ING", "Revolut"];
+    private static readonly string[] BankKeywords = Banks.Known;
 
     /// <summary>Okno na parę „bank + Portfel Google" dla jednej płatności.</summary>
     private const int CrossSourceWindowMinutes = 180;
+
+    /// <summary>
+    /// Okno na pojedyncze powiadomienie opisujące nogę przelewu własnego, dla którego
+    /// para już istnieje. Wąskie, bo warunek opiera się na samej kwocie.
+    /// </summary>
+    private const int OwnTransferLegWindowMinutes = 5;
 
     public static readonly IReadOnlySet<string> AllowedPackages = new HashSet<string>(StringComparer.Ordinal)
     {
@@ -61,6 +70,13 @@ public sealed partial class IngestRawNotificationUseCase(
     {
         var parser = parsers.FirstOrDefault(p => p.PackageName == packageName);
         if (parser is null) return;
+
+        // Przelew własny ma własną ścieżkę: jedno powiadomienie opisuje obie strony,
+        // więc powstaje od razu para, a nie pojedynczy wpis.
+        var transfer = parser.TryParseTransfer(notification.Title, notification.Text);
+        if (transfer is not null
+            && await TryIngestOwnTransferAsync(notification, transfer, packageName, postedAt, ct))
+            return;
 
         var parsed = parser.TryParse(notification.Title, notification.Text);
         if (parsed is null) return;
@@ -147,13 +163,37 @@ public sealed partial class IngestRawNotificationUseCase(
             .GroupBy(r => r.TransactionId!.Value)
             .ToDictionary(g => g.Key, g => g.First().PackageName);
 
+        // Warunek „to samo konto" jest tu ZŁAGODZONY: wystarczy to samo konto ALBO ten
+        // sam sprzedawca. Dopasowanie konta bywa niepewne (bank i Portfel Google nazywają
+        // to samo konto inaczej), a gdy się rozjedzie, twardy warunek na koncie kasuje
+        // deduplikację i powstaje duplikat — dokładnie to zgłoszone dla Allegro
+        // z konta wspólnego. Sam sprzedawca plus kwota co do grosza plus INNE źródło
+        // to już wystarczająco rzadki zbieg okoliczności.
         candidate ??= recent.FirstOrDefault(t =>
-            t.AccountId == accountId &&
             !t.SupersededById.HasValue &&
             t.Amount.Grosze == tx.Amount.Grosze &&
             sourcePackage.TryGetValue(t.Id, out var pkg) &&
             !string.Equals(pkg, packageName, StringComparison.Ordinal) &&
+            (t.AccountId == accountId
+             || (merchantKey is not null && t.MerchantKey is not null
+                 && t.MerchantKey.Equals(merchantKey, StringComparison.OrdinalIgnoreCase))) &&
             Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= CrossSourceWindowMinutes);
+
+        // Bank potrafi wysłać i powiadomienie zbiorcze o przelewie własnym, i osobne
+        // o obciążeniu czy uznaniu. Wpis z pary już istnieje i ma właściwe konto —
+        // pojedyncze powiadomienie o tej samej kwocie jest jego duplikatem, nawet jeśli
+        // wskazuje inne konto (bo samo konta nie zna).
+        //
+        // Okno jest tu CELOWO wąskie, węższe niż przy parze bank + Portfel Google.
+        // Ten warunek patrzy na samą kwotę, więc trafiłby też w prawdziwy zakup za
+        // dokładnie tę samą kwotę — a cicho połknięta transakcja jest gorsza niż
+        // widoczny duplikat, który da się skasować. Powiadomienia banku o JEDNEJ
+        // operacji przychodzą w odstępie sekund, nie minut.
+        candidate ??= recent.FirstOrDefault(t =>
+            !t.SupersededById.HasValue &&
+            (t.TransferGroupId is not null || t.ProposedTransferGroupId is not null) &&
+            t.Amount.Grosze == tx.Amount.Grosze &&
+            Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= OwnTransferLegWindowMinutes);
 
         // Zapasowo wąskie okno bez rozróżniania źródła — na wypadek powiadomień,
         // dla których nie znamy pakietu (np. sprzed dodania tego zapisu).
@@ -183,6 +223,165 @@ public sealed partial class IngestRawNotificationUseCase(
         return Math.Abs(a - b) <= Math.Abs(b) * 2 / 100; // ≤2% diff
     }
 
+    /// <summary>
+    /// Buduje parę wpisów z jednego powiadomienia o przelewie własnym. Zwraca false, gdy
+    /// nie da się rozstrzygnąć kont — wtedy powiadomienie idzie zwykłą ścieżką.
+    ///
+    /// Powstaje PROPOZYCJA, a nie gotowy przelew, bo przelew na konto oszczędnościowe
+    /// kryje dwa różne zdarzenia — przekładanie i odkładanie na rezerwę — i tylko
+    /// użytkownik wie które.
+    /// </summary>
+    private async Task<bool> TryIngestOwnTransferAsync(
+        RawNotification notification,
+        ParsedTransfer parsed,
+        string packageName,
+        DateTimeOffset postedAt,
+        CancellationToken ct)
+    {
+        var active = (await accounts.ListAsync(ct)).Where(a => !a.IsArchived).ToList();
+        var pool = NarrowToBank(active, BankOf(packageName, accountHint: null));
+        if (pool.Count < 2) return false;
+
+        var from = BestByHint(pool, parsed.FromAccountHint);
+        var to = BestByHint(pool, parsed.ToAccountHint);
+
+        // Gdy jedna strona się nie dopasowała, a w banku są dokładnie dwa konta, druga
+        // jest wyznaczona przez eliminację. To realny przypadek: bank nazywa konta po
+        // swojemu („Direct Rika"), a użytkownik po swojemu („ING") — żadne słowo się
+        // nie pokrywa, ale skoro to nie konto docelowe, to musi być to drugie.
+        if (from is null && to is not null && pool.Count == 2)
+            from = pool.First(a => a.Id != to.Id);
+        if (to is null && from is not null && pool.Count == 2)
+            to = pool.First(a => a.Id != from.Id);
+
+        if (from is null || to is null || from.Id == to.Id) return false;
+
+        var magnitude = Math.Abs(parsed.Amount.Grosze);
+        if (magnitude == 0) return false;
+
+        var recent = await transactions.ListRecentAsync(postedAt.AddMinutes(-15), ct);
+
+        var outgoing = await AdoptOrCreateLegAsync(recent, pool, from.Id, -magnitude, postedAt, notification, ct);
+        var incoming = await AdoptOrCreateLegAsync(recent, pool, to.Id, magnitude, postedAt, notification, ct);
+
+        var groupId = Guid.NewGuid();
+        outgoing.ProposeTransfer(groupId);
+        incoming.ProposeTransfer(groupId);
+
+        notification.MarkParsed(outgoing.Id);
+        return true;
+    }
+
+    /// <summary>
+    /// Bierze wpis, który powstał już z pojedynczego powiadomienia o tej samej kwocie,
+    /// i przypina go do właściwego konta — zamiast dokładać drugi obok. Bank potrafi
+    /// wysłać i powiadomienie zbiorcze, i osobne o obciążeniu; kolejność jest loterią,
+    /// a bez przygarniania z jednego przelewu robiłyby się cztery wpisy.
+    /// </summary>
+    private async Task<Transaction> AdoptOrCreateLegAsync(
+        IReadOnlyList<Transaction> recent,
+        List<Account> pool,
+        AccountId accountId,
+        long grosze,
+        DateTimeOffset postedAt,
+        RawNotification notification,
+        CancellationToken ct)
+    {
+        var orphan = recent.FirstOrDefault(t =>
+            t.Amount.Grosze == grosze &&
+            !t.SupersededById.HasValue &&
+            t.TransferGroupId is null &&
+            t.ProposedTransferGroupId is null &&
+            pool.Any(a => a.Id == t.AccountId) &&
+            Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= 15);
+
+        if (orphan is not null)
+        {
+            orphan.SetAccount(accountId);
+            return orphan;
+        }
+
+        var leg = Transaction.CreateFromNotification(
+            accountId, new Money(grosze), postedAt, notification.Id, "Przelew własny");
+        await transactions.AddAsync(leg, ct);
+        return leg;
+    }
+
+    private static string? BankOf(string packageName, string? accountHint) =>
+        packageName switch
+        {
+            "pl.ing.mojeing"      => Banks.Ing,
+            "com.revolut.revolut" => Banks.Revolut,
+            _                     => BankKeywords.FirstOrDefault(b =>
+                                         accountHint?.Contains(b, StringComparison.OrdinalIgnoreCase) == true),
+        };
+
+    private static List<Account> NarrowToBank(List<Account> active, string? bank)
+    {
+        if (bank is null) return active;
+
+        var byKey = active
+            .Where(a => string.Equals(a.BankKey, bank, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (byKey.Count > 0) return byKey;
+
+        var byName = active
+            .Where(a => a.Name.Contains(bank, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        return byName.Count > 0 ? byName : active;
+    }
+
+    /// <summary>
+    /// Najlepsze dopasowanie konta do tekstowej podpowiedzi. Null, gdy nic nie pasuje —
+    /// wywołujący decyduje, czy zgadywać dalej.
+    /// </summary>
+    private static Account? BestByHint(List<Account> pool, string? accountHint)
+    {
+        if (string.IsNullOrWhiteSpace(accountHint)) return null;
+
+        var hintTokens = Tokenize(accountHint);
+        var best = pool
+            .Select(a =>
+            {
+                var tokens = Tokenize(a.Name);
+                var score = TokenOverlap(hintTokens, tokens);
+
+                // Skrótowiec: „OKO" to inicjały „Otwarte Konto Oszczędnościowe" — tak
+                // ten sam rachunek nazywa bank w jednym miejscu i użytkownik w drugim,
+                // a wspólnego słowa nie ma tam ani jednego.
+                if (score == 0 && AcronymMatches(tokens, accountHint)) score = 1;
+
+                // Przy remisie wygrywa konto, którego nazwa NIE ma słów spoza
+                // podpowiedzi. Inaczej podpowiedź „Revolut" trafiałaby w „Revolut
+                // Wspólny" tak samo dobrze jak w „Revolut", a rozstrzygałaby długość
+                // nazwy — czyli nic.
+                var extra = tokens.Length - TokenOverlap(tokens, hintTokens);
+                return new { Account = a, Score = score, Extra = extra };
+            })
+            .Where(x => x.Score > 0)
+            .OrderByDescending(x => x.Score)
+            .ThenBy(x => x.Extra)
+            .FirstOrDefault();
+        if (best is not null) return best.Account;
+
+        // Zapasowo dawne zawieranie w obie strony — tańsze i wystarcza, gdy nazwa
+        // konta jest wprost fragmentem podpowiedzi albo odwrotnie.
+        return pool
+            .Where(a => accountHint.Contains(a.Name, StringComparison.OrdinalIgnoreCase)
+                     || a.Name.Contains(accountHint, StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(a => a.Name.Length)
+            .FirstOrDefault();
+    }
+
+    private static bool AcronymMatches(string[] accountTokens, string hint)
+    {
+        var words = NonLetters().Split(Fold(hint)).Where(w => w.Length > 0).ToArray();
+        if (words.Length < 2) return false;
+
+        var acronym = new string([.. words.Select(w => w[0])]);
+        return accountTokens.Any(t => t.Length >= 2 && t == acronym);
+    }
+
     private async Task TryProposeTransferAsync(
         Transaction tx,
         AccountId ownAccountId,
@@ -207,59 +406,83 @@ public sealed partial class IngestRawNotificationUseCase(
         match.ProposeTransfer(groupId);
     }
 
+    /// <summary>
+    /// Podpowiedź konta z treści powiadomienia decyduje PRZED nazwą banku z pakietu.
+    /// Wcześniej było odwrotnie: znany pakiet („to Revolut") kończył szukanie na
+    /// pierwszym koncie zawierającym „Revolut" w nazwie, a podpowiedź w ogóle nie
+    /// była oglądana. Przy dwóch kontach w tym samym banku znaczyło to, że KAŻDE
+    /// powiadomienie z tego banku lądowało na tym samym koncie — alfabetycznie
+    /// pierwszym — niezależnie od tego, z którego konta poszła płatność.
+    /// </summary>
+    /// <summary>
+    /// Podpowiedź konta z treści powiadomienia decyduje PRZED nazwą banku z pakietu.
+    /// Wcześniej było odwrotnie: znany pakiet („to Revolut") kończył szukanie na
+    /// pierwszym koncie zawierającym „Revolut" w nazwie, a podpowiedź w ogóle nie
+    /// była oglądana. Przy dwóch kontach w tym samym banku znaczyło to, że KAŻDE
+    /// powiadomienie z tego banku lądowało na tym samym koncie — alfabetycznie
+    /// pierwszym — niezależnie od tego, z którego konta poszła płatność.
+    /// </summary>
     private async Task<Account?> FindAccountAsync(string packageName, string? accountHint, CancellationToken ct)
     {
         var all = await accounts.ListAsync(ct);
         var active = all.Where(a => !a.IsArchived).ToList();
+        if (active.Count == 0) return null;
 
-        var keyword = packageName switch
-        {
-            "pl.ing.mojeing"      => "ING",
-            "com.revolut.revolut" => "Revolut",
-            _                     => null,
-        };
+        var pool = NarrowToBank(active, BankOf(packageName, accountHint));
 
-        if (keyword is not null)
-        {
-            var byName = active.FirstOrDefault(a =>
-                a.Name.Contains(keyword, StringComparison.OrdinalIgnoreCase));
-            if (byName is not null) return byName;
-        }
+        var byHint = BestByHint(pool, accountHint);
+        if (byHint is not null) return byHint;
 
-        // Portfel Google nie mówi z jakiego banku jest karta przez packageName —
-        // zdradza to dopiero treść powiadomienia ("karta Revolut Wspólny").
-        if (!string.IsNullOrWhiteSpace(accountHint))
-        {
-            // Zawieranie MUSI działać w obie strony. Wcześniej sprawdzane było tylko
-            // „podpowiedź zawiera nazwę konta", więc konto nazwane szerzej niż karta
-            // (np. „ING Konto z Lwem" przy podpowiedzi „ING") nie dawało trafienia
-            // i płatność lądowała na pierwszym koncie rozliczeniowym — potencjalnie
-            // zupełnie innym banku. Wtedy deduplikacja nie miała szans: porównuje
-            // kandydatów w obrębie jednego konta, a te dwa były różne.
-            //
-            // Przy kilku trafieniach wygrywa najdłuższa nazwa konta, czyli
-            // najbardziej szczegółowe dopasowanie.
-            var byHint = active
-                .Where(a => accountHint.Contains(a.Name, StringComparison.OrdinalIgnoreCase)
-                         || a.Name.Contains(accountHint, StringComparison.OrdinalIgnoreCase))
-                .OrderByDescending(a => a.Name.Length)
-                .FirstOrDefault();
-            if (byHint is not null) return byHint;
-
-            // Ostatnia szansa: sama nazwa banku w podpowiedzi, gdy nazwa konta i nazwa
-            // karty nie mają ze sobą nic wspólnego poza bankiem.
-            foreach (var bank in BankKeywords)
-            {
-                if (!accountHint.Contains(bank, StringComparison.OrdinalIgnoreCase)) continue;
-                var byBank = active.FirstOrDefault(a =>
-                    a.Name.Contains(bank, StringComparison.OrdinalIgnoreCase));
-                if (byBank is not null) return byBank;
-            }
-        }
-
-        return active.FirstOrDefault(a => a.Kind == AccountKind.Checking)
-            ?? active.FirstOrDefault();
+        // Bez podpowiedzi zostaje pole zawężone przez pakiet. Gdy jest w nim więcej
+        // niż jedno konto, wybór jest zgadywaniem — bierzemy rozliczeniowe, bo płatność
+        // kartą idzie zwykle z niego.
+        return pool.FirstOrDefault(a => a.Kind == AccountKind.Checking)
+            ?? pool.FirstOrDefault();
     }
+
+    /// <summary>
+    /// Słowa znaczące z nazwy konta: bez ogonków, bez wielkości liter i bez wyrazów,
+    /// które nie odróżniają jednego konta od drugiego („konto", „karta").
+    /// </summary>
+    private static string[] Tokenize(string text)
+    {
+        var folded = Fold(text);
+        var all = NonLetters().Split(folded).Where(t => t.Length >= 2).ToArray();
+        var meaningful = all.Where(t => !NoiseWords.Contains(t)).ToArray();
+
+        // Konto nazwane samym szumem („Konto", „Rachunek") straciłoby wszystkie słowa
+        // i nie dałoby się dopasować do niczego. Wtedy lepszy szum niż nic.
+        return meaningful.Length > 0 ? meaningful : all;
+    }
+
+    // „osobiste" i „wspolne" NIE są tu szumem, choć kuszą: użytkownik nazywa konta
+    // dokładnie tak („wspólne", „osobiste"), a wyrzucenie tych słów zostawiałoby
+    // nazwę bez ani jednego słowa do dopasowania.
+    /// <summary>Bez ogonków i bez wielkości liter — wspólna postać do porównań.</summary>
+    private static string Fold(string text) =>
+        new string(text.Normalize(NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
+            .ToArray()).ToLowerInvariant().Replace('ł', 'l');
+
+    private static readonly HashSet<string> NoiseWords = new(StringComparer.Ordinal)
+    {
+        "konto", "konta", "rachunek", "karta", "karty", "moje", "moj", "account", "card",
+        "pln", "eur", "usd", "gbp", "chf", "bank",
+    };
+
+    /// <summary>
+    /// Ile słów mają wspólnych. Wspólny przedrostek długości 5 wystarcza, żeby zrównać
+    /// polskie końcówki: „wspolne" i „wspolny" to to samo konto, „oszczednosciowe"
+    /// i „oszczednosciowy" też.
+    /// </summary>
+    private static int TokenOverlap(string[] a, string[] b) =>
+        a.Count(x => b.Any(y => x == y
+            || (x.Length >= 5 && y.Length >= 5
+                && (x.StartsWith(y[..5], StringComparison.Ordinal)
+                 || y.StartsWith(x[..5], StringComparison.Ordinal)))));
+
+    [GeneratedRegex(@"[^a-z0-9]+")]
+    private static partial Regex NonLetters();
 
     private static string MaskSensitiveData(string text) =>
         SensitivePattern().Replace(text, "****");

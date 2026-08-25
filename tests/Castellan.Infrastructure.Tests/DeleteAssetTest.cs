@@ -41,7 +41,7 @@ public class DeleteAssetTest
 
         var cushion = new GetCushionOverviewUseCase(
             new AssetRepository(db),
-            new FundRepository(db),
+            new CategoryRepository(db),
             new TransactionRepository(db),
             new GetAccountsWithBalancesUseCase(new AccountRepository(db), new TransactionRepository(db)));
 

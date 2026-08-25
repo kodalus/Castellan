@@ -20,13 +20,12 @@
 
             <!-- Zebrane saldo nie jest polem — edycja parametrów nigdy go nie rusza,
                  więc stoi tu jako fakt, a nie coś do wpisania. -->
-            <Border Style="{StaticResource StatTile}">
-                <VerticalStackLayout Spacing="3">
-                    <Label Text="Zebrane" Style="{StaticResource SectionHeader}" />
-                    <Label Text="{Binding BalanceDisplay}" Style="{StaticResource RowValue}"
-                           HorizontalTextAlignment="Start" />
-                </VerticalStackLayout>
-            </Border>
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Zebrane (zł)" Style="{StaticResource FieldLabel}" />
+                <Entry Text="{Binding BalanceText}" Keyboard="Numeric" />
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Do wyrównania z rzeczywistością, gdy saldo się rozjechało. Nie liczy się jako wpłata — podpowiadana rata na ten miesiąc zostaje bez zmian. Normalnie saldo rośnie przyciskiem „Wpłać”." />
+            </VerticalStackLayout>
 
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="Nazwa funduszu" Style="{StaticResource FieldLabel}" />

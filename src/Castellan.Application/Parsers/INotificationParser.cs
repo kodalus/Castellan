@@ -8,8 +8,22 @@ namespace Castellan.Application.Parsers;
 // ("karta Revolut Wspólny") to zdradza.
 public sealed record ParsedTransaction(Money Amount, string? Merchant, string? AccountHint = null);
 
+/// <summary>
+/// Przelew między własnymi kontami opisany JEDNYM powiadomieniem, które nazywa obie
+/// strony („1,00 PLN z konta Direct Rika na konto Otwarte Konto Oszczędnościowe").
+/// To jedyny znany format, w którym bank mówi wprost, o które konta chodzi — reszta
+/// powiadomień ING nie zdradza tego wcale.
+/// </summary>
+public sealed record ParsedTransfer(Money Amount, string FromAccountHint, string ToAccountHint);
+
 public interface INotificationParser
 {
     string PackageName { get; }
     ParsedTransaction? TryParse(string title, string text);
+
+    /// <summary>
+    /// Zwraca parę kont, gdy powiadomienie opisuje przelew własny. Domyślnie brak —
+    /// tylko ING ma taki format.
+    /// </summary>
+    ParsedTransfer? TryParseTransfer(string title, string text) => null;
 }

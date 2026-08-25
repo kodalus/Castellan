@@ -77,12 +77,22 @@ public sealed partial class RevolutNotificationParser : INotificationParser
 
         var grosze = (long)Math.Round(dec * 100, MidpointRounding.AwayFromZero) * sign;
 
-        // Tytuł "Konto wspólne · Lidl" → sprzedawcą jest segment po ostatnim " · ".
+        // Tytuł "Konto wspólne · Lidl" → sprzedawcą jest segment po ostatnim " · ",
+        // a wszystko przed nim to nazwa konta w Revolucie. Przedrostek był wcześniej
+        // wyrzucany, przez co przy dwóch kontach w tym samym banku powiadomienie
+        // zawsze lądowało na tym pierwszym alfabetycznie — i nie miało jak spotkać
+        // się z powiadomieniem Portfela Google, które konto podaje.
         var merchant = title;
+        string? accountHint = null;
         var sepIdx = title.LastIndexOf(" · ", StringComparison.Ordinal);
-        if (sepIdx >= 0) merchant = title[(sepIdx + 3)..].Trim();
+        if (sepIdx >= 0)
+        {
+            merchant = title[(sepIdx + 3)..].Trim();
+            var prefix = title[..sepIdx].Trim();
+            if (prefix.Length > 0) accountHint = prefix;
+        }
 
-        return new ParsedTransaction(new Money(grosze), merchant);
+        return new ParsedTransaction(new Money(grosze), merchant, accountHint);
     }
 
     private static ParsedTransaction? TryParseInternational(string text, string combined, string lower)

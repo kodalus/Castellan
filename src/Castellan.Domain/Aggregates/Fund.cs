@@ -2,6 +2,13 @@ using Castellan.Domain.ValueObjects;
 
 namespace Castellan.Domain.Aggregates;
 
+/// <summary>
+/// Fundusz to koperta nad pieniędzmi, które fizycznie leżą na jakimś koncie:
+/// <see cref="Contribute"/> podbija tylko własne saldo i nigdy nie rusza konta.
+/// Dlatego salda funduszy NIE dolicza się do poduszki finansowej ani do wartości
+/// netto — te pieniądze są tam już policzone w saldzie konta. Pieniądze poza
+/// kontami znanymi aplikacji dodaje się jako aktywo, nie jako fundusz.
+/// </summary>
 public class Fund
 {
     public FundId Id { get; private set; }
@@ -20,16 +27,6 @@ public class Fund
     public bool IsArchived { get; private set; }
     public DateOnly? LastContributionMonth { get; private set; }
 
-    /// <summary>
-    /// Czy saldo funduszu wchodzi do poduszki finansowej w Majątku, czyli do liczby
-    /// „ile miesięcy wytrzymam bez przychodu". Domyślnie tylko poduszka bezpieczeństwa:
-    /// pieniądze w funduszu na OC są już wydane, tylko jeszcze nie zapłacone — OC
-    /// przyjdzie niezależnie od tego, czy dochód zniknie, więc doliczenie ich
-    /// zawyżałoby odporność. Znacznik jest jawnym polem, a nie regułą wyprowadzoną
-    /// z rodzaju, bo o tym, co realnie jest rezerwą, wie tylko właściciel pieniędzy.
-    /// </summary>
-    public bool CountsTowardCushion { get; private set; }
-
     private Fund() { }
 
     public static Fund Create(string name, FundKind kind, Money targetAmount, DateOnly? deadline)
@@ -46,7 +43,6 @@ public class Fund
             Deadline = FirstOfMonth(deadline),
             Balance = Money.Zero,
             IsArchived = false,
-            CountsTowardCushion = kind == FundKind.Emergency,
         };
     }
 
@@ -58,13 +54,22 @@ public class Fund
     }
 
     public void Withdraw(Money amount) => Balance = new Money(Balance.Grosze - amount.Grosze);
-    public void Archive() => IsArchived = true;
 
     /// <summary>
-    /// Przełączane wprost z listy funduszy. Celowo osobno od Update: zmiana rodzaju
-    /// funduszu nie ma po cichu przestawiać tego, co użytkownik świadomie zaznaczył.
+    /// Korekta zebranej kwoty wprost z ekranu edycji — na wyrównanie z rzeczywistością,
+    /// gdy saldo funduszu rozjechało się z tym, co realnie odłożone (odsetki na koncie,
+    /// wpłata sprzed założenia funduszu, wpłata zapisana dwa razy).
+    ///
+    /// Celowo NIE rusza LastContributionMonth: poprawka to nie wpłata, a zaliczenie jej
+    /// jako wpłaty zamknęłoby bieżący okres i podpowiadana rata zniknęłaby na miesiąc.
     /// </summary>
-    public void SetCountsTowardCushion(bool counts) => CountsTowardCushion = counts;
+    public void SetBalance(Money balance)
+    {
+        if (balance.Grosze < 0)
+            throw new ArgumentException("Zebrana kwota nie może być ujemna.", nameof(balance));
+        Balance = balance;
+    }
+    public void Archive() => IsArchived = true;
 
     /// <summary>
     /// Edycja parametrów funduszu. Celowo nie rusza Balance ani StartMonth:

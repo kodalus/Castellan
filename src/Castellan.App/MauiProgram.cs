@@ -30,6 +30,7 @@ public static class MauiProgram
 
         // Use cases
         builder.Services.AddTransient<CreateAccountUseCase>();
+        builder.Services.AddTransient<UpdateAccountUseCase>();
         builder.Services.AddTransient<AddManualTransactionUseCase>();
         builder.Services.AddTransient<UpdateTransactionUseCase>();
         builder.Services.AddTransient<CreateTransferUseCase>();
@@ -51,7 +52,6 @@ public static class MauiProgram
         builder.Services.AddTransient<DeleteFundUseCase>();
         builder.Services.AddTransient<ContributeToFundUseCase>();
         builder.Services.AddTransient<GetFundOverviewUseCase>();
-        builder.Services.AddTransient<SetFundCushionFlagUseCase>();
         builder.Services.AddTransient<PayTransactionFromFundUseCase>();
         builder.Services.AddTransient<CreateAssetUseCase>();
         builder.Services.AddTransient<UpdateAssetValueUseCase>();
@@ -79,6 +79,7 @@ public static class MauiProgram
         builder.Services.AddTransient<TransactionsViewModel>();
         builder.Services.AddTransient<EnvelopesViewModel>();
         builder.Services.AddTransient<AddAccountViewModel>();
+        builder.Services.AddTransient<EditAccountViewModel>();
         builder.Services.AddTransient<AddTransactionViewModel>();
         builder.Services.AddTransient<EditTransactionViewModel>();
         builder.Services.AddTransient<AddTransferViewModel>();
@@ -114,6 +115,7 @@ public static class MauiProgram
         builder.Services.AddTransient<TransactionsPage>();
         builder.Services.AddTransient<EnvelopesPage>();
         builder.Services.AddTransient<AddAccountPage>();
+        builder.Services.AddTransient<EditAccountPage>();
         builder.Services.AddTransient<AddTransactionPage>();
         builder.Services.AddTransient<EditTransactionPage>();
         builder.Services.AddTransient<AddTransferPage>();

@@ -31,6 +31,19 @@
                        ReturnCommand="{Binding SaveCommand}" />
             </VerticalStackLayout>
 
+            <!-- Domyślnie „Nie zapisuj wydatku": prawdziwy przelew na oszczędnościowe
+                 przyjdzie osobno z powiadomienia i sam obciąży kopertę „Rezerwy".
+                 Konto wybiera się wtedy, gdy tego przelewu nie będzie — bo pieniądze
+                 zostają na tym samym koncie, a odkładanie jest tylko na papierze. -->
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="Zapisz jako wydatek z konta" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Sources}"
+                        SelectedItem="{Binding SelectedSource, Mode=TwoWay}"
+                        ItemDisplayBinding="{Binding Name}" />
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Wybór konta dopisuje wydatek w kategorii „Rezerwy”, żeby koperta pokazała, ile już odłożone. Zostaw „Nie zapisuj wydatku”, jeśli ten sam przelew trafi do aplikacji z powiadomienia." />
+            </VerticalStackLayout>
+
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 

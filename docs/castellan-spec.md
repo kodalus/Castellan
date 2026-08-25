@@ -176,7 +176,7 @@ Znak kwoty: **wydatek ujemny, przychód dodatni**. Jednolita reguła w całym sy
 |---|---|---|
 | `Id` | `AccountId` | |
 | `Name` | `string` | |
-| `BankKey` | `string` | klucz zestawu reguł parsowania, etap 3 |
+| `BankKey` | `string?` | bank konta z `Banks.Known` — zawęża dopasowanie powiadomień; `null` = nieustawiony |
 | `Kind` | `AccountKind` | `Checking`, `Savings` |
 | `LiquidityTier` | `LiquidityTier` | `Immediate`, `Month`, `Locked` — etap 5, domyślnie `Immediate` |
 | `LastReconciledBalance` | `Money` | |
@@ -315,10 +315,8 @@ Przechowywane po redakcji tekstu wyłącznie dla powiadomień z białej listy pa
 | `Balance` | `Money` | zgromadzone |
 | `LastContributionMonth` | `DateOnly?` | miesiąc ostatniej wpłaty |
 | `IsArchived` | `bool` | |
-| `CountsTowardCushion` | `bool` | czy saldo wchodzi do poduszki finansowej |
 
-Operacje: `Contribute(money)`, `Withdraw(money)`, `Update(...)`, `Archive()`,
-`SetCountsTowardCushion(bool)`.
+Operacje: `Contribute(money)`, `Withdraw(money)`, `Update(...)`, `SetBalance(money)`, `Archive()`.
 
 **Odejście od pierwotnego założenia.** Spec zakładał fundusz cykliczny: okresowość plus
 data następnej płatności, a `Spend` zerował zgromadzone i przesuwał termin. Wdrożony
@@ -331,6 +329,12 @@ z funduszem (`PaidFromFundId`), nie przez metodę `Spend`.
 wpłatami, a `StartMonth` jest kotwicą wyliczenia „ile powinno być odłożone do teraz" —
 przesunięcie go zafałszowałoby historię opóźnień.
 
+`SetBalance` stoi obok, jako osobna operacja, właśnie dlatego: wyrównanie zebranej kwoty
+z rzeczywistością (odsetki, wpłata sprzed założenia funduszu, wpłata policzona dwa razy)
+to inna czynność niż zmiana parametrów celu i nie ma prawa dziać się przy okazji. Celowo
+nie rusza też `LastContributionMonth` — poprawka nie jest wpłatą, a zaliczenie jej jako
+wpłaty zamknęłoby bieżący okres i podpowiadana rata zniknęłaby na miesiąc.
+
 `LastContributionMonth` doszedł po zgłoszeniu z eksploatacji: bez niego bieżący okres
 liczył się jako niezrobiony aż do dnia wypłaty, więc rata przeliczała się na nowo zaraz
 po wpłacie, tak jakby trzeba było dołożyć drugi raz.
@@ -342,26 +346,29 @@ ani ostrzeżenia o opóźnieniu; zostaje cel, saldo i pasek postępu. `Suggested
 musi zwracać zero jawnie, a nie wpaść w gałąź „termin minął", która podpowiada całą
 brakującą kwotę naraz.
 
-**Wejście do poduszki niesie znacznik, nie rodzaj.** Pierwsza wersja wiązała to
-z `Kind == Emergency`. Reguła była poprawna domyślnie, ale ukryta i sztywna: nie było
-jej widać na ekranie, a fundusz „Wakacje", który u kogoś jest zwykłym oszczędzaniem,
-nie miał jak się załapać. Teraz decyduje `CountsTowardCushion`, przełączany wprost
-z listy funduszy. `Fund.Create` ustawia go na `true` dla rodzaju `Emergency` i `false`
-dla pozostałych, więc domyślne zachowanie zostaje bez zmian.
+**Fundusz nie wchodzi do poduszki. W ogóle.** `Contribute` podbija wyłącznie własne
+saldo funduszu i nigdy nie rusza żadnego konta — fundusz jest kopertą nad pieniędzmi,
+które fizycznie leżą na koncie. Skoro do poduszki wchodzą salda wszystkich kont (11.8),
+doliczenie do niej jeszcze salda funduszu liczyłoby tę samą złotówkę drugi raz.
 
-`Update` celowo go nie rusza: zmiana rodzaju funduszu nie ma po cichu przestawiać tego,
-co użytkownik świadomie zaznaczył. Stąd osobny `SetFundCushionFlagUseCase` — przełącznik
-działa jednym tapnięciem z listy, bez otwierania formularza i bez ryzyka nadpisania
-reszty pól stanem ekranu, którego użytkownik nie widział.
+Historia tego pola jest pouczająca. Najpierw regułą był rodzaj (`Kind == Emergency`) —
+poprawnie domyślnie, ale sztywno i niewidocznie. Potem powstał jawny znacznik
+`CountsTowardCushion`, przełączany z listy funduszy, domyślnie włączony dla poduszki
+bezpieczeństwa. Obie wersje zakładały to samo: że do poduszki wchodzą tylko konta
+rozliczeniowe, więc pieniądze odłożone na koncie oszczędnościowym trzeba doliczyć
+osobno. Gdy to założenie upadło (11.8), znacznik z narzędzia zamienił się w pułapkę —
+i to uzbrojoną domyślnie, bo poduszka bezpieczeństwa dostawała go bez żadnej akcji
+użytkownika. Usunięty razem z kolumną (`DropFundCountsTowardCushion`).
 
-Fundusz wliczony do poduszki znika z osobnej sekcji „Fundusze" — inaczej byłby pokazany
-dwa razy, a wartość netto (poduszka + fundusze − zobowiązania) policzyłaby go podwójnie.
+Pieniądze, o których aplikacja nie wie z żadnego konta — gotówka w domu, rachunek
+w banku, którego użytkownik nie dodał — wchodzą do poduszki jako **aktywo**. To ten sam
+mechanizm, tylko nazwany wprost, i nie da się przez niego policzyć czegoś dwa razy bez
+świadomego wpisania tej samej kwoty w dwóch miejscach.
 
-**Decyzja o domyślnej wartości.** Rozważane było domyślne wliczanie wszystkich funduszy
-plus przycisk „zaznacz wszystkie". Odrzucone: poduszka odpowiada na pytanie „ile
-wytrzymam bez przychodu", a pieniądze z przypisanym wydatkiem tej odporności nie dają.
-Domyślne wliczanie wszystkiego zawyżałoby tę liczbę u każdego, kto ma jakikolwiek
-fundusz celowy, i mnożyłoby ryzyko podwójnego liczenia opisane w 11.8.
+Funduszów nie ma w Majątku w ogóle — ani w poduszce, ani w wartości netto, ani jako osobna
+sekcja. Sekcja informacyjna istniała przez jedną wersję i została usunięta: kwota, która
+nie wchodzi do żadnej sumy na ekranie, zaprasza do dodania jej do tej sumy w głowie.
+Fundusze mają własną zakładkę i tam jest ich miejsce.
 
 ### 5.10 Asset (agregat) — etap 5
 
@@ -627,7 +634,7 @@ trzema kropkami — stąd kolejność jest decyzją, nie przypadkiem.
 | Koperty | trzy kafelki miesiąca plus lista kopert z paskami; „Planuj" |
 | Skrzynka | wybór trybu przechwytywania; propozycje przelewów; transakcje `Unsorted` |
 | Fundusze | dzień wypłaty; suma odpisów; cel, termin, zgromadzone, rata, wskaźnik opóźnienia |
-| Majątek | poduszka w miesiącach; wartość netto; aktywa wg płynności; fundusze; zobowiązania |
+| Majątek | poduszka w miesiącach; wartość netto; aktywa wg płynności; zobowiązania |
 | Kopia | eksport i import JSON |
 | Pomoc | przewodnik po wszystkich ścieżkach, rozdziały zwijane |
 
@@ -675,6 +682,35 @@ Jeśli znaleziono kandydata z `Kind == Authorization`, a nowa transakcja jest `R
 
 Próg 2% i okno 1 dzień wynieść do ustawień: dobrać empirycznie na podstawie własnych banków.
 
+**Wdrożone odstępstwo — para bank + Portfel Google.** Powyższe reguły zakładają zgodny
+`MerchantKey`, a dla tej pary regularnie się nie zgadza: Portfel podaje nazwę prawną
+spółki, bank markę. Dlatego istnieje druga ścieżka: identyczna kwota co do grosza,
+zgłoszenie przez INNĄ aplikację, okno 180 minut. Sam warunek „różne źródła" odsiewa
+przypadkowe zbiegi — żeby trafić fałszywie, dwie różne płatności na identyczną kwotę
+musiałyby zostać zgłoszone, każda tylko przez jedno źródło, i to inne dla każdej.
+
+**Warunek „to samo konto" jest tu złagodzony do „to samo konto ALBO ten sam sprzedawca".**
+Dopasowanie konta bywa niepewne, bo bank i Portfel nazywają to samo konto inaczej
+(„Konto wspólne" kontra „karta Revolut Wspólny"). Gdy się rozjedzie, twardy warunek na
+koncie kasuje deduplikację i powstaje duplikat — objaw, przez który przyczyna, czyli
+złe konto, potrafi zostać niezauważona.
+
+**Dopasowanie konta.** Rozstrzyga w trzech krokach, od najpewniejszego do najsłabszego.
+
+*Krok 1 — jawny bank konta (`Account.BankKey`).* Pole istniało w schemacie od pierwszej
+migracji, ale nic go nie ustawiało ani nie czytało; ożyło razem z ekranem edycji konta.
+Gdy jest wypełnione, pole kandydatów zawęża się do kont tego banku — nazwa konta przestaje
+mieć znaczenie. To jedyny krok, który nie zgaduje: nazwę konta użytkownik nadaje dla
+siebie, nie dla parsera, i nie ma obowiązku wpisywać w nią nazwy banku.
+
+*Krok 2 — podpowiedź z treści powiadomienia.* Decyduje PRZED nazwą banku
+z pakietu. Odwrotna kolejność miała ukryty koszt: przy dwóch kontach w tym samym banku
+KAŻDE powiadomienie z tego banku lądowało na tym samym koncie — pierwszym alfabetycznie
+— niezależnie od tego, z którego konta poszła płatność. Dopasowanie idzie po słowach
+(bez ogonków, bez wyrazów typu „konto" i „karta"), bo żadna z nazw zwykle nie zawiera
+drugiej; wspólny przedrostek długości 5 zrównuje polskie końcówki („wspolne" / „wspolny").
+Przy remisie wygrywa konto, którego nazwa nie ma słów spoza podpowiedzi.
+
 ### 11.2 Scalanie przelewów (etap 3)
 
 Dwie transakcje A i B tworzą przelew, jeśli:
@@ -687,6 +723,46 @@ Dwie transakcje A i B tworzą przelew, jeśli:
 Obu przypisywany jest wspólny `TransferGroupId`, `Kind = Transfer`, `CategoryId = Transfer`.
 
 Fałszywe trafienie możliwe przy zbieżności kwot — dlatego proponować potwierdzenie, a nie scalać w ciszy.
+
+**Przelew własny opisany jednym powiadomieniem.** ING wysyła przy przelewie między
+własnymi kontami osobne powiadomienie w formacie `<kwota> PLN z konta <A> na konto <B>`.
+To jedyna znana treść, która nazywa oba konta — pozostałe („1 PLN mniej na Twoim koncie")
+nie mówią o koncie nic. Wcześniej wpadała do parsera ogólnego, który bez słowa
+„mniej"/„więcej" nie rozpoznaje kierunku i odrzucał ją w całości, więc przelew nie
+zostawiał żadnego śladu.
+
+Z takiego powiadomienia powstaje od razu PARA wpisów na właściwych kontach, oznaczona
+jako propozycja przelewu (a nie gotowy przelew — patrz wyjątek niżej).
+
+Dopasowanie kont jest tu trudniejsze niż zwykle, bo nazwy bankowe i nazwy w aplikacji
+nie muszą mieć ani jednego wspólnego słowa („Direct Rika" kontra „ING"). Stąd dwa
+dodatkowe sposoby: **skrótowiec** (`OKO` to inicjały „Otwarte Konto Oszczędnościowe")
+oraz **eliminacja** — gdy w banku są dokładnie dwa konta i jedno się dopasowało, drugie
+jest wyznaczone.
+
+Bank potrafi przysłać zarówno powiadomienie zbiorcze, jak i osobne o obciążeniu i uznaniu,
+w dowolnej kolejności. Wpisy z pojedynczych powiadomień są **przygarniane** do pary
+(korekta konta zamiast nowego wpisu), a późniejsze pojedyncze powiadomienia o tej samej
+kwocie odsiewa deduplikacja. Bez tego z jednego przelewu robiłyby się cztery wpisy.
+
+**Znane ograniczenie.** Gdy powiadomienie zbiorcze nie dotrze, a przelew idzie między
+dwoma kontami TEGO SAMEGO banku, obie nogi lądują na tym samym koncie — nie ma z czego
+wybrać. Propozycja przelewu wymaga dwóch różnych kont, więc nie powstaje. Pozostaje
+ręczny przelew, gdzie konta wskazuje użytkownik.
+
+**Przelew na własne konto oszczędnościowe jest wyjątkiem.** Kryje dwa różne zdarzenia,
+dla aplikacji nierozróżnialne: przekładanie pieniędzy (budżet bez zmian) albo odkładanie
+na rezerwę (pieniądze przestają być do wydania w tym miesiącu — dokładnie tak jak zakup).
+Rozstrzyga o tym użytkownik, pytany tylko wtedy, gdy konto docelowe ma rodzaj `Savings`.
+
+Przy odpowiedzi „odkładam" noga wychodząca dostaje `CategoryId = Rezerwy` i zostaje
+zwykłym wydatkiem, a noga przychodząca jest wykluczana jak każdy przelew. Asymetria jest
+konieczna: gdyby obie nogi zostały wydatkiem/przychodem, ta sama kwota wyszłaby jako
+przychód na koncie oszczędnościowym.
+
+Bez tego koperta „Rezerwy" była planem, którego nie dało się z niczym porównać —
+odkładanie odbywa się właśnie przelewem, a przelewy wypadały z budżetu w całości,
+więc koperta pokazywała zero wydanych niezależnie od tego, ile realnie poszło.
 
 ### 11.3 Normalizacja nazwy sprzedawcy
 
@@ -771,11 +847,11 @@ planowania podpowiada ją przyciskiem, który jednym tapnięciem wpisuje kwotę 
 
 ```
 ŚredniWydatek   = średnia z faktycznych wydatków miesięcznych z ostatnich 3 miesięcy
-                  (liczone tylko miesiące z jakimkolwiek wydatkiem)
+                  (liczone tylko miesiące z jakimkolwiek wydatkiem;
+                   kategoria „Rezerwy" pominięta)
 
 Płynne(poziom)  = Σ Asset.Value gdzie Liquidity == poziom
                   + salda wszystkich kont, gdy poziom == Immediate
-                  + salda funduszy z CountsTowardCushion, gdy poziom == Immediate
 
 Autonomia(poz.) = Płynne(narastająco do poziomu) / ŚredniWydatek   [miesiące]
 ```
@@ -787,26 +863,34 @@ a odpowiedź zmienia się z miesiąca na miesiąc. Wdrożony wariant bierze śre
 z realnych wydatków ostatnich trzech miesięcy: mniej precyzyjny teoretycznie, ale
 oparty na tym, jak faktycznie wygląda życie, i niewymagający żadnej konfiguracji.
 
+**Kategoria „Rezerwy" jest z tej średniej wyłączona.** Odkładanie na bok nie jest kosztem
+utrzymania — w miesiącu bez przychodu przestaje się odkładać pierwsze. Wyłączenie stało
+się konieczne, gdy odkładanie zaczęło w ogóle być widoczne jako wydatek (11.2): bez niego
+każda odłożona złotówka SKRACAŁABY liczbę miesięcy, które ta sama złotówka wydłuża.
+
 Poziomów są cztery, nie trzy, a liczby podawane są narastająco — „ile wytrzymam
 z tego, co mam pod ręką" kontra „ile wytrzymam, jeśli sięgnę też po rzeczy trudniejsze
-do spieniężenia". Fundusze są liczone osobno, poza poziomami: te pieniądze mają już
-przypisany przyszły wydatek, więc nie są rezerwą na czarną godzinę.
+do spieniężenia". Salda funduszy nie wchodzą tu wcale — uzasadnienie w 5.9.
 
-Wyjątkiem są fundusze z zaznaczonym `CountsTowardCushion` — domyślnie poduszka
-bezpieczeństwa, bo jest z definicji tym, co ta liczba mierzy. Doliczają się do płynności
-natychmiastowej i znikają z osobnej sekcji funduszy, żeby nie zostały policzone dwa razy.
-
-**Znane ograniczenie.** Fundusz jest kopertą nad pieniędzmi, które fizycznie leżą na
-koncie albo w aktywie. Salda wszystkich kont wchodzą do poziomu natychmiastowego, więc
-fundusz zaznaczony jako rezerwa, trzymany na którymkolwiek z nich, policzy się dwa razy.
-
-Pierwotnie do poduszki wchodziły wyłącznie konta rozliczeniowe — miało to ograniczać
-właśnie to ryzyko. W praktyce znaczyło jednak, że pieniądze z konta oszczędnościowego
-nie pojawiały się w Majątku w ogóle, ani w poduszce, ani w wartości netto. Dla ekranu
+**Salda wszystkich kont, nie tylko rozliczeniowych.** Pierwotnie do poduszki wchodziły
+wyłącznie konta rozliczeniowe — miało to ograniczać ryzyko podwójnego liczenia, bo konto
+oszczędnościowe to typowe miejsce na fundusze i poduszkę. W praktyce znaczyło jednak,
+że pieniądze z konta oszczędnościowego nie pojawiały się w Majątku w ogóle, ani w poduszce, ani w wartości netto. Dla ekranu
 odpowiadającego na pytanie „ile mam" pomijanie realnych pieniędzy jest gorsze niż
-ryzyko podwójnego zliczenia, które użytkownik widzi i może wyłączyć znacznikiem.
-Aplikacja nie ma jak tego wykryć — to samo dotyczy aktywa dodanego ręcznie obok konta
-o tym samym saldzie. Przewodnik ostrzega o tym wprost przy opisie poduszki.
+ryzyko podwójnego zliczenia. Ryzyko zostało przy tym właśnie zawężone do jednego,
+jawnego przypadku: aktywa dodanego ręcznie obok konta o tym samym saldzie. Aplikacja
+nie ma jak tego wykryć, więc przewodnik ostrzega o tym wprost przy opisie poduszki.
+
+**Wartość netto = (aktywa + salda kont) − całe salda zobowiązań.** Odejmowana jest całość
+długu, nie rata. Rata nie byłaby tu alternatywą: „majątek minus jedna rata” nie odpowiada
+ani na pytanie „ile mam”, ani na „ile wytrzymam”.
+
+Skutek uboczny jest widoczny przy kredycie hipotecznym: 400 000 zł długu wobec 50 000 zł
+na kontach trzyma wartość netto w głębokim minusie. To nie błąd rachunku, tylko brak
+drugiej strony transakcji — kredyt kupił mieszkanie, które jest aktywem. Aplikacja nie
+zakłada tego aktywa sama, bo nie zna wartości nieruchomości i nie ma jej skąd wziąć
+(brak sieci z założenia, 3.2). Przewodnik mówi wprost, że rzecz kupioną na kredyt trzeba
+dodać jako aktywo o płynności `Slow`.
 
 ---
 

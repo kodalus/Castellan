@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.Windows.Input;
-using Castellan.Application.Repositories;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
 using Castellan.Domain.ValueObjects;
@@ -62,28 +61,6 @@ public sealed class CushionTierVm
     }
 }
 
-public sealed class FundRowVm
-{
-    public string Name  { get; }
-    public string ValueDisplay { get; }
-
-    /// <summary>
-    /// Fundusze wliczone do poduszki zostają na tej liście, tylko z dopiskiem. Wcześniej
-    /// z niej znikały (żeby nie zostać policzone dwa razy w wartości netto) i wychodziło
-    /// z tego coś odwrotnego do napisu na przełączniku: zaznaczenie „licz do poduszki"
-    /// kasowało fundusz z jedynej listy funduszy, jaką widać na tym ekranie.
-    /// </summary>
-    public string CushionNote { get; }
-    public bool HasCushionNote => CushionNote.Length > 0;
-
-    public FundRowVm(string name, Money balance, bool countsTowardCushion)
-    {
-        Name = name;
-        ValueDisplay = $"{balance.Grosze / 100m:N2} zł";
-        CushionNote = countsTowardCushion ? "policzone wyżej w poduszce" : "";
-    }
-}
-
 public sealed class DebtRowVm
 {
     public DebtId Id { get; }
@@ -130,7 +107,6 @@ public sealed class DebtRowVm
 public partial class AssetsViewModel : ObservableObject
 {
     private readonly GetCushionOverviewUseCase _overview;
-    private readonly IFundRepository _funds;
     private readonly GetDebtOverviewUseCase _debtOverview;
     private readonly DeleteDebtUseCase _deleteDebt;
     private readonly DeleteAssetUseCase _deleteAsset;
@@ -145,10 +121,6 @@ public partial class AssetsViewModel : ObservableObject
 
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private ObservableCollection<CushionTierVm> _tiers = [];
-    [ObservableProperty] private ObservableCollection<FundRowVm> _fundRows = [];
-    [ObservableProperty] private string _fundsTotalDisplay = "";
-    [ObservableProperty] private string _fundsCushionNoteDisplay = "";
-    [ObservableProperty] private bool _hasFunds;
 
     [ObservableProperty] private ObservableCollection<DebtRowVm> _debtRows = [];
     [ObservableProperty] private string _debtsTotalDisplay = "";
@@ -157,6 +129,14 @@ public partial class AssetsViewModel : ObservableObject
 
     [ObservableProperty] private string _netWorthDisplay = "";
     [ObservableProperty] private bool _isNetWorthNegative;
+
+    // Sam wynik bez składników wygląda przy dużym kredycie na błąd aplikacji,
+    // a nie na brakujące aktywo po drugiej stronie.
+    [ObservableProperty] private string _netWorthAssetsDisplay = "";
+    [ObservableProperty] private string _netWorthDebtsDisplay = "";
+
+    [ObservableProperty] private string _mortgageHintDisplay = "";
+    [ObservableProperty] private bool _hasMortgageHint;
 
     public bool IsEmpty    => !Tiers.Any(t => t.HasAssets);
     public bool IsNotEmpty => !IsEmpty;
@@ -175,13 +155,11 @@ public partial class AssetsViewModel : ObservableObject
 
     public AssetsViewModel(
         GetCushionOverviewUseCase overview,
-        IFundRepository funds,
         GetDebtOverviewUseCase debtOverview,
         DeleteDebtUseCase deleteDebt,
         DeleteAssetUseCase deleteAsset)
     {
         _overview = overview;
-        _funds = funds;
         _debtOverview = debtOverview;
         _deleteDebt = deleteDebt;
         _deleteAsset = deleteAsset;
@@ -250,25 +228,6 @@ public partial class AssetsViewModel : ObservableObject
             OnPropertyChanged(nameof(IsEmpty));
             OnPropertyChanged(nameof(IsNotEmpty));
 
-            // Lista pokazuje WSZYSTKIE aktywne fundusze, także te wliczone do poduszki —
-            // te dostają dopisek, że policzono je wyżej. Ukrywanie ich sprawiało, że
-            // przełącznik „licz do poduszki" wyglądał na odwrócony: zaznaczenie kasowało
-            // fundusz z listy funduszy zamiast go gdziekolwiek dodać.
-            var activeFunds = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
-            FundRows = new ObservableCollection<FundRowVm>(
-                activeFunds.Select(f => new FundRowVm(f.Name, f.Balance, f.CountsTowardCushion)));
-            HasFunds = activeFunds.Count > 0;
-
-            // Do wartości netto wchodzą tylko fundusze spoza poduszki — te wliczone
-            // siedzą już w Cushion.TotalValue, więc dodanie ich tutaj podwoiłoby kwotę.
-            var fundsOutsideCushion = activeFunds.Where(f => !f.CountsTowardCushion).Sum(f => f.Balance.Grosze);
-            var fundsInCushion      = activeFunds.Where(f => f.CountsTowardCushion).Sum(f => f.Balance.Grosze);
-
-            FundsTotalDisplay = $"razem: {(fundsOutsideCushion + fundsInCushion) / 100m:N2} zł";
-            FundsCushionNoteDisplay = fundsInCushion > 0
-                ? $"w tym {fundsInCushion / 100m:N2} zł policzone w poduszce"
-                : "";
-
             var debts = await _debtOverview.ExecuteAsync(ct);
             DebtRows = new ObservableCollection<DebtRowVm>(debts.Items.Select(d =>
             {
@@ -285,11 +244,28 @@ public partial class AssetsViewModel : ObservableObject
                 ? $"raty: {debts.TotalMonthlyInstallments} / mies."
                 : "";
 
-            // Wartość netto = aktywa + fundusze − długi. Fundusze to realne pieniądze
-            // odłożone na bok, więc wchodzą do majątku, mimo że są poza poduszką.
-            var netGrosze = (Cushion?.TotalValue.Grosze ?? 0) + fundsOutsideCushion - debts.TotalBalance.Grosze;
+            // Wartość netto = (aktywa + salda kont) − całe salda zobowiązań, nie raty.
+            // Rata nie jest tu alternatywą: „majątek minus jedna rata” nie odpowiadałoby
+            // na żadne pytanie. Jeśli kredyt coś kupił (mieszkanie, auto), tę rzecz dodaje
+            // się po drugiej stronie jako aktywo — inaczej liczona jest połowa transakcji.
+            var assetsGrosze = Cushion?.TotalValue.Grosze ?? 0;
+            var netGrosze = assetsGrosze - debts.TotalBalance.Grosze;
             IsNetWorthNegative = netGrosze < 0;
             NetWorthDisplay = new Money(netGrosze).ToString();
+            NetWorthAssetsDisplay = $"aktywa i salda kont: {new Money(assetsGrosze)}";
+            NetWorthDebtsDisplay = $"zobowiązania: −{debts.TotalBalance}";
+
+            // Kredyt hipoteczny bez żadnego aktywa o płynności „Wolna" to prawie na pewno
+            // zapisany dług bez zapisanej rzeczy, którą kupił. Warunek jest celowo wąski:
+            // jedno takie aktywo wystarcza, żeby podpowiedź zniknęła i nie stała na stałe.
+            var hasSlowAsset = Cushion?.Tiers
+                .FirstOrDefault(t => t.Liquidity == AssetLiquidity.Slow)?.Assets.Count > 0;
+            HasMortgageHint = debts.Items.Any(d => d.Kind == DebtKind.Mortgage && !d.IsPaidOff)
+                              && hasSlowAsset != true;
+            MortgageHintDisplay =
+                "Masz kredyt hipoteczny, ale żadnego aktywa o płynności „Wolna”. "
+                + "Dodaj mieszkanie jako aktywo — inaczej liczony jest sam dług bez rzeczy, "
+                + "którą za niego kupiłaś.";
         }
         finally
         {

@@ -35,13 +35,17 @@
                             </VerticalStackLayout>
                         </Grid>
 
-                        <HorizontalStackLayout Spacing="8">
+                        <!-- FlexLayout, a nie stos poziomy: trzy przyciski nie mieszczą się
+                             w jednej linii na wąskim ekranie i ostatni znikał poza krawędzią. -->
+                        <FlexLayout Wrap="Wrap" JustifyContent="Start" AlignItems="Center">
                             <Button Text="Ustaw domyślne" Command="{Binding SetDefaultCommand}"
-                                    Style="{StaticResource GhostButton}"
+                                    Style="{StaticResource GhostButton}" Margin="0,0,8,6"
                                     IsVisible="{Binding IsNotDefault}" />
                             <Button Text="Uzgodnij" Command="{Binding ReconcileCommand}"
-                                    Style="{StaticResource GhostButton}" />
-                        </HorizontalStackLayout>
+                                    Style="{StaticResource GhostButton}" Margin="0,0,8,6" />
+                            <Button Text="Edytuj" Command="{Binding EditCommand}"
+                                    Style="{StaticResource GhostButton}" Margin="0,0,8,6" />
+                        </FlexLayout>
 
                     </VerticalStackLayout>
                 </Border>

@@ -42,6 +42,20 @@ public class Account
         Name = name.Trim();
     }
 
+    /// <summary>
+    /// Typ konta wolno poprawić: rozstrzyga o tym, czy przelew NA nie jest pytaniem
+    /// „odkładasz czy przekładasz", więc pomyłka przy zakładaniu ma widoczne skutki.
+    /// </summary>
+    public void SetKind(AccountKind kind) => Kind = kind;
+
+    /// <summary>
+    /// Bank konta — do dopasowywania powiadomień. Puste znaczy „nie wiem": wtedy
+    /// dopasowanie zgaduje po nazwie, tak jak dotąd. Jawny wybór bije zgadywanie,
+    /// bo nazwę konta użytkownik nadaje dla siebie, a nie dla parsera.
+    /// </summary>
+    public void SetBank(string? bankKey) =>
+        BankKey = string.IsNullOrWhiteSpace(bankKey) ? null : bankKey.Trim();
+
     public void Archive() => IsArchived = true;
 
     public void Reconcile(Money balance, DateTimeOffset at)

@@ -2,9 +2,9 @@
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Castellan.App.ViewModels"
-             x:Class="Castellan.App.Views.AddAccountPage"
-             x:DataType="vm:AddAccountViewModel"
-             Title="Nowe konto">
+             x:Class="Castellan.App.Views.EditAccountPage"
+             x:DataType="vm:EditAccountViewModel"
+             Title="Edycja konta">
 
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Zapisz" Command="{Binding SaveCommand}" />
@@ -14,29 +14,33 @@
     <ScrollView>
         <VerticalStackLayout Style="{StaticResource FormBody}">
 
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
+            </Border>
+
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="Nazwa" Style="{StaticResource FieldLabel}" />
-                <Entry Text="{Binding Name}" Placeholder="np. ING osobiste" />
+                <Entry Text="{Binding Name}" Placeholder="np. Revolut wspólne" />
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Zmiana nazwy nie rusza żadnej transakcji — wiszą na koncie, nie na jego nazwie." />
             </VerticalStackLayout>
 
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="Typ konta" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding KindOptions}" SelectedIndex="{Binding KindIndex}" />
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Przy przelewie na konto oszczędnościowe aplikacja pyta, czy odkładasz — dla rachunku bieżącego nie pyta." />
             </VerticalStackLayout>
 
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="Bank" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding BankOptions}" SelectedIndex="{Binding BankIndex}" />
-                <Label Text="Dzięki temu powiadomienia z tego banku trafią na właściwe konto, jakkolwiek je nazwiesz."
-                       Style="{StaticResource FieldHint}" />
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Po co: powiadomienie trafi na właściwe konto niezależnie od tego, jak je nazwałaś. Bez tego aplikacja zgaduje po nazwie — a przy dwóch kontach w jednym banku zgadywanie bywa błędne." />
             </VerticalStackLayout>
 
-            <VerticalStackLayout Style="{StaticResource Field}">
-                <Label Text="Saldo (zł)" Style="{StaticResource FieldLabel}" />
-                <Entry Text="{Binding BalanceText}" Keyboard="Numeric" />
-                <Label Text="Stan konta na dziś — od niego liczą się kolejne transakcje."
-                       Style="{StaticResource FieldHint}" />
-            </VerticalStackLayout>
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
 
         </VerticalStackLayout>
     </ScrollView>

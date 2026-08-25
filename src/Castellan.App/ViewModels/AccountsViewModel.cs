@@ -18,10 +18,11 @@ public sealed class AccountRow
     public bool IsNotDefault => !IsDefault;
     public IAsyncRelayCommand ReconcileCommand { get; }
     public IAsyncRelayCommand SetDefaultCommand { get; }
+    public IAsyncRelayCommand EditCommand { get; }
 
     public AccountRow(
         AccountId id, string name, string balanceDisplay, AccountKind kind, bool isDefault,
-        Func<Task> reconcile, Func<Task> setDefault)
+        Func<Task> reconcile, Func<Task> setDefault, Func<Task> edit)
     {
         Id = id;
         Name = name;
@@ -35,6 +36,7 @@ public sealed class AccountRow
         IsDefault = isDefault;
         ReconcileCommand = new AsyncRelayCommand(reconcile);
         SetDefaultCommand = new AsyncRelayCommand(setDefault);
+        EditCommand = new AsyncRelayCommand(edit);
     }
 }
 
@@ -66,7 +68,8 @@ public partial class AccountsViewModel : ObservableObject
                     {
                         DefaultAccountPreference.Set(captured.Id);
                         await LoadAsync();
-                    }));
+                    },
+                    () => Shell.Current.GoToAsync($"editAccount?accountId={captured.Id}")));
             }
             IsEmpty = Accounts.Count == 0;
         }

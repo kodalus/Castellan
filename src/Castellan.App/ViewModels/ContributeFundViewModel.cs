@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using Castellan.Application.Repositories;
 using Castellan.Application.UseCases;
@@ -8,10 +9,14 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Castellan.App.ViewModels;
 
+/// <summary>Konto, z którego poszła wpłata — albo brak, gdy wydatku nie zapisujemy.</summary>
+public sealed record ContributionSource(AccountId? AccountId, string Name);
+
 [QueryProperty(nameof(FundId), "fundId")]
 public partial class ContributeFundViewModel : ObservableObject
 {
     private readonly IFundRepository _funds;
+    private readonly IAccountRepository _accounts;
     private readonly ContributeToFundUseCase _contribute;
 
     [ObservableProperty] private string _fundId = "";
@@ -27,10 +32,35 @@ public partial class ContributeFundViewModel : ObservableObject
 
     private FundId? _id;
 
-    public ContributeFundViewModel(IFundRepository funds, ContributeToFundUseCase contribute)
+    public const string NoRecordLabel = "Nie zapisuj wydatku";
+
+    public ObservableCollection<ContributionSource> Sources { get; } = [];
+
+    [ObservableProperty] private ContributionSource? _selectedSource;
+
+    public ContributeFundViewModel(
+        IFundRepository funds,
+        IAccountRepository accounts,
+        ContributeToFundUseCase contribute)
     {
         _funds = funds;
+        _accounts = accounts;
         _contribute = contribute;
+        _ = LoadAccountsAsync();
+    }
+
+    /// <summary>
+    /// Pierwsza pozycja to celowo „nie zapisuj wydatku". Wpłata na fundusz zwykle ma
+    /// odpowiednik w prawdziwym przelewie, a ten przychodzi osobno z powiadomienia —
+    /// zapisanie obu policzyłoby tę samą kwotę dwa razy w kopercie „Rezerwy".
+    /// </summary>
+    private async Task LoadAccountsAsync()
+    {
+        Sources.Clear();
+        Sources.Add(new ContributionSource(null, NoRecordLabel));
+        foreach (var a in (await _accounts.ListAsync()).Where(a => !a.IsArchived))
+            Sources.Add(new ContributionSource(a.Id, a.Name));
+        SelectedSource = Sources[0];
     }
 
     partial void OnFundIdChanged(string value)
@@ -61,7 +91,7 @@ public partial class ContributeFundViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            await _contribute.ExecuteAsync(id, new Money(grosze), ct);
+            await _contribute.ExecuteAsync(id, new Money(grosze), SelectedSource?.AccountId, ct);
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)

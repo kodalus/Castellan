@@ -22,6 +22,34 @@ public sealed partial class IngNotificationParser : INotificationParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex AssistantPattern();
 
+    // Przelew własny: "1,00 PLN z konta Direct Rika na konto Otwarte Konto Oszczędnościowe".
+    // Jedno powiadomienie na całą operację i jedyne, które nazywa oba konta. Bez tego
+    // wzorca wpadało do parsera ogólnego, który nie rozpoznaje kierunku (brak słowa
+    // "mniej"/"więcej") i odrzucał je w całości — przelew nie zostawiał żadnego śladu.
+    [GeneratedRegex(
+        @"^(\d[\d ]*)(?:,(\d{2}))?\s+PLN\s+z\s+konta\s+(.+?)\s+na\s+konto\s+(.+?)\s*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex OwnTransferPattern();
+
+    public ParsedTransfer? TryParseTransfer(string title, string text)
+    {
+        var m = OwnTransferPattern().Match(NotificationText.Normalize(text).Trim());
+        if (!m.Success) return null;
+
+        var intPart = m.Groups[1].Value.Replace(" ", "");
+        var decPart = m.Groups[2].Success ? m.Groups[2].Value : "00";
+        if (!decimal.TryParse($"{intPart}.{decPart}", NumberStyles.Number,
+                CultureInfo.InvariantCulture, out var dec) || dec <= 0)
+            return null;
+
+        var from = m.Groups[3].Value.Trim();
+        var to = m.Groups[4].Value.Trim();
+        if (from.Length == 0 || to.Length == 0) return null;
+
+        return new ParsedTransfer(
+            new Money((long)Math.Round(dec * 100, MidpointRounding.AwayFromZero)), from, to);
+    }
+
     // Generic fallback: matches amounts anywhere in title+text
     [GeneratedRegex(@"([+-]?)\s*((?:\d[\d ]*)\d|\d)(?:,(\d{2}))?\s*(?:PLN|zł)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]

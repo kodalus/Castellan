@@ -48,7 +48,7 @@ public class ManualTransferTest
 
             var accountRepo = new AccountRepository(db);
             var txRepo = new TransactionRepository(db);
-            var create = new CreateTransferUseCase(accountRepo, txRepo, new UnitOfWork(db));
+            var create = new CreateTransferUseCase(accountRepo, txRepo, new CategoryRepository(db), new FundRepository(db), new UnitOfWork(db));
 
             await create.ExecuteAsync(new CreateTransferUseCase.Input(
                 ing.Id, revolut.Id, new Money(200_000), DateTimeOffset.UtcNow, "wspolne zakupy"));
@@ -85,7 +85,7 @@ public class ManualTransferTest
             var (db, ing, revolut) = await SetupAsync(dbPath);
 
             var txRepo = new TransactionRepository(db);
-            var create = new CreateTransferUseCase(new AccountRepository(db), txRepo, new UnitOfWork(db));
+            var create = new CreateTransferUseCase(new AccountRepository(db), txRepo, new CategoryRepository(db), new FundRepository(db), new UnitOfWork(db));
             await create.ExecuteAsync(new CreateTransferUseCase.Input(
                 ing.Id, revolut.Id, new Money(200_000), DateTimeOffset.UtcNow));
 
@@ -112,7 +112,8 @@ public class ManualTransferTest
             var (db, ing, _) = await SetupAsync(dbPath);
 
             var create = new CreateTransferUseCase(
-                new AccountRepository(db), new TransactionRepository(db), new UnitOfWork(db));
+                new AccountRepository(db), new TransactionRepository(db),
+                new CategoryRepository(db), new FundRepository(db), new UnitOfWork(db));
 
             var act = async () => await create.ExecuteAsync(new CreateTransferUseCase.Input(
                 ing.Id, ing.Id, new Money(200_000), DateTimeOffset.UtcNow));

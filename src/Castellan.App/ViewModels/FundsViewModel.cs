@@ -8,11 +8,8 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace Castellan.App.ViewModels;
 
-/// <summary>
-/// Wiersz listy funduszy. Klasa obserwowalna, a nie rekord, bo znacznik „licz do
-/// poduszki" przełącza się wprost tutaj — Switch potrzebuje wiązania dwustronnego.
-/// </summary>
-public sealed partial class FundRow : ObservableObject
+/// <summary>Wiersz listy funduszy.</summary>
+public sealed class FundRow
 {
     public FundId Id { get; }
     public string Name { get; }
@@ -31,24 +28,11 @@ public sealed partial class FundRow : ObservableObject
 
     public bool IsNotDelayed => !IsDelayed;
 
-    private readonly Func<bool, Task> _onCushionChanged;
-    private readonly bool _ready;
-
-    [ObservableProperty] private bool _countsTowardCushion;
-
-    // Wartość początkową ustawiamy przed uzbrojeniem, bo inaczej samo zbudowanie
-    // listy zapisywałoby do bazy każdy wiersz z osobna przy każdym odświeżeniu.
-    partial void OnCountsTowardCushionChanged(bool value)
-    {
-        if (_ready) _ = _onCushionChanged(value);
-    }
-
     public FundRow(
         FundId id, string name, string kindDisplay, string balanceDisplay, string targetDisplay,
         string suggestedMonthlyDisplay, string periodsRemainingDisplay, string deadlineDisplay,
-        string deficitDisplay, bool isDelayed, double progress, bool countsTowardCushion,
-        ICommand contributeCommand, ICommand editCommand, ICommand deleteCommand,
-        Func<bool, Task> onCushionChanged)
+        string deficitDisplay, bool isDelayed, double progress,
+        ICommand contributeCommand, ICommand editCommand, ICommand deleteCommand)
     {
         Id = id;
         Name = name;
@@ -64,10 +48,6 @@ public sealed partial class FundRow : ObservableObject
         ContributeCommand = contributeCommand;
         EditCommand = editCommand;
         DeleteCommand = deleteCommand;
-
-        _countsTowardCushion = countsTowardCushion;
-        _onCushionChanged = onCushionChanged;
-        _ready = true;
     }
 }
 
@@ -75,7 +55,6 @@ public partial class FundsViewModel : ObservableObject
 {
     private readonly GetFundOverviewUseCase _overview;
     private readonly DeleteFundUseCase _deleteFund;
-    private readonly SetFundCushionFlagUseCase _setCushionFlag;
 
     public ObservableCollection<FundRow> Items { get; } = [];
 
@@ -99,12 +78,10 @@ public partial class FundsViewModel : ObservableObject
 
     public FundsViewModel(
         GetFundOverviewUseCase overview,
-        DeleteFundUseCase deleteFund,
-        SetFundCushionFlagUseCase setCushionFlag)
+        DeleteFundUseCase deleteFund)
     {
         _overview = overview;
         _deleteFund = deleteFund;
-        _setCushionFlag = setCushionFlag;
         PaydateDay = Microsoft.Maui.Storage.Preferences.Get("paydate_day", 0);
         PaydateText = PaydateDay > 0 ? PaydateDay.ToString() : "";
     }
@@ -145,13 +122,11 @@ public partial class FundsViewModel : ObservableObject
                     s.IsOpenEnded ? "" : s.IsDelayed ? $"⚠ Brakuje {s.Deficit}" : "✓ Na bieżąco",
                     s.IsDelayed,
                     s.Progress,
-                    s.CountsTowardCushion,
                     new AsyncRelayCommand(() =>
                         Shell.Current.GoToAsync($"contributeFund?fundId={fundId.Value}")),
                     new AsyncRelayCommand(() =>
                         Shell.Current.GoToAsync($"editFund?fundId={fundId.Value}")),
-                    new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance)),
-                    counts => ToggleCushionAsync(fundId, counts)));
+                    new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance))));
             }
             IsEmpty = Items.Count == 0;
         }
@@ -161,22 +136,6 @@ public partial class FundsViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// Zapisuje przestawiony znacznik. Lista nie jest przeładowywana — wiersz już
-    /// pokazuje nowy stan, a przeładowanie w trakcie przesuwania przełącznika
-    /// wyrzuciłoby użytkownika na górę listy.
-    /// </summary>
-    private async Task ToggleCushionAsync(FundId id, bool counts)
-    {
-        try
-        {
-            await _setCushionFlag.ExecuteAsync(id, counts);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine("[Funds.ToggleCushion] " + ex);
-        }
-    }
 
     private static Money Remaining(FundSummary s) =>
         new(Math.Max(0, s.TargetAmount.Grosze - s.Balance.Grosze));

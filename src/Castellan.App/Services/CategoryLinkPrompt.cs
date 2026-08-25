@@ -51,7 +51,9 @@ public sealed class CategoryLinkPrompt(
         var fund = active.FirstOrDefault(f => f.Name == choice);
         if (fund is null) return;
 
-        await contributeToFund.ExecuteAsync(fund.Id, amount, ct);
+        // Bez konta: transakcja w kategorii „Rezerwy" już istnieje — to ona wywołała
+        // to pytanie. Dopisanie drugiej policzyłoby tę samą kwotę dwa razy.
+        await contributeToFund.ExecuteAsync(fund.Id, amount, fromAccount: null, ct);
     }
 
     private async Task OfferDebtAsync(Money amount, CancellationToken ct)

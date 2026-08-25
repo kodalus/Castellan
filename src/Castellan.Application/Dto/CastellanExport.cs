@@ -42,8 +42,7 @@ public sealed record MonthBudgetDto(
 public sealed record FundDto(
     Guid Id, string Name, string Kind, long TargetAmount, string StartMonth,
     // Null dla funduszy otwartych (poduszka bezpieczeństwa).
-    string? Deadline, long Balance, bool IsArchived, string? LastContributionMonth = null,
-    bool CountsTowardCushion = false);
+    string? Deadline, long Balance, bool IsArchived, string? LastContributionMonth = null);
 
 public sealed record AssetDto(
     Guid Id, string Name, string Liquidity, long Value, string UpdatedOn, bool IsArchived);

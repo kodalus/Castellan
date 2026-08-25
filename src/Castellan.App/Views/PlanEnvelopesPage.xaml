@@ -42,6 +42,14 @@
                     IsVisible="{Binding HasPlannedIncome}"
                     Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
 
+            <!-- Stoi w Przychodach, a nie niżej przy podziale, bo odpowiada na to samo
+                 pytanie co wiersze wyżej — z czego finansuję ten miesiąc — tylko mierzy
+                 zamiast planować. I jako jedyna liczba na tym ekranie zawiera już to,
+                 co zostało z poprzedniego miesiąca. -->
+            <Button Text="{Binding BalanceHintDisplay}" Command="{Binding ApplyBalanceHintCommand}"
+                    IsVisible="{Binding HasBalanceHint}"
+                    Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
+
             <BoxView Style="{StaticResource Divider}" Margin="0,8" />
 
             <!-- ===== Podział środków ===== -->
@@ -68,11 +76,6 @@
             <!-- Przy wypłacie pod koniec miesiąca to ta kwota finansuje ten plan. -->
             <Button Text="{Binding PreviousIncomeHintDisplay}" Command="{Binding ApplyPreviousIncomeHintCommand}"
                     IsVisible="{Binding HasPreviousIncomeHint}"
-                    Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
-
-            <!-- Pomiar, nie suma z okresu: sam uwzględnia wydatki zrobione po wypłacie. -->
-            <Button Text="{Binding BalanceHintDisplay}" Command="{Binding ApplyBalanceHintCommand}"
-                    IsVisible="{Binding HasBalanceHint}"
                     Style="{StaticResource GhostButton}" HorizontalOptions="Fill" />
 
             <!-- Bez tego zdania ekran po prostu milczy i wygląda, jakby podpowiedzi

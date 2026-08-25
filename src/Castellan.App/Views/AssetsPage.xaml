@@ -37,7 +37,12 @@
                             </DataTrigger>
                         </Label.Triggers>
                     </Label>
-                    <Label Text="aktywa i fundusze minus zobowiązania" Style="{StaticResource Caption}" />
+                    <Label Text="{Binding NetWorthAssetsDisplay}" Style="{StaticResource Caption}" />
+                    <Label Text="{Binding NetWorthDebtsDisplay}" Style="{StaticResource Caption}" />
+
+                    <!-- Widoczna tylko wtedy, gdy naprawdę czegoś brakuje. -->
+                    <Label Text="{Binding MortgageHintDisplay}" Style="{StaticResource InfoCaption}"
+                           IsVisible="{Binding HasMortgageHint}" Margin="0,6,0,0" />
                 </VerticalStackLayout>
             </Border>
 
@@ -101,40 +106,6 @@
                         </VerticalStackLayout>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
-            </VerticalStackLayout>
-
-            <!-- Fundusze celowo osobno od poduszki: te pieniądze mają już właściciela
-                 (konkretny przyszły wydatek), więc nie są rezerwą na czarną godzinę. -->
-            <VerticalStackLayout IsVisible="{Binding HasFunds}" Margin="0,14,0,0">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" Margin="16,0,16,4">
-                    <Label Grid.Column="0" Text="Fundusze" Style="{StaticResource SectionHeader}"
-                           VerticalOptions="Center" />
-                    <VerticalStackLayout Grid.Column="1" Spacing="1">
-                        <Label Text="{Binding FundsTotalDisplay}" Style="{StaticResource RowMeta}" />
-                        <Label Text="{Binding FundsCushionNoteDisplay}" Style="{StaticResource RowMeta}"
-                               IsVisible="{Binding FundsCushionNoteDisplay, Converter={StaticResource IsNotEmpty}}" />
-                    </VerticalStackLayout>
-                </Grid>
-
-                <VerticalStackLayout BindableLayout.ItemsSource="{Binding FundRows}">
-                    <BindableLayout.ItemTemplate>
-                        <DataTemplate x:DataType="vm:FundRowVm">
-                            <Border Style="{StaticResource CardRow}">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                                    <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
-                                        <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
-                                        <!-- Fundusz wliczony do poduszki zostaje na liście
-                                             z dopiskiem, zamiast z niej znikać. -->
-                                        <Label Text="{Binding CushionNote}" Style="{StaticResource InfoCaption}"
-                                               IsVisible="{Binding HasCushionNote}" />
-                                    </VerticalStackLayout>
-                                    <Label Grid.Column="1" Text="{Binding ValueDisplay}"
-                                           Style="{StaticResource RowValue}" VerticalOptions="Center" />
-                                </Grid>
-                            </Border>
-                        </DataTemplate>
-                    </BindableLayout.ItemTemplate>
-                </VerticalStackLayout>
             </VerticalStackLayout>
 
             <!-- Zobowiązania: lustro funduszy — saldo maleje do zera. Kolejność od

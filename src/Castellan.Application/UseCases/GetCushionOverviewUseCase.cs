@@ -30,7 +30,7 @@ public sealed record CushionOverview(
 
 public sealed class GetCushionOverviewUseCase(
     IAssetRepository assets,
-    IFundRepository funds,
+    ICategoryRepository categories,
     ITransactionRepository transactions,
     GetAccountsWithBalancesUseCase accountBalances)
 {
@@ -53,24 +53,17 @@ public sealed class GetCushionOverviewUseCase(
         //
         // Poziom natychmiastowy, bo przelew z konta oszczędnościowego na własne konto
         // rozliczeniowe jest w praktyce natychmiastowy.
+        //
+        // Salda FUNDUSZY celowo nie wchodzą tu wcale. Fundusz jest tylko kopertą nad
+        // pieniędzmi leżącymi na którymś z tych kont, więc doliczenie go liczyłoby tę
+        // samą złotówkę dwa razy. Pieniądze poza kontami znanymi aplikacji dodaje się
+        // jako aktywo — i wtedy są tu poniżej, razem z pozostałymi aktywami.
         var today = DateOnly.FromDateTime(DateTime.Today);
-        var checkingRows = (await accountBalances.ExecuteAsync(ct))
+        var accountRows = (await accountBalances.ExecuteAsync(ct))
             .Where(a => !a.IsArchived)
             .Select(a => new AssetRow(
                 default, $"Konto: {a.Name}", AssetLiquidity.Immediate,
                 a.CurrentBalance, today, IsAccount: true))
-            .ToList();
-
-        // Do „ile miesięcy wytrzymam" wchodzą tylko fundusze jawnie zaznaczone jako
-        // rezerwa. Domyślnie jest tak zaznaczona poduszka bezpieczeństwa; pozostałe
-        // mają przypisany konkretny przyszły wydatek (OC, urlop, podatek), więc ich
-        // doliczenie zawyżałoby odporność. Ostatnie słowo ma jednak użytkownik —
-        // tylko on wie, co u niego realnie jest rezerwą.
-        var cushionFundRows = (await funds.ListAsync(ct))
-            .Where(f => !f.IsArchived && f.CountsTowardCushion)
-            .Select(f => new AssetRow(
-                default, $"Fundusz: {f.Name}", AssetLiquidity.Immediate,
-                f.Balance, today, IsAccount: true))
             .ToList();
 
         var cumulative = 0L;
@@ -84,7 +77,7 @@ public sealed class GetCushionOverviewUseCase(
                 .ToList();
 
             if (liquidity == AssetLiquidity.Immediate)
-                tierAssets = [.. checkingRows, .. cushionFundRows, .. tierAssets];
+                tierAssets = [.. accountRows, .. tierAssets];
 
             var tierValue = tierAssets.Sum(a => a.Value.Grosze);
             cumulative += tierValue;
@@ -109,8 +102,18 @@ public sealed class GetCushionOverviewUseCase(
         return new CushionOverview(tiers, avgExpense, monthsUsed, totalMonths, new Money(cumulative));
     }
 
+    /// <summary>
+    /// Średnia liczy WYDATKI NA ŻYCIE, więc pomija kategorię „Rezerwy". Odkładanie na
+    /// bok nie jest kosztem utrzymania — w miesiącu bez przychodu przestaje się odkładać
+    /// pierwsze. Gdyby wchodziło do średniej, każda złotówka odłożona na fundusz
+    /// SKRACAŁABY liczbę miesięcy, które ta sama złotówka wydłuża.
+    /// </summary>
     private async Task<(Money avg, int months)> ComputeAvgExpenseAsync(int count, CancellationToken ct)
     {
+        var reserveId = (await categories.ListAsync(ct))
+            .FirstOrDefault(c => c.Name.Equals(ConfirmTransferUseCase.ReserveCategoryName,
+                StringComparison.OrdinalIgnoreCase))?.Id;
+
         var today   = DateOnly.FromDateTime(DateTime.Today);
         var upTo    = new YearMonth(today.Year, today.Month);
         var from    = upTo;
@@ -123,7 +126,8 @@ public sealed class GetCushionOverviewUseCase(
         {
             var txs = await transactions.ListForMonthAsync(current, ct);
             var expenses = txs
-                .Where(t => !t.IsExcludedFromCalculations && t.Amount.IsNegative)
+                .Where(t => !t.IsExcludedFromCalculations && t.Amount.IsNegative
+                         && (reserveId is null || t.CategoryId != reserveId))
                 .Sum(t => Math.Abs(t.Amount.Grosze));
             if (expenses > 0) { total += expenses; usedMonths++; }
             current = current.Next();

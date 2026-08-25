@@ -18,7 +18,8 @@ public sealed record TransactionRow(
     bool IsExcluded,
     string? FundName = null,
     bool IsEditable = true,
-    bool IsIncome = false)
+    bool IsIncome = false,
+    bool IsTransfer = false)
 {
     public bool IsPaidFromFund => FundName is not null;
     public string FundLabel => FundName is not null ? $"⛃ z funduszu: {FundName}" : "";
@@ -88,7 +89,8 @@ public partial class TransactionsViewModel : ObservableObject
                 tx.IsExcludedFromCalculations,
                 fundName,
                 isEditable,
-                !tx.Amount.IsNegative));
+                !tx.Amount.IsNegative,
+                tx.Kind == TransactionKind.Transfer));
         }
         IsEmpty = Transactions.Count == 0;
     }
@@ -187,8 +189,29 @@ public partial class TransactionsViewModel : ObservableObject
     {
         try
         {
-            await _delete.ExecuteAsync(row.Id, ct);
-            Transactions.Remove(row);
+            // Przelew ginie parami. Powiedz to przed, a nie przez zniknięcie drugiego
+            // wiersza, którego użytkownik nie tykał.
+            if (row.IsTransfer && Shell.Current?.CurrentPage is Page confirmPage)
+            {
+                var ok = await confirmPage.DisplayAlertAsync(
+                    "Usunąć przelew?",
+                    "To jedna z dwóch stron przelewu między Twoimi kontami. Znikną obie — "
+                    + "inaczej saldo jednego konta zmieniłoby się bez odpowiednika na drugim.",
+                    "Usuń obie", "Anuluj");
+                if (!ok) return;
+            }
+
+            var removed = await _delete.ExecuteAsync(row.Id, ct);
+
+            // Usuń WSZYSTKIE wiersze, które naprawdę zniknęły z bazy. Sam dotknięty
+            // wiersz to za mało: przy przelewie druga noga zostawała na ekranie i przy
+            // próbie jej usunięcia leciał wyjątek o nieistniejącej transakcji.
+            foreach (var gone in removed)
+            {
+                var stale = Transactions.FirstOrDefault(t => t.Id == gone);
+                if (stale is not null) Transactions.Remove(stale);
+            }
+
             IsEmpty = Transactions.Count == 0;
         }
         catch (Exception ex)

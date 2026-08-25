@@ -16,8 +16,7 @@ public sealed record FundSummary(
     Money SuggestedMonthly,
     int PeriodsRemaining,
     DateOnly? Deadline,
-    double Progress,
-    bool CountsTowardCushion)
+    double Progress)
 {
     /// <summary>Fundusz otwarty: cel bez daty, zbierany aż uzbiera.</summary>
     public bool IsOpenEnded => Deadline is null;
@@ -49,8 +48,7 @@ public sealed class GetFundOverviewUseCase(IFundRepository funds)
                 f.SuggestedMonthly(today, paydateDay),
                 f.PeriodsRemaining(today, paydateDay),
                 f.Deadline,
-                f.Progress,
-                f.CountsTowardCushion))
+                f.Progress))
             .OrderBy(s => s.IsDelayed ? 0 : 1)
             .ThenBy(s => s.Deadline)
             .ToList();

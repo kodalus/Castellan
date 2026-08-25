@@ -164,6 +164,11 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     /// realnie leży na kontach rozliczeniowych. Sama uwzględnia wydatki zrobione po
     /// wypłacie, więc działa też w miesiącu przejściowym, zanim uzbiera się bufor.
     ///
+    /// To zarazem odpowiedź na „ile zostało z poprzedniego miesiąca": saldo konta JEST
+    /// resztą z poprzedniego miesiąca powiększoną o to, co wpłynęło od tamtej pory.
+    /// Osobna pozycja w Przychodach liczyłaby tę resztę drugi raz — wypłata siedzi
+    /// i w wierszu przychodu, i w saldzie konta.
+    ///
     /// Konta oszczędnościowe są pominięte celowo — tam zwykle leżą rezerwy i fundusze,
     /// czyli pieniądze, które mają już przypisane zadanie. To świadoma różnica względem
     /// Majątku, gdzie liczą się salda wszystkich kont: tam pytanie brzmi „ile mam",
@@ -181,7 +186,9 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
 
         _suggestedBalance  = grosze / 100m;
         HasBalanceHint     = grosze > 0;
-        BalanceHintDisplay = $"Na kontach rozliczeniowych: {_suggestedBalance:N2} zł — wstaw jako środki";
+        BalanceHintDisplay =
+            $"Na kontach rozliczeniowych: {_suggestedBalance:N2} zł "
+            + "— w tym reszta z poprzedniego miesiąca";
     }
 
     private async Task<decimal> SumIncomeAsync(YearMonth month, CancellationToken ct)

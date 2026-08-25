@@ -15,8 +15,10 @@ public partial class AddAccountViewModel : ObservableObject
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private int _kindIndex;
     [ObservableProperty] private string _balanceText = "0";
+    [ObservableProperty] private int _bankIndex;
 
     public List<string> KindOptions { get; } = ["Rachunek bieżący", "Oszczędnościowe"];
+    public List<string> BankOptions => BankChoices.Options;
 
     public AddAccountViewModel(CreateAccountUseCase create) => _create = create;
 
@@ -32,7 +34,9 @@ public partial class AddAccountViewModel : ObservableObject
         try
         {
             await _create.ExecuteAsync(
-                new CreateAccountUseCase.Input(Name.Trim(), kind, new Money(grosze), DateTimeOffset.Now), ct);
+                new CreateAccountUseCase.Input(
+                    Name.Trim(), kind, new Money(grosze), DateTimeOffset.Now,
+                    BankChoices.FromIndex(BankIndex)), ct);
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)

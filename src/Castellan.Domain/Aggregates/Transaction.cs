@@ -112,6 +112,22 @@ public class Transaction
         CategoryId = Category.TransferId;
     }
 
+    /// <summary>
+    /// Przelew na własne konto oszczędnościowe to jedyny przelew, który OBCIĄŻA budżet
+    /// miesiąca: te pieniądze przestają być do wydania, dokładnie tak jak zakup. Noga
+    /// wychodząca zostaje więc zwykłym wydatkiem w kategorii „Rezerwy" zamiast zniknąć
+    /// jako przelew — bez tego koperta Rezerwy nigdy nie pokazywała ani grosza wydanego
+    /// i była planem, którego nie dało się z niczym porównać.
+    ///
+    /// Noga przychodząca jest wykluczana jak każdy przelew (SetTransferGroup) — inaczej
+    /// ta sama kwota wyszłaby jako przychód na koncie docelowym.
+    /// </summary>
+    public void MarkAsReserveMove(CategoryId reserveCategory)
+    {
+        ProposedTransferGroupId = null;
+        CategoryId = reserveCategory;
+    }
+
     public void PayFromFund(FundId fundId) => PaidFromFundId = fundId;
 
     public void ClearFundPayment() => PaidFromFundId = null;

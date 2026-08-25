@@ -1,4 +1,5 @@
 using Castellan.Application.Repositories;
+using Castellan.Domain;
 using Castellan.Domain.ValueObjects;
 
 namespace Castellan.Application.UseCases;
@@ -8,7 +9,8 @@ public sealed record TransferProposalOverview(
     string FromAccountName,
     string ToAccountName,
     Money Amount,
-    DateTimeOffset OccurredAt);
+    DateTimeOffset OccurredAt,
+    bool ToIsSavings);
 
 public sealed class GetTransferProposalsUseCase(
     ITransactionRepository transactions,
@@ -18,7 +20,7 @@ public sealed class GetTransferProposalsUseCase(
     {
         var proposed = await transactions.ListProposedTransfersAsync(ct);
         var allAccounts = await accounts.ListAsync(ct);
-        var accountMap = allAccounts.ToDictionary(a => a.Id, a => a.Name);
+        var accountMap = allAccounts.ToDictionary(a => a.Id, a => a);
 
         var result = new List<TransferProposalOverview>();
 
@@ -31,15 +33,18 @@ public sealed class GetTransferProposalsUseCase(
             var from = pair[0].Amount.IsNegative ? pair[0] : pair[1];
             var to   = pair[0].Amount.IsNegative ? pair[1] : pair[0];
 
-            var fromName = accountMap.TryGetValue(from.AccountId, out var n0) ? n0 : "?";
-            var toName   = accountMap.TryGetValue(to.AccountId,   out var n1) ? n1 : "?";
+            var fromAccount = accountMap.GetValueOrDefault(from.AccountId);
+            var toAccount   = accountMap.GetValueOrDefault(to.AccountId);
 
             result.Add(new TransferProposalOverview(
                 group.Key,
-                fromName,
-                toName,
+                fromAccount?.Name ?? "?",
+                toAccount?.Name ?? "?",
                 new Money(Math.Abs(from.Amount.Grosze)),
-                from.OccurredAt));
+                from.OccurredAt,
+                // Przelew NA własne oszczędnościowe to zwykle odkładanie na rezerwę,
+                // a nie zwykłe przekładanie pieniędzy — ekran ma o to dopytać.
+                toAccount?.Kind == AccountKind.Savings));
         }
 
         return result;
