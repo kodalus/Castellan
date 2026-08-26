@@ -88,10 +88,10 @@ public partial class QuickAddTransactionViewModel : ObservableObject
 
         try
         {
-            await _addTx.ExecuteAsync(
+            var txId = await _addTx.ExecuteAsync(
                 new AddManualTransactionUseCase.Input(_defaultAccountId, new Money(grosze), DateTimeOffset.Now, categoryId, null), ct);
 
-            await _categoryLink.OfferAsync(SelectedCategoryName, new Money(amountGrosze), ct);
+            await _categoryLink.OfferAsync(SelectedCategoryName, new Money(amountGrosze), txId, ct);
 
             await Shell.Current.GoToAsync("..");
         }

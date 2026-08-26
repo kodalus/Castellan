@@ -31,6 +31,7 @@ public sealed class AccountRow
         {
             AccountKind.Checking => "Rachunek bieżący",
             AccountKind.Savings  => "Oszczędnościowe",
+            AccountKind.Cash     => "Gotówka",
             _                    => kind.ToString(),
         };
         IsDefault = isDefault;

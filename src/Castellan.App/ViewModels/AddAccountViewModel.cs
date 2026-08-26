@@ -17,7 +17,7 @@ public partial class AddAccountViewModel : ObservableObject
     [ObservableProperty] private string _balanceText = "0";
     [ObservableProperty] private int _bankIndex;
 
-    public List<string> KindOptions { get; } = ["Rachunek bieżący", "Oszczędnościowe"];
+    public List<string> KindOptions => AccountKinds.Options;
     public List<string> BankOptions => BankChoices.Options;
 
     public AddAccountViewModel(CreateAccountUseCase create) => _create = create;
@@ -29,7 +29,7 @@ public partial class AddAccountViewModel : ObservableObject
         if (!decimal.TryParse(BalanceText.Replace(',', '.'), NumberStyles.Any, CultureInfo.InvariantCulture, out var dec)) return;
 
         var grosze = (long)Math.Round(dec * 100, MidpointRounding.AwayFromZero);
-        var kind = KindIndex == 1 ? AccountKind.Savings : AccountKind.Checking;
+        var kind = AccountKinds.FromIndex(KindIndex);
 
         try
         {

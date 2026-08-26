@@ -24,7 +24,7 @@ public partial class EditAccountViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
-    public List<string> KindOptions { get; } = ["Rachunek bieżący", "Oszczędnościowe"];
+    public List<string> KindOptions => AccountKinds.Options;
     public List<string> BankOptions => BankChoices.Options;
 
     private AccountId? _id;
@@ -51,7 +51,7 @@ public partial class EditAccountViewModel : ObservableObject
         if (account is null) return;
 
         Name = account.Name;
-        KindIndex = account.Kind == AccountKind.Savings ? 1 : 0;
+        KindIndex = AccountKinds.IndexOf(account.Kind);
         BankIndex = BankChoices.IndexOf(account.BankKey);
     }
 
@@ -69,7 +69,7 @@ public partial class EditAccountViewModel : ObservableObject
             await _update.ExecuteAsync(new UpdateAccountUseCase.Input(
                 id,
                 Name.Trim(),
-                KindIndex == 1 ? AccountKind.Savings : AccountKind.Checking,
+                AccountKinds.FromIndex(KindIndex),
                 BankChoices.FromIndex(BankIndex)), ct);
 
             await Shell.Current.GoToAsync("..");

@@ -15,8 +15,18 @@ namespace Castellan.App.ViewModels;
 public sealed record AccountOption(AccountId Id, string Name);
 public sealed record CategoryOption(CategoryId Id, string Name);
 
+[QueryProperty(nameof(Amount), "amount")]
 public partial class AddTransactionViewModel : ObservableObject
 {
+    /// <summary>
+    /// Kwota podpowiedziana z nierozpoznanego powiadomienia. Tylko punkt wyjścia —
+    /// znaku stamtąd nie znamy, więc wydatek albo wpływ wybiera się jak zwykle.
+    /// </summary>
+    public string Amount
+    {
+        set => AmountText = Uri.UnescapeDataString(value ?? "");
+    }
+
     private const string DefaultExpenseCategoryName = "Produkty do domu";
 
     private readonly IAccountRepository _accounts;
@@ -141,11 +151,11 @@ public partial class AddTransactionViewModel : ObservableObject
 
         try
         {
-            await _addTx.ExecuteAsync(
+            var txId = await _addTx.ExecuteAsync(
                 new AddManualTransactionUseCase.Input(accountId, new Money(grosze), occurredAt, categoryId, Note), ct);
 
             if (IsExpense)
-                await _categoryLink.OfferAsync(categoryName, new Money(magnitude), ct);
+                await _categoryLink.OfferAsync(categoryName, new Money(magnitude), txId, ct);
 
             await Shell.Current.GoToAsync("..");
         }

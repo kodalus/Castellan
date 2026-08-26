@@ -66,7 +66,7 @@ public class ReserveEnvelopeTests
             new GetCushionOverviewUseCase(
                 new AssetRepository(db), catRepo, txRepo,
                 new GetAccountsWithBalancesUseCase(new AccountRepository(db), txRepo)),
-            new ContributeToFundUseCase(fundRepo, catRepo, txRepo, uow),
+            new ContributeToFundUseCase(fundRepo, uow),
             checking, savings, reserve);
     }
 
@@ -225,8 +225,13 @@ public class ReserveEnvelopeTests
     }
 
     [Fact]
-    public async Task Contributing_from_the_funds_screen_records_the_expense_only_when_an_account_is_given()
+    public async Task Raising_a_fund_balance_alone_never_touches_any_account()
     {
+        // ContributeToFundUseCase podnosi WYŁĄCZNIE saldo funduszu. Był tu kiedyś wariant
+        // z kontem, który dopisywał wydatek w „Rezerwach" — i zapisywał połowę zdarzenia:
+        // ile ubyło ze źródła, bez tego, gdzie pieniądze wylądowały. Suma majątku spadała,
+        // mimo że pieniądze nadal były. Ruch pieniędzy idzie teraz przelewem, który ma
+        // obie strony.
         var dbPath = Path.Combine(Path.GetTempPath(), $"castellan_res_{Guid.NewGuid():N}.db");
         try
         {
@@ -238,20 +243,12 @@ public class ReserveEnvelopeTests
             await env.Db.SaveChangesAsync();
             env.Db.ChangeTracker.Clear();
 
-            // Bez konta: sam wzrost salda, żadnego śladu w budżecie — tak działa droga
-            // „wydatek w Rezerwach zapytał o fundusz", gdzie transakcja już istnieje.
-            await env.Contribute.ExecuteAsync(fund.Id, new Money(10_000));
+            await env.Contribute.ExecuteAsync(fund.Id, new Money(30_000));
             env.Db.ChangeTracker.Clear();
 
-            (await env.Db.Transactions.CountAsync()).Should().Be(0);
-            (await ReserveSpentAsync(env)).Grosze.Should().Be(0);
-
-            // Z kontem: koperta widzi odłożone pieniądze.
-            await env.Contribute.ExecuteAsync(fund.Id, new Money(30_000), env.Checking.Id);
-            env.Db.ChangeTracker.Clear();
-
-            (await env.Db.Funds.SingleAsync()).Balance.Grosze.Should().Be(40_000);
-            (await ReserveSpentAsync(env)).Grosze.Should().Be(-30_000);
+            (await env.Db.Funds.SingleAsync()).Balance.Grosze.Should().Be(30_000);
+            (await env.Db.Transactions.CountAsync()).Should().Be(0, "żaden ruch na koncie się nie odbył");
+            (await ReserveSpentAsync(env)).Grosze.Should().Be(0, "koperty obciąża dopiero przelew");
         }
         finally
         {

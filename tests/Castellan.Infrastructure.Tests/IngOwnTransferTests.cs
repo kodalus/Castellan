@@ -235,10 +235,9 @@ public class IngOwnTransferTests
         // Kontrola do pochłaniania pojedynczych powiadomień: opiera się ono na samej
         // kwocie, więc prawdziwy zakup za dokładnie tę samą złotówkę musi przeżyć.
         //
-        // Zakup jest 20 minut później, bo NIEZALEŻNIE od tej zmiany działa starsze,
-        // zapasowe okno deduplikacji: ta sama kwota co do grosza na tym samym koncie
-        // w ciągu 15 minut jest uznawana za duplikat. To osobne, wcześniejsze
-        // zachowanie — tu chodzi o to, żeby nowe pochłanianie go nie rozszerzyło.
+        // Zakup jest 10 minut później, czyli WEWNĄTRZ zapasowego okna 15 minut. Kiedyś
+        // przez to znikał: tamta reguła patrzyła na samą kwotę i konto. Odkąd bierze
+        // pod uwagę także sprzedawcę, „Biedronka" i noga przelewu to dwie różne rzeczy.
         var dbPath = Path.Combine(Path.GetTempPath(), $"castellan_own_{Guid.NewGuid():N}.db");
         try
         {
@@ -248,7 +247,7 @@ public class IngOwnTransferTests
             await ingest.ExecuteAsync(OwnTransfer(now));
             await ingest.ExecuteAsync(new IngestRawNotificationUseCase.Input(
                 IngPackage, Title, "1 PLN mniej na Twoim koncie - Biedronka - płatność BLIK",
-                now.AddMinutes(20)));
+                now.AddMinutes(10)));
             db.ChangeTracker.Clear();
 
             (await db.Transactions.CountAsync()).Should().Be(3,

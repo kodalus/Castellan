@@ -32,7 +32,7 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
         {
             ExportedAt = DateTimeOffset.UtcNow.ToString("O"),
             Accounts = accounts.Select(a => new AccountDto(
-                a.Id.Value, a.Name, (int)a.Kind, (int)a.LiquidityTier,
+                a.Id.Value, a.Name, (int)a.Kind,
                 a.BankKey, a.IsArchived, a.LastReconciledBalance.Grosze,
                 a.LastReconciledAt.ToString("O"))).ToList(),
             Categories = categories.Select(c => new CategoryDto(
@@ -84,8 +84,8 @@ internal sealed class BackupService(CastellanDbContext db) : IBackupService
 
             foreach (var a in data.Accounts)
                 await db.Database.ExecuteSqlRawAsync(
-                    "INSERT INTO Accounts (Id, Name, Kind, LiquidityTier, BankKey, IsArchived, LastReconciledBalance, LastReconciledAt) VALUES ({0},{1},{2},{3},{4},{5},{6},{7})",
-                    a.Id, a.Name, a.Kind, a.LiquidityTier,
+                    "INSERT INTO Accounts (Id, Name, Kind, BankKey, IsArchived, LastReconciledBalance, LastReconciledAt) VALUES ({0},{1},{2},{3},{4},{5},{6})",
+                    a.Id, a.Name, a.Kind,
                     Null(a.BankKey, SqliteType.Text),
                     a.IsArchived ? 1 : 0, a.LastReconciledBalance, a.LastReconciledAt);
 

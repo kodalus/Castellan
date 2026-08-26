@@ -1,6 +1,6 @@
 # Castellan
 
-Prywatna aplikacja do budżetu domowego na Androida. Offline, jeden użytkownik, bez backendu i bez konta — dane nie opuszczają telefonu.
+Prywatna aplikacja do budżetu domowego na Androida. Offline, jeden użytkownik, bez backendu i bez konta.
 
 Metoda: budżet kopertowy oparty na dostępnych środkach. Założenie, wokół którego zbudowana jest całość: **aplikacja nie może polegać na pamięci użytkownika**. Stąd wyłapywanie transakcji z powiadomień bankowych zamiast proszenia o ich wpisywanie.
 
@@ -124,7 +124,7 @@ Ikony zakładek to jednokolorowe obrysy SVG 24×24 w `Resources/Images/tab_*.svg
 ## Kopia zapasowa
 
 Zakładka **Kopia**:
-- **Eksport** — serializuje wszystko do JSON i udostępnia przez Android Share Sheet (Dysk, mail, cokolwiek).
+- **Eksport** — serializuje wszystko do JSON i udostępnia przez Android Share Sheet (Dysk, mail, cokolwiek). Plik jest zwykłym, nieszyfrowanym JSON-em z całą historią finansową; o to, gdzie trafia, dba użytkownik.
 - **Import** — wczytuje plik i **zastępuje nim wszystkie obecne dane**; operacji nie da się cofnąć.
 
 Nazwa pliku: `castellan_RRRRMMDD_GGmmss.json`; schemat niesie pole `Version`, obecnie `1`. Kopie sprzed dodania jakiegoś modułu wczytują się poprawnie — brakujące sekcje są traktowane jako puste.

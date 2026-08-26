@@ -33,6 +33,7 @@ public partial class InboxViewModel : ObservableObject
     private readonly ConfirmTransferUseCase _confirmTransfer;
     private readonly RejectTransferUseCase _rejectTransfer;
     private readonly IFundRepository _funds;
+    private readonly GetUnrecognizedNotificationsUseCase _unrecognized;
 
     public ObservableCollection<UnsortedTxRow> Items { get; } = [];
     public ObservableCollection<TransferProposalRow> Proposals { get; } = [];
@@ -46,6 +47,14 @@ public partial class InboxViewModel : ObservableObject
     private bool _isEmpty = true;
 
     [ObservableProperty] private bool _hasProposals;
+
+    /// <summary>
+    /// Powiadomienia z kwotą, których parser nie zrozumiał. Baner stoi w Skrzynce, bo to
+    /// jedyny ekran, na który zagląda się po to, żeby coś rozstrzygnąć — schowana lista
+    /// byłaby tym samym co brak listy.
+    /// </summary>
+    [ObservableProperty] private string _unrecognizedDisplay = "";
+    [ObservableProperty] private bool _hasUnrecognized;
 
     /// <summary>
     /// Tryb pracy. Bez tego wyboru osoba, która nie ma powiadomień bankowych i nie
@@ -86,7 +95,8 @@ public partial class InboxViewModel : ObservableObject
         GetTransferProposalsUseCase getProposals,
         ConfirmTransferUseCase confirmTransfer,
         RejectTransferUseCase rejectTransfer,
-        IFundRepository funds)
+        IFundRepository funds,
+        GetUnrecognizedNotificationsUseCase unrecognized)
     {
         _transactions = transactions;
         _permission = permission;
@@ -94,6 +104,7 @@ public partial class InboxViewModel : ObservableObject
         _confirmTransfer = confirmTransfer;
         _rejectTransfer = rejectTransfer;
         _funds = funds;
+        _unrecognized = unrecognized;
     }
 
     [RelayCommand]
@@ -135,6 +146,12 @@ public partial class InboxViewModel : ObservableObject
                     new AsyncRelayCommand(() => RejectProposalAsync(groupId))));
             }
             HasProposals = Proposals.Count > 0;
+
+            var unrecognized = await _unrecognized.ExecuteAsync(ct);
+            HasUnrecognized = unrecognized.Count > 0;
+            UnrecognizedDisplay = unrecognized.Count == 1
+                ? "1 powiadomienie z kwotą, którego nie zrozumiałam"
+                : $"{unrecognized.Count} powiadomień z kwotą, których nie zrozumiałam";
         }
         catch (Exception ex)
         {
@@ -149,6 +166,10 @@ public partial class InboxViewModel : ObservableObject
     /// użytkownik, więc jest pytany — ale tylko wtedy, gdy cel naprawdę jest kontem
     /// oszczędnościowym.
     /// </summary>
+    [RelayCommand]
+    private static async Task OpenUnrecognizedAsync() =>
+        await Shell.Current.GoToAsync("unrecognized");
+
     private async Task ConfirmProposalAsync(Guid groupId, bool toIsSavings)
     {
         if (toIsSavings && Shell.Current?.CurrentPage is Page page)

@@ -177,11 +177,36 @@ Znak kwoty: **wydatek ujemny, przychód dodatni**. Jednolita reguła w całym sy
 | `Id` | `AccountId` | |
 | `Name` | `string` | |
 | `BankKey` | `string?` | bank konta z `Banks.Known` — zawęża dopasowanie powiadomień; `null` = nieustawiony |
-| `Kind` | `AccountKind` | `Checking`, `Savings` |
-| `LiquidityTier` | `LiquidityTier` | `Immediate`, `Month`, `Locked` — etap 5, domyślnie `Immediate` |
+| `Kind` | `AccountKind` | `Checking`, `Savings`, `Cash` |
 | `LastReconciledBalance` | `Money` | |
 | `LastReconciledAt` | `DateTimeOffset` | |
 | `IsArchived` | `bool` | konta nie są usuwane |
+
+**Gotówka jest kontem, nie wyjątkiem.** Portfel ma saldo, wychodzą z niego wydatki,
+da się go uzgodnić przeliczeniem zawartości, a odłożenie pieniędzy do szuflady jest
+przelewem — nie zniknięciem. Bez takiego konta wydatek gotówkowy obciążał konto bankowe,
+którego użytkownik nie ruszał, i zaniżał jego saldo.
+
+Osobny `Kind`, a nie „rachunek bieżący nazwany Gotówka", z dwóch powodów. Lista kont
+przestaje kłamać. I — ważniejsze — portfel wypada z awaryjnego wyboru konta przy
+powiadomieniach (11.1): gdy treść nie mówi, którego konta dotyczy, wybór spada na pierwsze
+konto rozliczeniowe w kolejności alfabetycznej, a portfel potrafi tam wygrać i przejąć
+płatność kartą, której nigdy nie widział. Żaden bank nie powiadamia o gotówce, więc
+trafienie tam byłoby zawsze błędem; gdy nie zostaje nic innego, powiadomienie zostaje
+nierozpoznane (11.1a) zamiast wylądować w cudzym miejscu.
+
+Gotówka wchodzi natomiast do podpowiedzi „Na kontach i w gotówce" przy planowaniu:
+pieniądze w portfelu są do wydania w tym miesiącu jak każde inne.
+
+**Bez poziomu płynności.** Konto miało kiedyś pole `LiquidityTier` (`Immediate` /
+`Month` / `Locked`) — zawsze o wartości `Immediate` i nigdy nieczytane. Dublowało przy tym
+pojęcie, które już działa: `Asset.Liquidity` ma cztery poziomy i jest realnie używane
+w wyliczeniu poduszki (11.8). Dwie niekompatybilne skale na jedną rzecz są gorsze niż jedna,
+więc pole zniknęło razem z kolumną (`DropAccountLiquidityTier`).
+
+Konto z okresem wypowiedzenia — lokata — opisuje się jako **aktywo**: nie wiszą na nim
+transakcje i nie uzgadnia się jego salda, więc agregat `Account` i tak by do niego nie
+pasował.
 
 Bieżące saldo nie jest przechowywane. Obliczane jest jako:
 
@@ -455,7 +480,7 @@ Niezmiennik N-1 jest centralny. Właśnie jego brak w Excelu pozwalał na planow
 ```sql
 CREATE TABLE Accounts (
     Id TEXT PRIMARY KEY, Name TEXT NOT NULL, BankKey TEXT NULL,
-    Kind INTEGER NOT NULL, LiquidityTier INTEGER NOT NULL DEFAULT 0,
+    Kind INTEGER NOT NULL,
     LastReconciledBalance INTEGER NOT NULL, LastReconciledAt TEXT NOT NULL,
     IsArchived INTEGER NOT NULL DEFAULT 0);
 
@@ -509,7 +534,7 @@ CREATE TABLE Funds (
 
 CREATE TABLE Assets (
     Id TEXT PRIMARY KEY, Name TEXT NOT NULL, CurrentValue INTEGER NOT NULL,
-    ValuedAt TEXT NOT NULL, LiquidityTier INTEGER NOT NULL,
+    ValuedAt TEXT NOT NULL, Liquidity INTEGER NOT NULL,
     IsInMonthlyBudget INTEGER NOT NULL DEFAULT 0);
 ```
 
@@ -682,6 +707,17 @@ Jeśli znaleziono kandydata z `Kind == Authorization`, a nowa transakcja jest `R
 
 Próg 2% i okno 1 dzień wynieść do ustawień: dobrać empirycznie na podstawie własnych banków.
 
+**Zapasowe okno 15 minut ogląda też sprzedawcę.** Reguła „ta sama kwota co do grosza, to
+samo konto, kwadrans" patrzyła wyłącznie na kwotę i gubiła przez to prawdziwe transakcje —
+wykryte własnym testem kontrolnym, w którym zakup za 1 zł zniknął, bo dziesięć minut
+wcześniej poszedł przelew na 1 zł. Teraz różni **znani** sprzedawcy rozstrzygają na nie;
+brak nazwy po którejkolwiek stronie to brak informacji, a nie dowód różnicy, więc reguła
+po samej kwocie zostaje tam, po co powstała.
+
+Ta sama reguła pomija też wpisy należące do przelewu (`TransferGroupId` lub
+`ProposedTransferGroupId`). Noga przelewu jest w pełni wyjaśniona przez sam przelew,
+a powiadomienie, które ją opisuje, przygarnia osobne przejście z oknem 5 minut (11.2).
+
 **Wdrożone odstępstwo — para bank + Portfel Google.** Powyższe reguły zakładają zgodny
 `MerchantKey`, a dla tej pary regularnie się nie zgadza: Portfel podaje nazwę prawną
 spółki, bank markę. Dlatego istnieje druga ścieżka: identyczna kwota co do grosza,
@@ -711,6 +747,26 @@ KAŻDE powiadomienie z tego banku lądowało na tym samym koncie — pierwszym a
 drugiej; wspólny przedrostek długości 5 zrównuje polskie końcówki („wspolne" / „wspolny").
 Przy remisie wygrywa konto, którego nazwa nie ma słów spoza podpowiedzi.
 
+### 11.1a Powiadomienia nierozpoznane
+
+Powiadomienie, którego żaden parser nie rozumie, zostaje zapisane ze statusem `Unparsed`
+i do niedawna na tym się kończyło: **żaden ekran nie odwoływał się do `ParseStatus`**.
+Tak przez wiele tygodni przepadały przelewy własne ING — format istniał, aplikacja go nie
+znała, i nic nigdy tego nie zgłosiło. Banki zmieniają brzmienie komunikatów, więc to nie
+jest wypadek jednorazowy, tylko klasa problemów.
+
+Skrzynka pokazuje pasek z liczbą takich powiadomień; osobny ekran daje pełną treść,
+przycisk „Dodaj ręcznie" (z przepisaną kwotą) i „Odłóż" (`ParseStatus = Ignored`,
+treść zostaje).
+
+**Lista jest zawężona do powiadomień zawierających kwotę.** ING i Revolut przysyłają też
+reklamy i przypomnienia o logowaniu; bez tego filtra lista zalałaby się szumem i przestano
+by na nią patrzeć — czyli byłaby tak samo bezużyteczna jak jej brak. Kwota w treści przy
+braku transakcji to dokładnie ten przypadek, o którym trzeba wiedzieć.
+
+Odczytywana jest sama kwota, bez znaku: kierunku w nierozpoznanej treści z definicji nie
+znamy, a przy ręcznym wpisie i tak wybiera się wydatek albo wpływ.
+
 ### 11.2 Scalanie przelewów (etap 3)
 
 Dwie transakcje A i B tworzą przelew, jeśli:
@@ -723,6 +779,19 @@ Dwie transakcje A i B tworzą przelew, jeśli:
 Obu przypisywany jest wspólny `TransferGroupId`, `Kind = Transfer`, `CategoryId = Transfer`.
 
 Fałszywe trafienie możliwe przy zbieżności kwot — dlatego proponować potwierdzenie, a nie scalać w ciszy.
+
+**Wydatek w kategorii „Rezerwy" to dopiero połowa zdarzenia.** Mówi, ile UBYŁO z konta
+źródłowego, ale nie mówi, gdzie pieniądze wylądowały. Bez drugiej nogi saldo jednego konta
+maleje, drugiego nie rośnie, a suma majątku spada — mimo że pieniądze nadal są.
+
+Dlatego po zapisaniu takiego wydatku padają dwa pytania, oba do pominięcia: o fundusz
+(jak dotąd) i o konto docelowe. Wskazanie konta dopisuje nogę wchodzącą przez
+`RecordReserveTransferUseCase`; wychodząca zostaje zwykłym wydatkiem w „Rezerwach",
+bo to ona obciąża kopertę. Ta sama asymetria co przy przelewie potwierdzanym w skrzynce
+(11.2) — noga wchodząca jest wykluczana, inaczej ta sama kwota wyszłaby jako przychód.
+
+Pominięcie jest sensowną odpowiedzią: gotówka odłożona do szuflady nie ma konta
+docelowego. Wtedy zachowanie zostaje takie jak wcześniej.
 
 **Przelew własny opisany jednym powiadomieniem.** ING wysyła przy przelewie między
 własnymi kontami osobne powiadomienie w formacie `<kwota> PLN z konta <A> na konto <B>`.
@@ -839,6 +908,13 @@ ale mniej dokładnie, stąd pasek zachęcający do podania dnia wypłaty.
 Pomniejszenie o bieżący okres po wpłacie jest istotne: bez niego rata przeliczała się
 na nowo zaraz po wpłaceniu, pokazując, że wciąż trzeba dołożyć.
 
+**Niezaplanowany miesiąc startuje od poprzedniego.** Koperty i plany przychodów
+dostają kwoty z miesiąca bezpośrednio poprzedzającego jako punkt wyjścia — wydatki stałe
+powtarzają się, a przepisywanie kilkunastu kategorii od zera to praca, którą aplikacja ma
+odbierać, nie zadawać. Wyłącznie gdy planu NIE MA (`GetMonthPlanDraftUseCase`): zaplanowany
+miesiąc zostaje nietknięty, bo koperta świadomie ustawiona na zero wracałaby inaczej
+z poprzednią kwotą przy każdym wejściu na ekran i po cichu nadpisywała decyzję.
+
 Suma rat wszystkich funduszy nie jest doklejana do planu automatycznie — ekran
 planowania podpowiada ją przyciskiem, który jednym tapnięciem wpisuje kwotę do koperty
 „Rezerwy". Kopertę wybiera użytkownik, więc suma normalnie uczestniczy w N-1.
@@ -898,7 +974,7 @@ dodać jako aktywo o płynności `Slow`.
 
 ### Etap 0 — szkielet
 
-**Prace:** struktura rozwiązania według 4.1; `CastellanDbContext` i pierwsza migracja; rejestracja DI; MAUI Shell z zaślepkami nawigacji; projekty xUnit; GitHub Actions — build, testy, artefakt APK; `.gitignore`, `.editorconfig`, licencja; `android:allowBackup="false"` i `android:dataExtractionRules` z jawnym zakazem backupu w chmurze; `network_security_config.xml` blokujący wszystkie połączenia sieciowe; `android:usesCleartextTraffic="false"` w manifeście; `FLAG_SECURE` na oknie głównej aktywności.
+**Prace:** struktura rozwiązania według 4.1; `CastellanDbContext` i pierwsza migracja; rejestracja DI; MAUI Shell z zaślepkami nawigacji; projekty xUnit; GitHub Actions — build, testy, artefakt APK; `.gitignore`, `.editorconfig`, licencja; `android:allowBackup="false"` i `android:dataExtractionRules` z jawnym zakazem backupu w chmurze; `network_security_config.xml` blokujący wszystkie połączenia sieciowe; `android:usesCleartextTraffic="false"` w manifeście.
 
 **Gotowe, gdy:** APK instaluje się na telefonie i uruchamia; `dotnet test` jest zielony w CI; migracja tworzy pustą BD na urządzeniu.
 
@@ -934,7 +1010,7 @@ Kluczowy etap. Dla niego to wszystko zostało zapoczątkowane.
 
 ### Etap 5 — aktywa i poduszka finansowa
 
-**Prace:** agregat `Asset`; poziomy płynności na kontach i aktywach; flaga obowiązkowości na kategoriach; obliczenie 11.8; ekran „Poduszka finansowa".
+**Prace:** agregat `Asset`; poziomy płynności na aktywach; flaga obowiązkowości na kategoriach; obliczenie 11.8; ekran „Poduszka finansowa".
 
 **Gotowe, gdy:** widać, na ile miesięcy wystarczy według trzech poziomów płynności, i jak liczba zmienia się po wyłączeniu źródła dochodu.
 
@@ -1059,7 +1135,6 @@ w tej sekcji, bo plik z założenia opuszcza urządzenie.
 
 ### 15.5 Ekran i dostęp fizyczny
 
-- **`FLAG_SECURE`** na oknie głównej aktywności — blokuje zrzuty ekranu i ukrywa zawartość w liście ostatnich aplikacji. Standardowa praktyka dla aplikacji finansowych; ustawić na Etapie 0. **Nieustawione.** Świadomy kompromis na czas budowy: zrzuty ekranu są głównym sposobem zgłaszania uwag do wyglądu. Do włączenia, gdy aplikacja przestanie być codziennie przebudowywana.
 - **Biometria przy otwarciu aplikacji** — opcjonalna, z zastrzeżeniem: widget szybkiego wprowadzania nie może wymagać odcisku palca, bo cel „trzy dotknięcia" przestaje działać. Kompromis: biometria chroni podgląd (pełna aplikacja), widget pozwala zapisać transakcję bez wyświetlania salda.
 
 ### 15.6 Logowanie

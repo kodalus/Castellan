@@ -31,17 +31,33 @@
                        ReturnCommand="{Binding SaveCommand}" />
             </VerticalStackLayout>
 
-            <!-- Domyślnie „Nie zapisuj wydatku": prawdziwy przelew na oszczędnościowe
-                 przyjdzie osobno z powiadomienia i sam obciąży kopertę „Rezerwy".
-                 Konto wybiera się wtedy, gdy tego przelewu nie będzie — bo pieniądze
-                 zostają na tym samym koncie, a odkładanie jest tylko na papierze. -->
+            <!-- Przełącznik, a nie od razu dwa pola: ekran ma jedno duże pole na kwotę
+                 i wpisuje się go w biegu. Pola „skąd" i „dokąd" pojawiają się dopiero
+                 wtedy, gdy naprawdę są potrzebne. -->
             <VerticalStackLayout Style="{StaticResource Field}">
-                <Label Text="Zapisz jako wydatek z konta" Style="{StaticResource FieldLabel}" />
-                <Picker ItemsSource="{Binding Sources}"
-                        SelectedItem="{Binding SelectedSource, Mode=TwoWay}"
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                        <Label Text="Zapisz też przelew między kontami" Style="{StaticResource FieldLabel}" />
+                        <Label Style="{StaticResource FieldHint}"
+                               Text="Zostaw wyłączone, jeśli ten przelew trafi do aplikacji z powiadomienia — inaczej ta sama kwota obciąży kopertę „Rezerwy” dwa razy." />
+                    </VerticalStackLayout>
+                    <Switch Grid.Column="1" IsToggled="{Binding RecordTransfer, Mode=TwoWay}"
+                            VerticalOptions="Center" />
+                </Grid>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}" IsVisible="{Binding RecordTransfer}">
+                <Label Text="Z konta" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Accounts}" SelectedItem="{Binding FromAccount, Mode=TwoWay}"
+                        ItemDisplayBinding="{Binding Name}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}" IsVisible="{Binding RecordTransfer}">
+                <Label Text="Na konto" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Accounts}" SelectedItem="{Binding ToAccount, Mode=TwoWay}"
                         ItemDisplayBinding="{Binding Name}" />
                 <Label Style="{StaticResource FieldHint}"
-                       Text="Wybór konta dopisuje wydatek w kategorii „Rezerwy”, żeby koperta pokazała, ile już odłożone. Zostaw „Nie zapisuj wydatku”, jeśli ten sam przelew trafi do aplikacji z powiadomienia." />
+                       Text="Odkładasz do portfela? Załóż konto typu „Gotówka” i wskaż je tutaj — wtedy pieniądze nie znikają z Majątku." />
             </VerticalStackLayout>
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"

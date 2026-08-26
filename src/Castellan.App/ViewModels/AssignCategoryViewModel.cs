@@ -85,7 +85,7 @@ public partial class AssignCategoryViewModel : ObservableObject
         // Rata kredytu złapana z powiadomienia trafia tutaj — bez tego pytania
         // saldo długu nie zmniejszyłoby się mimo zapłaconej raty.
         if (_amount.IsNegative)
-            await _categoryLink.OfferAsync(SelectedCategory.Name, _amount.Abs(), ct);
+            await _categoryLink.OfferAsync(SelectedCategory.Name, _amount.Abs(), txId, ct);
 
         await Shell.Current.GoToAsync("..");
     }

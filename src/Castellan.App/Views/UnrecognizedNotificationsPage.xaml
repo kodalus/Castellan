@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.UnrecognizedNotificationsPage"
+             x:DataType="vm:UnrecognizedNotificationsViewModel"
+             Title="Nierozpoznane powiadomienia">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="0,10,0,16">
+
+            <Label Style="{StaticResource EmptyState}" IsVisible="{Binding IsEmpty}"
+                   Text="Nic tu nie ma — każde powiadomienie z kwotą zostało rozczytane." />
+
+            <Label Style="{StaticResource FieldHint}" Margin="16,0,16,8"
+                   IsVisible="{Binding IsNotEmpty}"
+                   Text="W tych powiadomieniach jest kwota, ale aplikacja nie wiedziała, co z nimi zrobić. Dopisz transakcję ręcznie albo odłóż powiadomienie na bok, jeśli nie dotyczy pieniędzy." />
+
+            <VerticalStackLayout BindableLayout.ItemsSource="{Binding Rows}">
+                <BindableLayout.ItemTemplate>
+                    <DataTemplate x:DataType="vm:UnrecognizedRow">
+                        <Border Style="{StaticResource Card}">
+                            <VerticalStackLayout Spacing="8">
+
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <Label Grid.Column="0" Text="{Binding Header}"
+                                           Style="{StaticResource Caption}" VerticalOptions="Center" />
+                                    <Label Grid.Column="1" Text="{Binding AmountDisplay}"
+                                           Style="{StaticResource RowValue}" VerticalOptions="Center" />
+                                </Grid>
+
+                                <!-- Pełna treść, nie skrót: to ona jest dowodem, czego parser
+                                     nie umie przeczytać, i to ją trzeba móc przepisać. -->
+                                <Label Text="{Binding Title}" Style="{StaticResource RowTitle}" />
+                                <Label Text="{Binding Text}" Style="{StaticResource Secondary}" />
+
+                                <HorizontalStackLayout Spacing="8">
+                                    <Button Text="Dodaj ręcznie" Command="{Binding AddCommand}" />
+                                    <Button Text="Odłóż" Command="{Binding IgnoreCommand}"
+                                            Style="{StaticResource GhostButton}" />
+                                </HorizontalStackLayout>
+
+                            </VerticalStackLayout>
+                        </Border>
+                    </DataTemplate>
+                </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

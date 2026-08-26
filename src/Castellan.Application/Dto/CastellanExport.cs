@@ -15,7 +15,7 @@ public sealed class CastellanExport
 }
 
 public sealed record AccountDto(
-    Guid Id, string Name, int Kind, int LiquidityTier,
+    Guid Id, string Name, int Kind,
     string? BankKey, bool IsArchived, long LastReconciledBalance, string LastReconciledAt);
 
 public sealed record CategoryDto(

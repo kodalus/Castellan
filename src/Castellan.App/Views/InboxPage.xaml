@@ -23,6 +23,19 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="0,0,0,16">
 
+                <!-- Nierozpoznane powiadomienia na samej górze: to jedyny ślad po tym,
+                     czego aplikacja NIE zapisała, więc nie może być niżej niż rzeczy,
+                     które zapisała. -->
+                <Border Style="{StaticResource WarningBanner}" Margin="12,10,12,0"
+                        IsVisible="{Binding HasUnrecognized}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <Label Grid.Column="0" Text="{Binding UnrecognizedDisplay}"
+                               Style="{StaticResource WarningText}" VerticalOptions="Center" />
+                        <Button Grid.Column="1" Text="Zobacz"
+                                Command="{Binding OpenUnrecognizedCommand}" />
+                    </Grid>
+                </Border>
+
                 <!-- Wybór trybu pracy stoi na górze Skrzynki, bo to jedyny ekran,
                      którego zawartość od niego zależy: w trybie ręcznym nic tu
                      samo nie trafia. -->

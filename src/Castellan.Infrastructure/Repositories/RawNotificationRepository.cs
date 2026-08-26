@@ -14,6 +14,9 @@ internal sealed class RawNotificationRepository(CastellanDbContext db) : IRawNot
         return Task.CompletedTask;
     }
 
+    public async Task<RawNotification?> GetAsync(RawNotificationId id, CancellationToken ct = default) =>
+        await db.RawNotifications.FirstOrDefaultAsync(r => r.Id == id, ct);
+
     public async Task<IReadOnlyList<RawNotification>> ListUnparsedAsync(int limit = 200, CancellationToken ct = default)
     {
         // EF Core SQLite can't translate DateTimeOffset ordering — load then sort client-side

@@ -17,6 +17,12 @@
             <Label Text="{Binding MonthDisplay}" Style="{StaticResource SectionHeader}"
                    HorizontalTextAlignment="Center" Margin="0,0,0,6" />
 
+            <!-- Widoczne tylko przy pierwszym wejściu w niezaplanowany miesiąc. -->
+            <Border Style="{StaticResource WarningBanner}" IsVisible="{Binding IsCarriedOver}">
+                <Label Style="{StaticResource Secondary}"
+                       Text="Kwoty przeniesione z poprzedniego miesiąca jako punkt wyjścia. Popraw, co się zmieniło, i zapisz." />
+            </Border>
+
             <!-- ===== Przychody ===== -->
             <Label Text="Przychody" Style="{StaticResource SectionHeader}" />
             <Label Text="Ile spodziewasz się dostać z każdego źródła w tym miesiącu."

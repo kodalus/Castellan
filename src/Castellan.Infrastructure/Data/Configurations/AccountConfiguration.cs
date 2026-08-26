@@ -17,7 +17,6 @@ internal sealed class AccountConfiguration : IEntityTypeConfiguration<Account>
         builder.Property(a => a.Name).IsRequired().HasMaxLength(200);
         builder.Property(a => a.BankKey).HasMaxLength(100);
         builder.Property(a => a.Kind).HasConversion<int>();
-        builder.Property(a => a.LiquidityTier).HasConversion<int>();
         builder.Property(a => a.LastReconciledBalance)
             .HasConversion(m => m.Grosze, v => new Money(v));
         builder.Property(a => a.LastReconciledAt);

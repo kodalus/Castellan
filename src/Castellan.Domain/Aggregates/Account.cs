@@ -8,7 +8,6 @@ public class Account
     public string Name { get; private set; } = "";
     public string? BankKey { get; private set; }
     public AccountKind Kind { get; private set; }
-    public LiquidityTier LiquidityTier { get; private set; }
     public Money LastReconciledBalance { get; private set; }
     public DateTimeOffset LastReconciledAt { get; private set; }
     public bool IsArchived { get; private set; }
@@ -29,7 +28,6 @@ public class Account
             Name = name.Trim(),
             Kind = kind,
             BankKey = bankKey,
-            LiquidityTier = LiquidityTier.Immediate,
             LastReconciledBalance = initialBalance,
             LastReconciledAt = reconciledAt,
             IsArchived = false,

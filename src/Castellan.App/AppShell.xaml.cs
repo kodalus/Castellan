@@ -15,6 +15,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("addTransfer",       typeof(AddTransferPage));
         Routing.RegisterRoute("planEnvelopes",     typeof(PlanEnvelopesPage));
         Routing.RegisterRoute("notificationAudit", typeof(NotificationAuditPage));
+        Routing.RegisterRoute("unrecognized",      typeof(UnrecognizedNotificationsPage));
         Routing.RegisterRoute("reconcileAccount",  typeof(ReconcileAccountPage));
         Routing.RegisterRoute("quickAdd",          typeof(QuickAddTransactionPage));
         Routing.RegisterRoute("categoryRules",     typeof(CategoryRulesPage));

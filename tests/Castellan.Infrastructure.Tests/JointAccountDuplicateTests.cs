@@ -164,6 +164,59 @@ public class JointAccountDuplicateTests
         }
     }
 
+    [Fact]
+    public async Task Two_purchases_for_the_same_amount_at_different_shops_both_survive()
+    {
+        // Zapasowa reguła deduplikacji uznawała za duplikat KAŻDE dwie transakcje o tej
+        // samej kwocie co do grosza, na tym samym koncie, w ciągu 15 minut — bez patrzenia
+        // na sprzedawcę. Dwie kawy po 12 zł w kwadrans to nie jest dziwny scenariusz,
+        // a druga po prostu znikała.
+        var dbPath = Path.Combine(Path.GetTempPath(), $"castellan_joint_{Guid.NewGuid():N}.db");
+        try
+        {
+            var (db, useCase) = await SetupAsync(dbPath);
+            var now = DateTimeOffset.UtcNow;
+
+            await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(
+                RevolutPackage, "Konto wspólne · Costa Coffee", "Wydano 12,00 zł.", now));
+            await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(
+                RevolutPackage, "Konto wspólne · Green Caffe", "Wydano 12,00 zł.", now.AddMinutes(8)));
+
+            db.ChangeTracker.Clear();
+            (await db.Transactions.CountAsync()).Should().Be(2);
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task The_same_shop_twice_for_the_same_amount_is_still_treated_as_one()
+    {
+        // Druga strona tej samej reguły, NIE ruszona: ten sam sprzedawca, ta sama kwota,
+        // kilka minut różnicy to niemal zawsze jedna płatność zgłoszona dwa razy.
+        // Poprawka miała odróżnić różnych sprzedawców, a nie wyłączyć deduplikację.
+        var dbPath = Path.Combine(Path.GetTempPath(), $"castellan_joint_{Guid.NewGuid():N}.db");
+        try
+        {
+            var (db, useCase) = await SetupAsync(dbPath);
+            var now = DateTimeOffset.UtcNow;
+
+            await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(
+                RevolutPackage, "Konto wspólne · Costa Coffee", "Wydano 12,00 zł.", now));
+            await useCase.ExecuteAsync(new IngestRawNotificationUseCase.Input(
+                RevolutPackage, "Konto wspólne · Costa Coffee", "Wydano 12,00 zł.", now.AddMinutes(8)));
+
+            db.ChangeTracker.Clear();
+            (await db.Transactions.CountAsync()).Should().Be(1);
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
     private static void Cleanup(string dbPath)
     {
         SqliteConnection.ClearAllPools();

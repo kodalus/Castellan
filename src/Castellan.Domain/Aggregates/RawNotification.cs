@@ -20,6 +20,13 @@ public class RawNotification
         string packageName, string title, string text, DateTimeOffset postedAt) =>
         new() { Id = RawNotificationId.New(), PackageName = packageName, Title = title, Text = text, PostedAt = postedAt, ParseStatus = ParseStatus.Ignored };
 
+    /// <summary>
+    /// Odłożenie na bok powiadomienia, którego aplikacja nie zrozumiała, a które nie
+    /// opisuje transakcji (reklama, przypomnienie o logowaniu). Bez tego lista
+    /// nierozpoznanych rosłaby bez końca i szybko przestano by na nią patrzeć.
+    /// </summary>
+    public void Ignore() => ParseStatus = ParseStatus.Ignored;
+
     public void MarkParsed(TransactionId transactionId)
     {
         ParseStatus = ParseStatus.Parsed;

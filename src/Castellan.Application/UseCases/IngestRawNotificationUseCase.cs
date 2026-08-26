@@ -197,10 +197,24 @@ public sealed partial class IngestRawNotificationUseCase(
 
         // Zapasowo wąskie okno bez rozróżniania źródła — na wypadek powiadomień,
         // dla których nie znamy pakietu (np. sprzed dodania tego zapisu).
+        //
+        // RÓŻNI SPRZEDAWCY ROZSTRZYGAJĄ NA NIE. Ta reguła patrzyła wcześniej wyłącznie
+        // na kwotę i konto, więc prawdziwy zakup ginął, gdy przypadkiem kosztował tyle
+        // samo co coś sprzed kilkunastu minut. Wykryte własnym testem kontrolnym: zakup
+        // w Biedronce za 1 zł zniknął, bo dziesięć minut wcześniej poszedł przelew na
+        // 1 zł. Reguła po samej kwocie zostaje tam, po co powstała — gdy przynajmniej
+        // jedna ze stron nie wie, u kogo zapłacono.
+        // Noga przelewu jest już w pełni wyjaśniona przez sam przelew, a własnej nazwy
+        // sprzedawcy nie ma — więc porównanie po sprzedawcy nie ma jej z czym zestawić.
+        // Powiadomienie, które faktycznie opisuje tę noge, przygarnia przejście wyżej
+        // (okno 5 minut). Wszystko poza nim to osobne zdarzenie i nie ma prawa w nią wpaść.
         candidate ??= recent.FirstOrDefault(t =>
             t.AccountId == accountId &&
             !t.SupersededById.HasValue &&
+            t.TransferGroupId is null &&
+            t.ProposedTransferGroupId is null &&
             t.Amount.Grosze == tx.Amount.Grosze &&
+            !MerchantsKnownAndDifferent(t.MerchantKey, merchantKey) &&
             Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= 15);
 
         if (candidate is null) return DeduplicateResult.None;
@@ -215,6 +229,15 @@ public sealed partial class IngestRawNotificationUseCase(
         // Same kind — this is an exact duplicate; don't add it
         return DeduplicateResult.ExactDuplicate;
     }
+
+    /// <summary>
+    /// Prawda tylko wtedy, gdy OBIE strony wiedzą, u kogo zapłacono, i są to różni
+    /// sprzedawcy. Brak nazwy po którejkolwiek stronie to brak informacji, a nie dowód
+    /// różnicy — wtedy decydują pozostałe warunki.
+    /// </summary>
+    private static bool MerchantsKnownAndDifferent(string? a, string? b) =>
+        a is not null && b is not null
+        && !a.Equals(b, StringComparison.OrdinalIgnoreCase);
 
     private static bool AmountMatches(long a, long b)
     {
@@ -436,8 +459,13 @@ public sealed partial class IngestRawNotificationUseCase(
         // Bez podpowiedzi zostaje pole zawężone przez pakiet. Gdy jest w nim więcej
         // niż jedno konto, wybór jest zgadywaniem — bierzemy rozliczeniowe, bo płatność
         // kartą idzie zwykle z niego.
+        //
+        // Konto gotówkowe jest z tego zgadywania WYŁĄCZONE: żaden bank nie powiadamia
+        // o gotówce, więc trafienie tam byłoby zawsze błędem. Gdy nie zostaje nic innego,
+        // lepszy brak transakcji niż transakcja w cudzym miejscu — powiadomienie zostaje
+        // nierozpoznane i widać je na liście w Skrzynce.
         return pool.FirstOrDefault(a => a.Kind == AccountKind.Checking)
-            ?? pool.FirstOrDefault();
+            ?? pool.FirstOrDefault(a => a.Kind != AccountKind.Cash);
     }
 
     /// <summary>

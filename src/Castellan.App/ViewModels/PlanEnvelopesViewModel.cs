@@ -26,6 +26,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
 
     private readonly ICategoryRepository _categories;
     private readonly IMonthBudgetRepository _budgets;
+    private readonly GetMonthPlanDraftUseCase _planDraft;
     private readonly PlanMonthUseCase _plan;
     private readonly GetFundOverviewUseCase _fundOverview;
     private readonly ITransactionRepository _transactions;
@@ -68,6 +69,9 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     /// i wygląda tak, jakby podpowiedzi w ogóle nie istniały. Stąd zdanie w ich miejsce.
     /// </summary>
     public bool HasNoIncomeHints => !HasIncomeHint && !HasPreviousIncomeHint && !HasBalanceHint;
+    /// <summary>Kwoty pochodzą z poprzedniego miesiąca i czekają na poprawienie.</summary>
+    [ObservableProperty] private bool _isCarriedOver;
+
     [ObservableProperty] private string _plannedIncomeDisplay = "";
     [ObservableProperty] private bool _hasPlannedIncome;
 
@@ -112,6 +116,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     public PlanEnvelopesViewModel(
         ICategoryRepository categories,
         IMonthBudgetRepository budgets,
+        GetMonthPlanDraftUseCase planDraft,
         PlanMonthUseCase plan,
         GetFundOverviewUseCase fundOverview,
         ITransactionRepository transactions,
@@ -119,6 +124,7 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     {
         _categories = categories;
         _budgets = budgets;
+        _planDraft = planDraft;
         _plan = plan;
         _fundOverview = fundOverview;
         _transactions = transactions;
@@ -170,7 +176,8 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     /// i w wierszu przychodu, i w saldzie konta.
     ///
     /// Konta oszczędnościowe są pominięte celowo — tam zwykle leżą rezerwy i fundusze,
-    /// czyli pieniądze, które mają już przypisane zadanie. To świadoma różnica względem
+    /// czyli pieniądze, które mają już przypisane zadanie. Gotówka wchodzi, bo portfel
+    /// to pieniądze do wydania w tym miesiącu jak każde inne. To świadoma różnica względem
     /// Majątku, gdzie liczą się salda wszystkich kont: tam pytanie brzmi „ile mam",
     /// a tutaj „ile mogę rozdysponować w tym miesiącu".
     /// </summary>
@@ -181,13 +188,13 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     private async Task LoadBalanceHintAsync(CancellationToken ct)
     {
         var grosze = (await _accountBalances.ExecuteAsync(ct))
-            .Where(a => !a.IsArchived && a.Kind == AccountKind.Checking)
+            .Where(a => !a.IsArchived && a.Kind is AccountKind.Checking or AccountKind.Cash)
             .Sum(a => a.CurrentBalance.Grosze);
 
         _suggestedBalance  = grosze / 100m;
         HasBalanceHint     = grosze > 0;
         BalanceHintDisplay =
-            $"Na kontach rozliczeniowych: {_suggestedBalance:N2} zł "
+            $"Na kontach i w gotówce: {_suggestedBalance:N2} zł "
             + "— w tym reszta z poprzedniego miesiąca";
     }
 
@@ -224,7 +231,12 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
     public async Task LoadAsync(CancellationToken ct = default)
     {
         MonthDisplay = _month.ToDisplayString();
-        var budget = await _budgets.GetForMonthAsync(_month, ct);
+
+        var draft = await _planDraft.ExecuteAsync(_month, ct);
+        var budget = draft.Budget;
+        var template = draft.Template;
+        IsCarriedOver = draft.IsCarriedOver;
+
         if (budget is not null)
             AvailableFundsText = (budget.AvailableFunds.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture);
 
@@ -232,7 +244,8 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
         Envelopes.Clear();
         foreach (var c in cats.Where(c => !c.IsSystem && !c.IsArchived && c.Kind == CategoryKind.Expense))
         {
-            var existing = budget?.Envelopes.FirstOrDefault(e => e.CategoryId == c.Id);
+            var existing = budget?.Envelopes.FirstOrDefault(e => e.CategoryId == c.Id)
+                           ?? template?.Envelopes.FirstOrDefault(e => e.CategoryId == c.Id);
             var amtText = existing is not null
                 ? (existing.PlannedAmount.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture)
                 : "0";
@@ -244,7 +257,8 @@ public partial class PlanEnvelopesViewModel : ObservableObject, IQueryAttributab
         Incomes.Clear();
         foreach (var c in cats.Where(c => !c.IsSystem && !c.IsArchived && c.Kind == CategoryKind.Income))
         {
-            var existing = budget?.IncomePlans.FirstOrDefault(p => p.CategoryId == c.Id);
+            var existing = budget?.IncomePlans.FirstOrDefault(p => p.CategoryId == c.Id)
+                           ?? template?.IncomePlans.FirstOrDefault(p => p.CategoryId == c.Id);
             var amtText = existing is not null
                 ? (existing.PlannedAmount.Grosze / 100m).ToString("F2", CultureInfo.InvariantCulture)
                 : "0";

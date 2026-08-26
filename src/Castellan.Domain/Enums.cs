@@ -1,6 +1,15 @@
 namespace Castellan.Domain;
 
-public enum AccountKind { Checking, Savings }
+/// <summary>
+/// Gotówka jest kontem, a nie wyjątkiem: portfel zachowuje się jak rachunek —
+/// ma saldo, wychodzą z niego wydatki, da się go uzgodnić przeliczeniem zawartości,
+/// a odłożenie pieniędzy do szuflady jest przelewem, nie zniknięciem.
+///
+/// Osobny typ, a nie „rachunek bieżący z nazwą Gotówka", z dwóch powodów: lista kont
+/// przestaje kłamać, a portfel wypada z awaryjnego wyboru konta przy powiadomieniach —
+/// żaden bank nie powiadamia o gotówce, więc cudza płatność nie ma prawa tam wylądować.
+/// </summary>
+public enum AccountKind { Checking, Savings, Cash }
 
 /// <summary>
 /// Banki, których powiadomienia aplikacja umie czytać. Ta sama lista służy do dwóch
@@ -14,8 +23,6 @@ public static class Banks
 
     public static readonly string[] Known = [Ing, Revolut];
 }
-
-public enum LiquidityTier { Immediate, Month, Locked }
 
 public enum CategoryKind { Expense, Income }
 
