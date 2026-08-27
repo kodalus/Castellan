@@ -816,8 +816,21 @@ kwocie odsiewa deduplikacja. Bez tego z jednego przelewu robiłyby się cztery w
 
 **Znane ograniczenie.** Gdy powiadomienie zbiorcze nie dotrze, a przelew idzie między
 dwoma kontami TEGO SAMEGO banku, obie nogi lądują na tym samym koncie — nie ma z czego
-wybrać. Propozycja przelewu wymaga dwóch różnych kont, więc nie powstaje. Pozostaje
-ręczny przelew, gdzie konta wskazuje użytkownik.
+wybrać. Propozycja przelewu wymaga dwóch różnych kont, więc nie powstaje.
+
+**Ścieżka ratunkowa: „To przelew" na liście transakcji.** Zgłoszone z eksploatacji:
+jedynym wyjściem było skasowanie obu wpisów i wpisanie przelewu ręcznie, czyli wyrzucenie
+tego, co aplikacja już wiedziała — kwoty, daty i tego, że coś się wydarzyło.
+
+Gest w lewo na dowolnym wpisie pokazuje kandydatów na drugą stronę: przeciwna kwota co do
+grosza, okno 48 godzin, jeszcze niesparowane. Konto NIE jest tu warunkiem — cała potrzeba
+bierze się właśnie z tego, że obie nogi wylądowały na jednym koncie. Gdy tak jest,
+`LinkAsTransferUseCase` dopytuje o konto docelowe i przenosi tam nogę wchodzącą.
+
+Para na jednym koncie jest odrzucana (`SameAccount`): przelew z definicji łączy dwa konta,
+a wpis znoszący sam siebie byłby gorszy niż brak wpisu. Wszystkie sprawdzenia idą PRZED
+zmianami — inaczej odmowa zostawiałaby przestawione konto na śledzonym obiekcie,
+niezapisane, ale gotowe pojechać przy najbliższym zapisie czegokolwiek innego.
 
 **Przelew na własne konto oszczędnościowe jest wyjątkiem.** Kryje dwa różne zdarzenia,
 dla aplikacji nierozróżnialne: przekładanie pieniędzy (budżet bez zmian) albo odkładanie

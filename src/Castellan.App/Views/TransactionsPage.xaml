@@ -41,6 +41,9 @@
                                 <SwipeItem Text="Z funduszu" BackgroundColor="{StaticResource InfoDim}"
                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=PayFromFundCommand}"
                                            CommandParameter="{Binding .}" />
+                                <SwipeItem Text="To przelew" BackgroundColor="{StaticResource SurfaceRaised}"
+                                           Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=LinkAsTransferCommand}"
+                                           CommandParameter="{Binding .}" />
                                 <SwipeItem Text="{x:Static strings:AppResources.Transactions_Delete}"
                                            BackgroundColor="{StaticResource NegativeDim}"
                                            Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=DeleteTransactionCommand}"
