@@ -163,20 +163,22 @@ public sealed partial class IngestRawNotificationUseCase(
             .GroupBy(r => r.TransactionId!.Value)
             .ToDictionary(g => g.Key, g => g.First().PackageName);
 
-        // Warunek „to samo konto" jest tu ZŁAGODZONY: wystarczy to samo konto ALBO ten
-        // sam sprzedawca. Dopasowanie konta bywa niepewne (bank i Portfel Google nazywają
-        // to samo konto inaczej), a gdy się rozjedzie, twardy warunek na koncie kasuje
-        // deduplikację i powstaje duplikat — dokładnie to zgłoszone dla Allegro
-        // z konta wspólnego. Sam sprzedawca plus kwota co do grosza plus INNE źródło
-        // to już wystarczająco rzadki zbieg okoliczności.
+        // Warunek „to samo konto" jest tu ZŁAGODZONY: wystarczy to samo konto ALBO
+        // WSPÓLNE SŁOWO w nazwie sprzedawcy. Dopasowanie konta bywa niepewne (bank
+        // i Portfel Google nazywają to samo konto inaczej), a gdy się rozjedzie, twardy
+        // warunek na koncie kasuje deduplikację i powstaje duplikat.
+        //
+        // Porównanie CAŁYCH nazw też nie wystarcza, bo te dwa źródła prawie nigdy nie
+        // nazywają sprzedawcy tak samo: Portfel podaje „CASTORAMA TARNOWSKIEG8", bank
+        // „Castorama"; przy Biedronce Portfel podaje nazwę prawną spółki, a bank markę.
+        // Wspólne słowo jest tym, co naprawdę je łączy — i nadal wystarczająco rzadkim
+        // zbiegiem okoliczności przy identycznej kwocie z DWÓCH różnych aplikacji.
         candidate ??= recent.FirstOrDefault(t =>
             !t.SupersededById.HasValue &&
             t.Amount.Grosze == tx.Amount.Grosze &&
             sourcePackage.TryGetValue(t.Id, out var pkg) &&
             !string.Equals(pkg, packageName, StringComparison.Ordinal) &&
-            (t.AccountId == accountId
-             || (merchantKey is not null && t.MerchantKey is not null
-                 && t.MerchantKey.Equals(merchantKey, StringComparison.OrdinalIgnoreCase))) &&
+            (t.AccountId == accountId || MerchantsShareAWord(t.MerchantKey, merchantKey)) &&
             Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= CrossSourceWindowMinutes);
 
         // Bank potrafi wysłać i powiadomienie zbiorcze o przelewie własnym, i osobne
@@ -229,6 +231,21 @@ public sealed partial class IngestRawNotificationUseCase(
         // Same kind — this is an exact duplicate; don't add it
         return DeduplicateResult.ExactDuplicate;
     }
+
+    /// <summary>
+    /// Czy nazwy sprzedawcy mają choć jedno wspólne znaczące słowo. Krótkie człony
+    /// („S", „A", „PL") są pomijane, bo trafiałyby się przypadkiem.
+    /// </summary>
+    private static bool MerchantsShareAWord(string? a, string? b)
+    {
+        if (a is null || b is null) return false;
+
+        var first = SignificantWords(a);
+        return first.Count > 0 && SignificantWords(b).Any(first.Contains);
+    }
+
+    private static HashSet<string> SignificantWords(string merchant) =>
+        [.. NonLetters().Split(Fold(merchant)).Where(w => w.Length >= 4)];
 
     /// <summary>
     /// Prawda tylko wtedy, gdy OBIE strony wiedzą, u kogo zapłacono, i są to różni
@@ -358,11 +375,18 @@ public sealed partial class IngestRawNotificationUseCase(
     /// Najlepsze dopasowanie konta do tekstowej podpowiedzi. Null, gdy nic nie pasuje —
     /// wywołujący decyduje, czy zgadywać dalej.
     /// </summary>
-    private static Account? BestByHint(List<Account> pool, string? accountHint)
+    private static Account? BestByHint(List<Account> pool, string? accountHint, string? ignoreWord = null)
     {
         if (string.IsNullOrWhiteSpace(accountHint)) return null;
 
-        var hintTokens = Tokenize(accountHint);
+        var ignored = ignoreWord is null ? null : Fold(ignoreWord);
+        var hintTokens = Tokenize(accountHint).Where(t => t != ignored).ToArray();
+
+        // Podpowiedz zlozona z samej nazwy banku nie niesie zadnej informacji o koncie.
+        // Wazne, zeby wtedy NIE schodzic do zapasowego dopasowania po zawieraniu: ono
+        // preferuje najdluzsza nazwe, wiec podpowiedz „karta Revolut” trafialaby
+        // w „Revolut Wspólny” zamiast w „Revolut”. Lepiej oddac decyzje regule domyslnej.
+        if (hintTokens.Length == 0) return null;
         var best = pool
             .Select(a =>
             {
@@ -451,9 +475,14 @@ public sealed partial class IngestRawNotificationUseCase(
         var active = all.Where(a => !a.IsArchived).ToList();
         if (active.Count == 0) return null;
 
-        var pool = NarrowToBank(active, BankOf(packageName, accountHint));
+        var bank = BankOf(packageName, accountHint);
+        var pool = NarrowToBank(active, bank);
 
-        var byHint = BestByHint(pool, accountHint);
+        // Nazwa banku jest tu pomijana jako słowo rozstrzygające: skoro pole zawężono już
+        // do kont tego banku, „Revolut" w podpowiedzi nie odróżnia niczego. Bez tego
+        // podpowiedź „karta Revolut Wspólny" pasowała do konta nazwanego po prostu
+        // „Revolut" tak samo dobrze jak do „Wspólne" — i wygrywała kolejność alfabetyczna.
+        var byHint = BestByHint(pool, accountHint, ignoreWord: bank);
         if (byHint is not null) return byHint;
 
         // Bez podpowiedzi zostaje pole zawężone przez pakiet. Gdy jest w nim więcej

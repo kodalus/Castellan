@@ -725,11 +725,17 @@ zgłoszenie przez INNĄ aplikację, okno 180 minut. Sam warunek „różne źró
 przypadkowe zbiegi — żeby trafić fałszywie, dwie różne płatności na identyczną kwotę
 musiałyby zostać zgłoszone, każda tylko przez jedno źródło, i to inne dla każdej.
 
-**Warunek „to samo konto" jest tu złagodzony do „to samo konto ALBO ten sam sprzedawca".**
-Dopasowanie konta bywa niepewne, bo bank i Portfel nazywają to samo konto inaczej
-(„Konto wspólne" kontra „karta Revolut Wspólny"). Gdy się rozjedzie, twardy warunek na
-koncie kasuje deduplikację i powstaje duplikat — objaw, przez który przyczyna, czyli
-złe konto, potrafi zostać niezauważona.
+**Warunek „to samo konto" jest tu złagodzony do „to samo konto ALBO WSPÓLNE SŁOWO
+w nazwie sprzedawcy".** Dopasowanie konta bywa niepewne, bo bank i Portfel nazywają to
+samo konto inaczej („Konto wspólne" kontra „karta Revolut Wspólny"). Gdy się rozjedzie,
+twardy warunek na koncie kasuje deduplikację i powstaje duplikat — objaw, przez który
+przyczyna, czyli złe konto, potrafi zostać niezauważona.
+
+Porównanie CAŁYCH nazw sprzedawcy też nie wystarcza i było drugą przyczyną tego samego
+objawu: te dwa źródła prawie nigdy nie nazywają sprzedawcy identycznie. Portfel podaje
+„CASTORAMA TARNOWSKIEG8", bank „Castorama"; przy Biedronce Portfel podaje nazwę prawną
+spółki, a bank markę. Wspólne słowo (od czterech znaków, żeby „S" czy „PL" nie trafiały
+się przypadkiem) jest tym, co naprawdę je łączy.
 
 **Dopasowanie konta.** Rozstrzyga w trzech krokach, od najpewniejszego do najsłabszego.
 
@@ -739,8 +745,19 @@ Gdy jest wypełnione, pole kandydatów zawęża się do kont tego banku — nazw
 mieć znaczenie. To jedyny krok, który nie zgaduje: nazwę konta użytkownik nadaje dla
 siebie, nie dla parsera, i nie ma obowiązku wpisywać w nią nazwy banku.
 
-*Krok 2 — podpowiedź z treści powiadomienia.* Decyduje PRZED nazwą banku
-z pakietu. Odwrotna kolejność miała ukryty koszt: przy dwóch kontach w tym samym banku
+*Krok 2 — podpowiedź z treści powiadomienia.* Decyduje PRZED nazwą banku z pakietu.
+
+Nazwa banku jest przy tym pomijana jako słowo rozstrzygające: skoro pole zawężono już do
+kont tego banku, „Revolut" w podpowiedzi nie odróżnia niczego. Bez tego podpowiedź „karta
+Revolut Wspólny" pasowała do konta nazwanego po prostu „Revolut" tak samo dobrze jak do
+„Wspólne" i wygrywała kolejność alfabetyczna — czyli powiadomienia z Portfela i z banku
+rozjeżdżały się na dwa konta.
+
+Gdy po pominięciu nazwy banku nie zostaje ani jedno słowo, podpowiedź nie niesie żadnej
+informacji o koncie i krok 2 nic nie zwraca. **Ważne, żeby nie schodzić wtedy do
+dopasowania po zawieraniu**: ono preferuje najdłuższą nazwę, więc podpowiedź „karta
+Revolut" trafiałaby w „Revolut Wspólny" zamiast w „Revolut". Decyzję przejmuje reguła
+domyślna z kroku 3. Odwrotna kolejność miała ukryty koszt: przy dwóch kontach w tym samym banku
 KAŻDE powiadomienie z tego banku lądowało na tym samym koncie — pierwszym alfabetycznie
 — niezależnie od tego, z którego konta poszła płatność. Dopasowanie idzie po słowach
 (bez ogonków, bez wyrazów typu „konto" i „karta"), bo żadna z nazw zwykle nie zawiera
