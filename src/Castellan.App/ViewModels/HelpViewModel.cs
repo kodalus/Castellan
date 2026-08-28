@@ -96,11 +96,7 @@ public partial class HelpViewModel : ObservableObject
                 new("Pełne dodanie ręczne",
                     "Zakładka Transakcje → „+”. Tu ustawisz konto, datę, wydatek albo przychód i notatkę."),
                 new("Poprawianie i usuwanie",
-                    "Dotknięcie wiersza otwiera edycję — tam zmienisz też konto, jeśli transakcja trafiła nie tam, gdzie trzeba. Przeciągnięcie wiersza w lewo odsłania „Z funduszu”, „To przelew” i „Usuń”."),
-                new("Gdy przelew nie został rozpoznany",
-                    "Objaw: po przelewie między dwoma kontami w tym samym banku widzisz DWIE transakcje na jednym koncie — jedną z plusem, drugą z minusem. Tak wygląda przelew, którego powiadomienia nie zdradziły, którego konta dotyczą."
-                    + "\n\nNie kasuj ich. Przeciągnij którąkolwiek w lewo → „To przelew” → wskaż drugą stronę z listy. Jeśli obie są na tym samym koncie, aplikacja dopyta, na które konto naprawdę wpłynęły pieniądze, i sama je tam przeniesie."
-                    + "\n\nPo połączeniu obie strony wypadają z budżetu — przelew między Twoimi kontami nie jest ani wydatkiem, ani przychodem. Kwota i data zostają takie, jakie przyszły z banku."),
+                    "Dotknięcie wiersza otwiera edycję — tam zmienisz też konto, jeśli transakcja trafiła nie tam, gdzie trzeba. Przeciągnięcie wiersza w lewo odsłania „Z funduszu” i „Usuń”."),
                 new("Jak liczy się data",
                     "Wpis z datą „dziś” dostaje aktualną godzinę, wpis wsteczny — koniec wybranego dnia. Dzięki temu transakcja nie wypadnie przed ostatnim uzgodnieniem salda i nie zniknie z konta."),
             ]),

@@ -19,8 +19,7 @@ public sealed record TransactionRow(
     string? FundName = null,
     bool IsEditable = true,
     bool IsIncome = false,
-    bool IsTransfer = false,
-    AccountId AccountId = default)
+    bool IsTransfer = false)
 {
     public bool IsPaidFromFund => FundName is not null;
     public string FundLabel => FundName is not null ? $"⛃ z funduszu: {FundName}" : "";
@@ -32,9 +31,6 @@ public partial class TransactionsViewModel : ObservableObject
     private readonly ICategoryRepository _categories;
     private readonly IFundRepository _funds;
     private readonly DeleteTransactionUseCase _delete;
-    private readonly GetTransferCandidatesUseCase _transferCandidates;
-    private readonly LinkAsTransferUseCase _linkAsTransfer;
-    private readonly IAccountRepository _accounts;
     private readonly PayTransactionFromFundUseCase _payFromFund;
 
     public ObservableCollection<TransactionRow> Transactions { get; } = [];
@@ -52,18 +48,12 @@ public partial class TransactionsViewModel : ObservableObject
         ICategoryRepository categories,
         IFundRepository funds,
         DeleteTransactionUseCase delete,
-        GetTransferCandidatesUseCase transferCandidates,
-        LinkAsTransferUseCase linkAsTransfer,
-        IAccountRepository accounts,
         PayTransactionFromFundUseCase payFromFund)
     {
         _transactions = transactions;
         _categories = categories;
         _funds = funds;
         _delete = delete;
-        _transferCandidates = transferCandidates;
-        _linkAsTransfer = linkAsTransfer;
-        _accounts = accounts;
         _payFromFund = payFromFund;
         CurrentMonth = YearMonth.Current;
     }
@@ -100,8 +90,7 @@ public partial class TransactionsViewModel : ObservableObject
                 fundName,
                 isEditable,
                 !tx.Amount.IsNegative,
-                tx.Kind == TransactionKind.Transfer,
-                tx.AccountId));
+                tx.Kind == TransactionKind.Transfer));
         }
         IsEmpty = Transactions.Count == 0;
     }
@@ -194,92 +183,6 @@ public partial class TransactionsViewModel : ObservableObject
         if (!row.IsEditable) return;
         await Shell.Current.GoToAsync($"editTransaction?txId={row.Id.Value}");
     }
-
-    /// <summary>
-    /// Ratunek dla przelewu, którego aplikacja nie rozpoznała. Przy przelewie między
-    /// kontami tego samego banku powiadomienia nie mówią, którego konta dotyczą, więc
-    /// obie nogi lądują na jednym koncie — jedna z plusem, druga z minusem. Bez tego
-    /// jedynym wyjściem było skasowanie obu i wpisanie przelewu od nowa.
-    /// </summary>
-    [RelayCommand]
-    private async Task LinkAsTransferAsync(TransactionRow row, CancellationToken ct = default)
-    {
-        if (Shell.Current?.CurrentPage is not Page page) return;
-
-        try
-        {
-            var candidates = await _transferCandidates.ExecuteAsync(row.Id, ct);
-            if (candidates.Count == 0)
-            {
-                await page.DisplayAlertAsync(
-                    "Nie ma czego połączyć",
-                    "Druga strona przelewu to wpis na dokładnie przeciwną kwotę, w ciągu dwóch dni, "
-                    + "jeszcze niepołączony z żadnym przelewem. Nic takiego nie znalazłam.",
-                    "OK");
-                return;
-            }
-
-            var labels = candidates
-                .Select(c => $"{c.OccurredAt.ToLocalTime():dd.MM HH:mm} · {c.AccountName} · {c.Amount}")
-                .ToArray();
-
-            var picked = await page.DisplayActionSheetAsync("Druga strona przelewu", "Anuluj", null, labels);
-            if (string.IsNullOrEmpty(picked) || picked == "Anuluj") return;
-
-            var index = Array.IndexOf(labels, picked);
-            if (index < 0) return;
-            var other = candidates[index];
-
-            // Obie nogi na jednym koncie to właśnie objaw, przez który ta akcja istnieje.
-            // Przelew łączy DWA konta, więc trzeba dopytać, dokąd naprawdę poszły pieniądze.
-            AccountId? moveTo = null;
-            if (other.AccountId == row.AccountId)
-            {
-                var targets = (await _accounts.ListAsync(ct))
-                    .Where(a => !a.IsArchived && a.Id != row.AccountId)
-                    .ToList();
-                if (targets.Count == 0)
-                {
-                    await page.DisplayAlertAsync(
-                        "Brak drugiego konta",
-                        "Obie transakcje są na tym samym koncie, a przelew łączy dwa. Załóż konto "
-                        + "docelowe i spróbuj ponownie.",
-                        "OK");
-                    return;
-                }
-
-                var chosen = await page.DisplayActionSheetAsync(
-                    "Na które konto wpłynęły te pieniądze?", "Anuluj", null,
-                    [.. targets.Select(a => a.Name)]);
-                if (string.IsNullOrEmpty(chosen) || chosen == "Anuluj") return;
-
-                moveTo = targets.FirstOrDefault(a => a.Name == chosen)?.Id;
-                if (moveTo is null) return;
-            }
-
-            var result = await _linkAsTransfer.ExecuteAsync(row.Id, other.Id, moveTo, ct);
-            if (result != LinkTransferResult.Linked)
-            {
-                await page.DisplayAlertAsync("Nie udało się połączyć", Describe(result), "OK");
-                return;
-            }
-
-            await LoadAsync(ct);
-        }
-        catch (Exception ex)
-        {
-            await page.DisplayAlertAsync("Błąd łączenia w przelew", DescribeException(ex), "OK");
-        }
-    }
-
-    private static string Describe(LinkTransferResult result) => result switch
-    {
-        LinkTransferResult.NotFound      => "Jednej z transakcji już nie ma.",
-        LinkTransferResult.AlreadyLinked => "Któraś z nich należy już do przelewu.",
-        LinkTransferResult.NotOpposite   => "Kwoty nie są przeciwne co do grosza.",
-        LinkTransferResult.SameAccount   => "Obie strony wyszły na tym samym koncie — przelew łączy dwa.",
-        _                                => "Nieznany powód.",
-    };
 
     [RelayCommand]
     private async Task DeleteTransactionAsync(TransactionRow row, CancellationToken ct = default)

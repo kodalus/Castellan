@@ -34,8 +34,6 @@ public static class MauiProgram
         builder.Services.AddTransient<GetUnrecognizedNotificationsUseCase>();
         builder.Services.AddTransient<GetMonthPlanDraftUseCase>();
         builder.Services.AddTransient<RecordReserveTransferUseCase>();
-        builder.Services.AddTransient<GetTransferCandidatesUseCase>();
-        builder.Services.AddTransient<LinkAsTransferUseCase>();
         builder.Services.AddTransient<IgnoreRawNotificationUseCase>();
         builder.Services.AddTransient<AddManualTransactionUseCase>();
         builder.Services.AddTransient<UpdateTransactionUseCase>();
