@@ -14,6 +14,19 @@ internal sealed class RawNotificationRepository(CastellanDbContext db) : IRawNot
         return Task.CompletedTask;
     }
 
+    public async Task<bool> ExistsAsync(
+        string packageName, string title, string text, DateTimeOffset postedAt,
+        CancellationToken ct = default)
+    {
+        // Po stronie SQLite tylko tekst — porownanie DateTimeOffset zostaje w pamieci,
+        // bo EF Core nie tlumaczy go na SQL (patrz ListUnparsedAsync).
+        var sameContent = await db.RawNotifications
+            .Where(r => r.PackageName == packageName && r.Title == title && r.Text == text)
+            .ToListAsync(ct);
+
+        return sameContent.Any(r => r.PostedAt == postedAt);
+    }
+
     public async Task<RawNotification?> GetAsync(RawNotificationId id, CancellationToken ct = default) =>
         await db.RawNotifications.FirstOrDefaultAsync(r => r.Id == id, ct);
 

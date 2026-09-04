@@ -38,12 +38,50 @@ public sealed partial class IngestRawNotificationUseCase(
 
     public sealed record Input(string PackageName, string Title, string Text, DateTimeOffset PostedAt);
 
+    /// <summary>
+    /// Jedno powiadomienie naraz w calym procesie.
+    ///
+    /// Nasluch Androida odpala kazde powiadomienie przez „Task.Run" i nie czeka na wynik,
+    /// a kazde takie wywolanie dostaje WLASNY kontener i wlasny DbContext. Bez tej blokady
+    /// dwa doreczenia tego samego powiadomienia czytaja baze zanim ktorekolwiek zdazy
+    /// zapisac — obydwa widza pustke, obydwa uznaja sie za pierwsze i deduplikacja nie ma
+    /// czego z czym porownac. Skutek: KAZDE powiadomienie zaklada dwie transakcje.
+    ///
+    /// Wystarczy odstep milisekund, a odczyty i zapis do SQLite na telefonie trwaja
+    /// znacznie dluzej — wiec „dorecza po kolei" nie znaczy „wykonuje sie po kolei".
+    ///
+    /// Blokada procesowa jest tu na miejscu: aplikacja ma jednego uzytkownika i jeden
+    /// proces, a przyjmowanie powiadomien to z natury sekcja krytyczna na wspoldzielonym
+    /// stanie, ktorej nie da sie obronic w obrebie jednego DbContextu.
+    /// </summary>
+    private static readonly SemaphoreSlim Gate = new(1, 1);
+
     public async Task ExecuteAsync(Input input, CancellationToken ct = default)
     {
         if (!AllowedPackages.Contains(input.PackageName)) return;
 
+        await Gate.WaitAsync(ct);
+        try
+        {
+            await IngestAsync(input, ct);
+        }
+        finally
+        {
+            Gate.Release();
+        }
+    }
+
+    private async Task IngestAsync(Input input, CancellationToken ct)
+    {
         var maskedTitle = MaskSensitiveData(input.Title);
         var maskedText  = MaskSensitiveData(input.Text);
+
+        // To samo powiadomienie doreczone drugi raz nie jest druga platnoscia. Deduplikacja
+        // transakcji by je wprawdzie wychwycila, ale dopiero po zalozeniu drugiego wpisu
+        // w Skrzynce i po oznaczeniu go jako sparsowany wskazaniem na transakcje, ktorej
+        // nigdy nie dodano. Taniej i uczciwiej odrzucic je od razu.
+        if (await rawNotifications.ExistsAsync(input.PackageName, maskedTitle, maskedText, input.PostedAt, ct))
+            return;
 
         // Portfel Google bywa jedynym śladem płatności NFC telefonem (np. dla ING,
         // który przy zbliżeniówce z telefonu nie wysyła własnego powiadomienia) —
