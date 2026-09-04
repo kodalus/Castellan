@@ -60,7 +60,8 @@ public static class InfrastructureServiceExtensions
                 "Produkty do domu", "Restauracje i kawiarnie", "Transport", "Paliwo",
                 "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
                 "Rozrywka", "Subskrypcje", "Ubrania i obuwie", "Elektronika", "Edukacja",
-                "Sport i rekreacja", "Higiena i kosmetyki", "Podróże", "Inne wydatki",
+                "Sport i rekreacja", "Higiena i kosmetyki", "Kosmetyczka", "Podróże",
+                "Inne wydatki",
                 "Inwestycje", "Dobroczynność", "Dzieci", "Przedszkole", "Rezerwy",
                 "Kredyty i pożyczki",
             };
@@ -87,6 +88,10 @@ public static class InfrastructureServiceExtensions
         EnsureCategory(db, "Przedszkole", CategoryKind.Expense);
         EnsureCategory(db, "Rezerwy", CategoryKind.Expense);
         EnsureCategory(db, "Subskrypcje", CategoryKind.Expense);
+
+        // Usługa u kosmetyczki, osobno od „Higiena i kosmetyki" — tamta kategoria to
+        // rzeczy kupowane w sklepie, ta jest wizytą. Dwie różne decyzje wydatkowe.
+        EnsureCategory(db, "Kosmetyczka", CategoryKind.Expense);
         EnsureCategory(db, "800+", CategoryKind.Income);
         EnsureCategory(db, "Wpłata małżonka", CategoryKind.Income);
 
