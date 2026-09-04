@@ -23,6 +23,22 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="0,0,0,16">
 
+                <!-- Błąd przechwytywania jest ważniejszy niż cokolwiek niżej: gdy
+                     nasłuch się wywraca, reszta ekranu opisuje stan, którego nikt już
+                     nie aktualizuje. -->
+                <Border Style="{StaticResource ErrorBanner}" Margin="12,10,12,0"
+                        IsVisible="{Binding HasCaptureError}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Nasłuch powiadomień zgłosił błąd" Style="{StaticResource ErrorText}" />
+                        <Label Text="{Binding CaptureErrorDisplay}" Style="{StaticResource Caption}" />
+                        <HorizontalStackLayout Spacing="8">
+                            <Button Text="Kopiuj" Command="{Binding CopyCaptureErrorsCommand}" />
+                            <Button Text="Wyczyść" Command="{Binding ClearCaptureErrorsCommand}"
+                                    Style="{StaticResource GhostButton}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
                 <!-- Nierozpoznane powiadomienia na samej górze: to jedyny ślad po tym,
                      czego aplikacja NIE zapisała, więc nie może być niżej niż rzeczy,
                      które zapisała. -->

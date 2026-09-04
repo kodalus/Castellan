@@ -57,6 +57,14 @@ public partial class InboxViewModel : ObservableObject
     [ObservableProperty] private bool _hasUnrecognized;
 
     /// <summary>
+    /// Ostatni błąd przechwytywania. Awaria nasłuchu wygląda dokładnie jak cisza —
+    /// powiadomienia przychodzą, nic się nie zapisuje — więc bez tego pokazania jedyną
+    /// metodą diagnozy jest zgadywanie na odległość.
+    /// </summary>
+    [ObservableProperty] private string _captureErrorDisplay = "";
+    [ObservableProperty] private bool _hasCaptureError;
+
+    /// <summary>
     /// Tryb pracy. Bez tego wyboru osoba, która nie ma powiadomień bankowych i nie
     /// zamierza ich włączać, dostawała w kółko ostrzeżenie o braku uprawnienia —
     /// czyli nagabywanie o rzecz, której świadomie nie chce.
@@ -147,6 +155,10 @@ public partial class InboxViewModel : ObservableObject
             }
             HasProposals = Proposals.Count > 0;
 
+            var errors = CaptureDiagnostics.Read();
+            HasCaptureError = errors.Count > 0;
+            CaptureErrorDisplay = errors.Count > 0 ? errors[^1] : "";
+
             var unrecognized = await _unrecognized.ExecuteAsync(ct);
             HasUnrecognized = unrecognized.Count > 0;
             UnrecognizedDisplay = unrecognized.Count == 1
@@ -169,6 +181,25 @@ public partial class InboxViewModel : ObservableObject
     [RelayCommand]
     private static async Task OpenUnrecognizedAsync() =>
         await Shell.Current.GoToAsync("unrecognized");
+
+    /// <summary>Cały zapis do schowka — po to, żeby dało się go komuś wkleić.</summary>
+    [RelayCommand]
+    private async Task CopyCaptureErrorsAsync()
+    {
+        var text = string.Join(Environment.NewLine, CaptureDiagnostics.Read());
+        if (text.Length == 0) return;
+
+        await Clipboard.SetTextAsync(text);
+        if (Shell.Current?.CurrentPage is Page page)
+            await page.DisplayAlertAsync("Skopiowane", "Zapis błędów jest w schowku.", "OK");
+    }
+
+    [RelayCommand]
+    private async Task ClearCaptureErrorsAsync()
+    {
+        CaptureDiagnostics.Clear();
+        await LoadAsync();
+    }
 
     private async Task ConfirmProposalAsync(Guid groupId, bool toIsSavings)
     {
