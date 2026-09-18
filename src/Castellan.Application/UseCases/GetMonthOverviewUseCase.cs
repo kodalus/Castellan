@@ -108,7 +108,9 @@ public sealed class GetMonthOverviewUseCase(
 
         // "Wydano" / "Pozostało do wydania" liczone wyłącznie z planu (kopert),
         // nigdy z aktywów ani funduszy — te pozostają poza budżetem miesiąca.
-        var totalSpent = new Money(envelopes.Sum(e => Math.Abs(e.Actual.Grosze)));
+        // Odwrocony znak, nie wartosc bezwzgledna: koperta z nadwyzka zwrotow ma
+        // faktyczna kwote DODATNIA, a modul zamienialby ten zwrot z powrotem w wydatek.
+        var totalSpent = new Money(envelopes.Sum(e => -e.Actual.Grosze));
 
         // Faktyczne wpływy: dodatnie, nieodrzucone transakcje — ta sama definicja
         // co w statystykach. Transfery między własnymi kontami są wykluczone przez

@@ -39,18 +39,29 @@ public partial class EditTransactionViewModel : ObservableObject
     [ObservableProperty] private DateTime _date = DateTime.Today;
     [ObservableProperty] private string? _note;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsExpense))]
-    private bool _isIncome;
+    // Trzy tryby, nie dwa — patrz AddTransactionViewModel. Zwrot kosztow ma kwote
+    // dodatnia, ale kategorie wydatkowa, bo pomniejsza wlasnie te kategorie.
+    [ObservableProperty] private bool _isExpense = true;
+    [ObservableProperty] private bool _isIncome;
+    [ObservableProperty] private bool _isRefund;
 
-    public bool IsExpense
-    {
-        get => !IsIncome;
-        set => IsIncome = !value;
-    }
+    private bool _switchingMode;
 
-    partial void OnIsIncomeChanged(bool value)
+    partial void OnIsExpenseChanged(bool value) { if (value) SelectMode(expense: true,  income: false, refund: false); }
+    partial void OnIsIncomeChanged(bool value)  { if (value) SelectMode(expense: false, income: true,  refund: false); }
+    partial void OnIsRefundChanged(bool value)  { if (value) SelectMode(expense: false, income: false, refund: true); }
+
+    private void SelectMode(bool expense, bool income, bool refund)
     {
+        if (_switchingMode) return;
+        _switchingMode = true;
+        IsExpense = expense;
+        IsIncome = income;
+        IsRefund = refund;
+        _switchingMode = false;
+
+        // Przy wczytywaniu liste kategorii wypelnia LoadAsync — i musi to zrobic PO
+        // ustawieniu trybu, bo inaczej pokazalaby kategorie nie tego rodzaju.
         if (IsLoaded) FillCategoryOptions();
     }
 
@@ -91,7 +102,11 @@ public partial class EditTransactionViewModel : ObservableObject
         _originalDate = tx.OccurredAt.LocalDateTime.Date;
         _originalOccurredAt = tx.OccurredAt;
 
-        IsIncome = !tx.Amount.IsNegative;
+        SelectMode(
+            expense: tx.Amount.IsNegative,
+            income:  !tx.Amount.IsNegative && !IsRefundTransaction(tx),
+            refund:  IsRefundTransaction(tx));
+
         AmountText = (Math.Abs(tx.Amount.Grosze) / 100m).ToString("F2", CultureInfo.InvariantCulture);
         Date = _originalDate;
         Note = tx.Note;
@@ -110,6 +125,16 @@ public partial class EditTransactionViewModel : ObservableObject
 
         IsLoaded = true;
     }
+
+    /// <summary>
+    /// Wplyw w kategorii wydatkowej to zwrot kosztow — dokladnie ta sama regula, po
+    /// ktorej rozpoznaja go obliczenia (RefundAccounting). Kategorie systemowe sa
+    /// wydatkowe, ale „Nieprzypisane" to brak decyzji, wiec taki wplyw zostaje
+    /// przychodem az do posortowania.
+    /// </summary>
+    private bool IsRefundTransaction(Transaction tx) =>
+        !tx.Amount.IsNegative
+        && _allCategories.FirstOrDefault(c => c.Id == tx.CategoryId) is { IsSystem: false, Kind: CategoryKind.Expense };
 
     private void FillCategoryOptions()
     {
@@ -131,7 +156,7 @@ public partial class EditTransactionViewModel : ObservableObject
 
         var magnitude = (long)Math.Round(Math.Abs(dec) * 100, MidpointRounding.AwayFromZero);
         if (magnitude == 0) return;
-        var grosze = IsIncome ? magnitude : -magnitude;
+        var grosze = IsExpense ? -magnitude : magnitude;
         var accountId = AccountOptions[AccountIndex].Id;
 
         CategoryId categoryId;

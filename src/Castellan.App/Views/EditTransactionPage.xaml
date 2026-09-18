@@ -15,11 +15,15 @@
     <ScrollView>
         <VerticalStackLayout Style="{StaticResource FormBody}">
 
-            <HorizontalStackLayout Spacing="24">
+            <!-- Zwrot kosztów jest osobnym trybem, a nie odmianą przychodu: kwota wraca
+                 na konto, ale ma pomniejszyć kategorię, z której poszła pierwotna płatność. -->
+            <HorizontalStackLayout Spacing="16">
                 <RadioButton Content="Wydatek" GroupName="txKind"
                              IsChecked="{Binding IsExpense, Mode=TwoWay}" />
                 <RadioButton Content="Przychód" GroupName="txKind"
                              IsChecked="{Binding IsIncome, Mode=TwoWay}" />
+                <RadioButton Content="Zwrot" GroupName="txKind"
+                             IsChecked="{Binding IsRefund, Mode=TwoWay}" />
             </HorizontalStackLayout>
 
             <VerticalStackLayout Style="{StaticResource Field}">
@@ -40,6 +44,8 @@
 
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="{x:Static strings:AppResources.Transactions_Category}" Style="{StaticResource FieldLabel}" />
+                <Label Text="Kategoria, z której odliczyć zwrot" Style="{StaticResource Caption}"
+                       IsVisible="{Binding IsRefund}" />
                 <Picker ItemsSource="{Binding CategoryOptions}" ItemDisplayBinding="{Binding Name}"
                         SelectedIndex="{Binding CategoryIndex}" />
             </VerticalStackLayout>

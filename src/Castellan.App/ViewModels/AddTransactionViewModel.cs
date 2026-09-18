@@ -46,18 +46,35 @@ public partial class AddTransactionViewModel : ObservableObject
     [ObservableProperty] private string? _note;
 
     // Znak kwoty wynika z trybu, nie z tego, czy użytkownik pamiętał o minusie.
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsExpense))]
-    private bool _isIncome;
+    //
+    // Tryby sa trzy, a nie dwa, bo „wplyw" kryje dwa rozne zdarzenia. Przychod to nowe
+    // pieniadze (wyplata, prezent). Zwrot kosztow to pieniadze wracajace za cos juz
+    // kupionego — reklamacja, oddany towar — i ma POMNIEJSZYC kategorie, z ktorej poszla
+    // pierwotna platnosc, zamiast zawyzac przychody. Dlatego zwrot dostaje do wyboru
+    // kategorie WYDATKOWE, choc kwota jest dodatnia.
+    [ObservableProperty] private bool _isExpense = true;
+    [ObservableProperty] private bool _isIncome;
+    [ObservableProperty] private bool _isRefund;
 
-    // Zapisywalna, bo RadioButton "Wydatek" wiąże się TwoWay i musi móc ją ustawić.
-    public bool IsExpense
+    // RadioButton pilnuje wylacznosci w widoku, ale zapis czyta te pola, wiec musza byc
+    // spojne takze wtedy, gdy tryb ustawia kod (np. wczytanie istniejacej transakcji).
+    private bool _switchingMode;
+
+    partial void OnIsExpenseChanged(bool value) { if (value) SelectMode(expense: true,  income: false, refund: false); }
+    partial void OnIsIncomeChanged(bool value)  { if (value) SelectMode(expense: false, income: true,  refund: false); }
+    partial void OnIsRefundChanged(bool value)  { if (value) SelectMode(expense: false, income: false, refund: true); }
+
+    private void SelectMode(bool expense, bool income, bool refund)
     {
-        get => !IsIncome;
-        set => IsIncome = !value;
-    }
+        if (_switchingMode) return;
+        _switchingMode = true;
+        IsExpense = expense;
+        IsIncome = income;
+        IsRefund = refund;
+        _switchingMode = false;
 
-    partial void OnIsIncomeChanged(bool value) => FillCategoryOptions();
+        FillCategoryOptions();
+    }
 
     public AddTransactionViewModel(
         IAccountRepository accounts,
@@ -101,6 +118,7 @@ public partial class AddTransactionViewModel : ObservableObject
 
     private void FillCategoryOptions()
     {
+        // Zwrot idzie razem z wydatkiem: wybrana kategoria mowi, z czego ten zwrot.
         var kind = IsIncome ? CategoryKind.Income : CategoryKind.Expense;
 
         CategoryOptions.Clear();
@@ -115,8 +133,9 @@ public partial class AddTransactionViewModel : ObservableObject
         if (CategoryOptions.Count == 0) return -1;
 
         // Zakupy spożywcze+chemia+higiena to najczęstszy wydatek — niech nie
-        // trzeba za każdym razem przewijać pickera, żeby go znaleźć.
-        if (!IsIncome)
+        // trzeba za każdym razem przewijać pickera, żeby go znaleźć. Przy zwrocie
+        // ta podpowiedz byla by falszywa: zwroty rozkladaja sie zupelnie inaczej.
+        if (IsExpense)
         {
             for (var i = 0; i < CategoryOptions.Count; i++)
                 if (CategoryOptions[i].Name.Equals(DefaultExpenseCategoryName, StringComparison.OrdinalIgnoreCase))
@@ -135,7 +154,7 @@ public partial class AddTransactionViewModel : ObservableObject
         // Kwotę wpisuje się zawsze dodatnią; minus dokłada tryb "Wydatek".
         var magnitude = (long)Math.Round(Math.Abs(dec) * 100, MidpointRounding.AwayFromZero);
         if (magnitude == 0) return;
-        var grosze = IsIncome ? magnitude : -magnitude;
+        var grosze = IsExpense ? -magnitude : magnitude;
         var accountId = AccountOptions[AccountIndex].Id;
 
         CategoryId categoryId;

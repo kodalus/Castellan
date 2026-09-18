@@ -1,5 +1,6 @@
 using System.Globalization;
 using Castellan.Application.Repositories;
+using Castellan.Application.Services;
 using Castellan.Domain;
 using Castellan.Domain.Aggregates;
 using Castellan.Domain.ValueObjects;
@@ -31,6 +32,11 @@ public sealed class GetMonthlyStatsUseCase(
         var start = upTo;
         for (var i = 0; i < monthCount - 1; i++) start = start.Previous();
 
+        // Pelna mapa kategorii, nie tylko tych z wydatkow: rozpoznanie zwrotu kosztow
+        // wymaga rodzaju kategorii, a zwrot ma kwote DODATNIA — po starym filtrze po
+        // znaku nigdy by tu nie trafil.
+        var catMap = (await categories.ListAsync(ct)).ToDictionary(c => c.Id);
+
         var months = new List<MonthlyStat>(monthCount);
         var allExpenseTxs = new List<Transaction>();
 
@@ -40,24 +46,23 @@ public sealed class GetMonthlyStatsUseCase(
             var txs = await transactions.ListForMonthAsync(current, ct);
             var active = txs.Where(t => !t.IsExcludedFromCalculations).ToList();
 
-            var expense = new Money(active.Where(t => t.Amount.IsNegative).Sum(t => t.Amount.Grosze));
-            var income  = new Money(active.Where(t => !t.Amount.IsNegative).Sum(t => t.Amount.Grosze));
+            // Zwrot kosztow zbija wydatki, zamiast zawyzac przychody. Inaczej ten sam
+            // zwrot pomniejszalby koperte w Planie i JEDNOCZESNIE rosl jako przychod
+            // w Statystykach — dwie liczby o tym samym zdarzeniu, mowiace co innego.
+            var expense = active.Sum(t => RefundAccounting.NetExpenseGrosze(t, catMap));
+            var income  = active.Where(t => RefundAccounting.IsIncome(t, catMap)).Sum(t => t.Amount.Grosze);
 
-            months.Add(new MonthlyStat(current, expense.Abs(), income));
-            allExpenseTxs.AddRange(active.Where(t => t.Amount.IsNegative));
+            months.Add(new MonthlyStat(current, new Money(expense), new Money(income)));
+            allExpenseTxs.AddRange(active.Where(t =>
+                t.Amount.IsNegative || RefundAccounting.IsRefund(t, catMap)));
             current = current.Next();
         }
-
-        // Top 5 expense categories across the whole period
-        var catIds = allExpenseTxs.Select(t => t.CategoryId).Distinct();
-        var cats = await categories.GetManyAsync(catIds, ct);
-        var catMap = cats.ToDictionary(c => c.Id);
 
         var topCats = allExpenseTxs
             .GroupBy(t => t.CategoryId)
             .Select(g => new TopCategoryStat(
                 catMap.TryGetValue(g.Key, out var c) ? c.Name : "?",
-                new Money(Math.Abs(g.Sum(t => t.Amount.Grosze)))))
+                new Money(g.Sum(t => RefundAccounting.NetExpenseGrosze(t, catMap)))))
             .OrderByDescending(x => x.TotalSpent.Grosze)
             .Take(5)
             .ToList();

@@ -1,4 +1,5 @@
 using Castellan.Application.Repositories;
+using Castellan.Application.Services;
 using Castellan.Domain;
 using Castellan.Domain.ValueObjects;
 
@@ -110,7 +111,9 @@ public sealed class GetCushionOverviewUseCase(
     /// </summary>
     private async Task<(Money avg, int months)> ComputeAvgExpenseAsync(int count, CancellationToken ct)
     {
-        var reserveId = (await categories.ListAsync(ct))
+        var allCategories = await categories.ListAsync(ct);
+        var catMap = allCategories.ToDictionary(c => c.Id);
+        var reserveId = allCategories
             .FirstOrDefault(c => c.Name.Equals(ConfirmTransferUseCase.ReserveCategoryName,
                 StringComparison.OrdinalIgnoreCase))?.Id;
 
@@ -125,10 +128,12 @@ public sealed class GetCushionOverviewUseCase(
         while (current.CompareTo(upTo) <= 0)
         {
             var txs = await transactions.ListForMonthAsync(current, ct);
+            // Zwrot kosztow pomniejsza tu wydatki tego miesiaca, bo tyle naprawde
+            // kosztowalo zycie: oddany towar nie jest kosztem utrzymania.
             var expenses = txs
-                .Where(t => !t.IsExcludedFromCalculations && t.Amount.IsNegative
+                .Where(t => !t.IsExcludedFromCalculations
                          && (reserveId is null || t.CategoryId != reserveId))
-                .Sum(t => Math.Abs(t.Amount.Grosze));
+                .Sum(t => RefundAccounting.NetExpenseGrosze(t, catMap));
             if (expenses > 0) { total += expenses; usedMonths++; }
             current = current.Next();
         }
