@@ -4,7 +4,12 @@
     <!-- Android to urzadzenie, na ktorym dziala przechwytywanie powiadomien bankowych
          — tam aplikacja sie zaczela. Windows jest dla osob, ktore nie uzywaja telefonu
          wcale: tam powiadomien nie ma i caly budzet wpisuje sie recznie. -->
-    <TargetFrameworks>net10.0-android36.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFrameworks>net10.0-android36.0</TargetFrameworks>
+
+    <!-- Target Windows tylko na Windows. Bez tego warunku przywracanie pakietow na
+         Linuksie (tak jest zbudowany APK w CI) probuje sciagnac pakiety WinUI
+         i wywala sie na czyms, co w ogole nie jest potrzebne do APK. -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>Castellan.App</RootNamespace>
     <UseMaui>true</UseMaui>

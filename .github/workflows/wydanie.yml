@@ -1,0 +1,129 @@
+name: Wydanie
+
+# Uruchamiane znacznikiem, np. `git tag v0.1.0 && git push origin v0.1.0`.
+# Artefakty przebiegu CI wygasają po 90 dniach i wymagają zalogowania;
+# wydanie daje stały, publiczny odnośnik do plików.
+#
+# Castellan ma dwa wydania naraz i nie da się ich zbudować na jednej maszynie:
+# APK wymaga workloadu Androida (najtaniej na Linuksie), a wersja na pulpit
+# wymaga WinUI, czyli Windowsa. Dlatego dwa osobne zadania budujące i trzecie,
+# które dopiero z ich wyników składa jedno wydanie — inaczej dwa zadania
+# tworzyłyby wydanie równolegle i jedno nadpisałoby drugie.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  apk:
+    name: Android (APK)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Workload Androida
+        run: dotnet workload install maui-android
+
+      - name: Publikacja APK
+        run: dotnet publish src/Castellan.App/Castellan.App.csproj -f net10.0-android36.0 -c Release
+
+      - name: Zebranie pakietu
+        run: |
+          mkdir -p artefakty
+          find src/Castellan.App/bin/Release -name '*-Signed.apk' -exec cp {} artefakty/ \;
+          # Gdyby konwencja nazw się zmieniła, bierzemy cokolwiek, co jest pakietem.
+          if [ -z "$(ls -A artefakty)" ]; then
+            find src/Castellan.App/bin/Release -name '*.apk' -exec cp {} artefakty/ \;
+          fi
+          apk="$(ls artefakty/*.apk | head -1)"
+          mv "$apk" "artefakty/Castellan-${GITHUB_REF_NAME}-android.apk"
+          ls -l artefakty
+          test -n "$(ls -A artefakty)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: artefakty/*.apk
+          if-no-files-found: error
+
+  pulpit:
+    name: Windows (ZIP)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Workload Windows
+        run: dotnet workload install maui-windows
+
+      # Bez -r i bez --self-contained: jedno i drugie przestawia SDK na pakiet
+      # uruchomieniowy Mono (od Androida), którego dla win-x64 nie ma w ogóle.
+      # Domyślne ustawienia tego targetu dają to, co trzeba — razem
+      # z WindowsAppSDKSelfContained z pliku projektu.
+      - name: Publikacja na pulpit
+        run: dotnet publish src/Castellan.App/Castellan.App.csproj -f net10.0-windows10.0.19041.0 -c Release
+
+      - name: Spakowanie
+        shell: pwsh
+        run: |
+          $pub = Get-ChildItem -Path "src/Castellan.App/bin/Release/net10.0-windows10.0.19041.0" `
+                               -Directory -Recurse -Filter "publish" | Select-Object -First 1
+          if (-not $pub) { throw "Nie znaleziono katalogu publish" }
+
+          $exe = Join-Path $pub.FullName "Castellan.App.exe"
+          if (-not (Test-Path $exe)) { throw "W katalogu publish nie ma Castellan.App.exe" }
+
+          New-Item -ItemType Directory -Force -Path artefakty | Out-Null
+          Compress-Archive -Path (Join-Path $pub.FullName '*') `
+                           -DestinationPath "artefakty/Castellan-$env:GITHUB_REF_NAME-windows-x64.zip" `
+                           -CompressionLevel Optimal
+          Get-ChildItem artefakty
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pulpit
+          path: artefakty/*.zip
+          if-no-files-found: error
+
+  wydanie:
+    name: Opublikowanie wydania
+    needs: [apk, pulpit]
+    runs-on: ubuntu-latest
+    steps:
+      # Potrzebne tylko dla pliku z notatkami — trzymanie ich w repozytorium zamiast
+      # w tym pliku omija cytowanie wielu linii w YAML-u i w powloce naraz.
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefakty
+          merge-multiple: true
+
+      - name: Wydanie
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l artefakty
+          gh release create "${{ github.ref_name }}" artefakty/* \
+            --title "Castellan ${{ github.ref_name }}" \
+            --notes-file .github/notatki-wydania.md \
+            --repo "${{ github.repository }}"
