@@ -27,6 +27,8 @@
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="Bank" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding BankOptions}" SelectedIndex="{Binding BankIndex}" />
+                <Entry Text="{Binding CustomBank}" Placeholder="np. Bank Spółdzielczy w Brodnicy"
+                       IsVisible="{Binding IsCustomBank}" />
                 <Label Text="Dzięki temu powiadomienia z tego banku trafią na właściwe konto, jakkolwiek je nazwiesz."
                        Style="{StaticResource FieldHint}" />
             </VerticalStackLayout>

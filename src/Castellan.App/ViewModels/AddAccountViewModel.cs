@@ -15,7 +15,14 @@ public partial class AddAccountViewModel : ObservableObject
     [ObservableProperty] private string _name = "";
     [ObservableProperty] private int _kindIndex;
     [ObservableProperty] private string _balanceText = "0";
-    [ObservableProperty] private int _bankIndex;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsCustomBank))]
+    private int _bankIndex;
+
+    /// <summary>Nazwa banku wpisana ręcznie — widoczna tylko przy wyborze „Inny (wpisz)".</summary>
+    [ObservableProperty] private string _customBank = "";
+
+    public bool IsCustomBank => BankIndex == BankChoices.CustomIndex;
 
     public List<string> KindOptions => AccountKinds.Options;
     public List<string> BankOptions => BankChoices.Options;
@@ -36,7 +43,7 @@ public partial class AddAccountViewModel : ObservableObject
             await _create.ExecuteAsync(
                 new CreateAccountUseCase.Input(
                     Name.Trim(), kind, new Money(grosze), DateTimeOffset.Now,
-                    BankChoices.FromIndex(BankIndex)), ct);
+                    BankChoices.FromIndex(BankIndex, CustomBank)), ct);
             await Shell.Current.GoToAsync("..");
         }
         catch (Exception ex)

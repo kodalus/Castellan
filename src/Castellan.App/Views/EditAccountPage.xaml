@@ -35,12 +35,19 @@
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="Bank" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding BankOptions}" SelectedIndex="{Binding BankIndex}" />
+                <Entry Text="{Binding CustomBank}" Placeholder="np. Bank Spółdzielczy w Brodnicy"
+                       IsVisible="{Binding IsCustomBank}" />
                 <Label Style="{StaticResource FieldHint}"
                        Text="Po co: powiadomienie trafi na właściwe konto niezależnie od tego, jak je nazwałaś. Bez tego aplikacja zgaduje po nazwie — a przy dwóch kontach w jednym banku zgadywanie bywa błędne." />
             </VerticalStackLayout>
 
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
+
+            <!-- Osobno, na samym dole i w kolorze ostrzegawczym: to jedyne działanie
+                 na tym ekranie, którego nie da się cofnąć. -->
+            <Button Text="Usuń konto" Command="{Binding DeleteCommand}"
+                    Style="{StaticResource DangerButton}" Margin="0,12,0,0" />
 
         </VerticalStackLayout>
     </ScrollView>

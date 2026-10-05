@@ -22,4 +22,10 @@ internal sealed class AccountRepository(CastellanDbContext db) : IAccountReposit
         db.Accounts.Add(account);
         return Task.CompletedTask;
     }
+
+    public Task RemoveAsync(Account account, CancellationToken ct = default)
+    {
+        db.Accounts.Remove(account);
+        return Task.CompletedTask;
+    }
 }

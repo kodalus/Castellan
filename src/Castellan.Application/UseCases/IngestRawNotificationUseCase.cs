@@ -18,7 +18,11 @@ public sealed partial class IngestRawNotificationUseCase(
     IUnitOfWork uow,
     IEnumerable<INotificationParser> parsers)
 {
-    private static readonly string[] BankKeywords = Banks.Known;
+    // Od najdluzszej nazwy, bo szukanie konczy sie na pierwszym trafieniu: krotsza
+    // nazwa zawarta w dluzszej przyslonilaby ja i wygralaby kolejnosc w liscie,
+    // a nie trafnosc.
+    private static readonly string[] BankKeywords =
+        [.. Banks.Popular.OrderByDescending(b => b.Length)];
 
     /// <summary>Okno na parę „bank + Portfel Google" dla jednej płatności.</summary>
     private const int CrossSourceWindowMinutes = 180;
