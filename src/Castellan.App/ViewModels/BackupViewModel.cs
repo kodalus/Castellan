@@ -1,10 +1,12 @@
+using Castellan.App.Services;
 using Castellan.Application.UseCases;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace Castellan.App.ViewModels;
 
-public partial class BackupViewModel(ExportDataUseCase export, ImportDataUseCase import) : ObservableObject
+public partial class BackupViewModel(
+    ExportDataUseCase export, ImportDataUseCase import, IBackupFileTarget target) : ObservableObject
 {
     [ObservableProperty] private bool _isBusy;
     [ObservableProperty] private string _statusMessage = "";
@@ -21,16 +23,15 @@ public partial class BackupViewModel(ExportDataUseCase export, ImportDataUseCase
         {
             var json = await export.ExecuteAsync(ct);
             var fileName = $"castellan_{DateTime.Now:yyyyMMdd_HHmmss}.json";
-            var filePath = Path.Combine(FileSystem.CacheDirectory, fileName);
-            await File.WriteAllTextAsync(filePath, json, ct);
 
-            await Share.RequestAsync(new ShareFileRequest
-            {
-                Title = "Kopia zapasowa Castellan",
-                File = new ShareFile(filePath, "application/json"),
-            });
+            // Gdzie plik ma wylądować, decyduje platforma: arkusz udostępniania na
+            // telefonie, okno zapisu na pulpicie. Tutaj liczy się tylko to, czy
+            // wylądował — i gdzie, żeby dało się to pokazać.
+            var saved = await target.SaveAsync(fileName, json, ct);
 
-            StatusMessage = $"Eksport gotowy: {fileName}";
+            StatusMessage = saved is null
+                ? "Eksport przerwany — nic nie zapisano."
+                : $"Kopia zapisana: {saved}";
             HasStatus = true;
         }
         catch (Exception ex)

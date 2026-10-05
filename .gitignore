@@ -495,3 +495,5 @@ screenshots/raw/
 Thumbs.db
 desktop.ini
 *.swp
+# Gotowe artefakty wydania — budowane lokalnie, wiszą przy Release na GitHubie.
+dist/

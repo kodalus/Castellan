@@ -78,7 +78,7 @@
                                             </SwipeView.RightItems>
 
                                             <Border Style="{StaticResource CardRow}">
-                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                                                     <Grid.GestureRecognizers>
                                                         <TapGestureRecognizer Command="{Binding UpdateCommand}"
                                                                               CommandParameter="{Binding Id}" />
@@ -89,6 +89,13 @@
                                                         <Label Text="{Binding ValueDisplay}" Style="{StaticResource RowValue}" />
                                                         <Label Text="{Binding UpdatedDisplay}" Style="{StaticResource RowMeta}" />
                                                     </VerticalStackLayout>
+
+                                                    <!-- Tylko na pulpicie: przeciagniecia wiersza mysza nikt nie odkrywa. -->
+                                                    <Button Grid.Column="2" Text="Usuń" Command="{Binding DeleteCommand}"
+                                                            CommandParameter="{Binding .}"
+                                                            Style="{StaticResource RowAction}" Padding="10,4"
+                                                            VerticalOptions="Center"
+                                                            IsVisible="{Binding ShowDeleteButton}" />
                                                 </Grid>
                                             </Border>
                                         </SwipeView>
@@ -160,9 +167,18 @@
                                                    Style="{StaticResource InfoCaption}" VerticalOptions="Center" />
                                         </Grid>
 
-                                        <Button Text="Zapłać ratę" Command="{Binding PayCommand}"
-                                                IsVisible="{Binding IsNotPaidOff}"
-                                                Style="{StaticResource RowAction}" HorizontalOptions="End" />
+                                        <!-- Tylko na pulpicie: przeciagniecia wiersza mysza nikt nie odkrywa. -->
+                                        <HorizontalStackLayout Spacing="6" HorizontalOptions="End">
+                                            <Button Text="Edytuj" Command="{Binding EditCommand}"
+                                                    Style="{StaticResource RowAction}" Padding="10,4"
+                                                    IsVisible="{OnPlatform Default=False, WinUI=True}" />
+                                            <Button Text="Usuń" Command="{Binding DeleteCommand}"
+                                                    Style="{StaticResource RowAction}" Padding="10,4"
+                                                    IsVisible="{OnPlatform Default=False, WinUI=True}" />
+                                            <Button Text="Zapłać ratę" Command="{Binding PayCommand}"
+                                                    IsVisible="{Binding IsNotPaidOff}"
+                                                    Style="{StaticResource RowAction}" />
+                                        </HorizontalStackLayout>
 
                                     </VerticalStackLayout>
                                 </Border>

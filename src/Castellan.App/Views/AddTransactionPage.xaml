@@ -34,7 +34,7 @@
 
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="{x:Static strings:AppResources.Transactions_Amount}" Style="{StaticResource FieldLabel}" />
-                <Entry Text="{Binding AmountText}" Keyboard="Numeric" Placeholder="100,00" />
+                <Entry x:Name="AmountEntry" Text="{Binding AmountText}" Keyboard="Numeric" Placeholder="100,00" />
             </VerticalStackLayout>
 
             <VerticalStackLayout Style="{StaticResource Field}">
@@ -52,8 +52,17 @@
 
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="{x:Static strings:AppResources.Transactions_Note}" Style="{StaticResource FieldLabel}" />
-                <Entry Text="{Binding Note}" />
+                <Entry x:Name="NoteEntry" Text="{Binding Note}" />
             </VerticalStackLayout>
+
+            <!-- Zapis jest też w pasku narzędzi, ale tam na pulpicie trafia do belki
+                 tytułowej: trudno go znaleźć i nie stoi w kolejce Taba. Przy wpisywaniu
+                 z klawiatury to jedyne wyjście, do którego da się dojść bez myszy. -->
+            <HorizontalStackLayout Spacing="8">
+                <Button Text="{x:Static strings:AppResources.Button_Save}" Command="{Binding SaveCommand}" />
+                <Button Text="{x:Static strings:AppResources.Button_Cancel}" Command="{Binding CancelCommand}"
+                        Style="{StaticResource GhostButton}" />
+            </HorizontalStackLayout>
 
         </VerticalStackLayout>
     </ScrollView>

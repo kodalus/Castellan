@@ -27,6 +27,14 @@ public sealed class AssetRowVm
     public bool IsAccount { get; }
     public bool IsDeletable => !IsAccount;
 
+    /// <summary>
+    /// Przycisk usuwania w wierszu — tylko na pulpicie i tylko tam, gdzie jest co usuwać.
+    /// Dwa warunki naraz, więc nie da się tego zapisać samym „{OnPlatform}" w XAML-u:
+    /// IsVisible przyjmuje jedno źródło. A wyszarzony przycisk przy saldzie konta
+    /// obiecywałby działanie, którego tam nigdy nie będzie.
+    /// </summary>
+    public bool ShowDeleteButton => IsDeletable && !OperatingSystem.IsAndroid();
+
     public AssetRowVm(AssetRow row, ICommand updateCommand, ICommand deleteCommand)
     {
         Id             = row.Id;

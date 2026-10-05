@@ -24,13 +24,20 @@
                                        CommandParameter="{Binding .}" />
                         </SwipeItems>
                     </SwipeView.RightItems>
-                    <Grid ColumnDefinitions="*,Auto" Padding="0,13" ColumnSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto,Auto" Padding="0,13" ColumnSpacing="12">
                         <Label Grid.Column="0" Text="{Binding Name}" Style="{StaticResource RowTitle}"
                                VerticalOptions="Center" />
                         <!-- Rodzaj jako cichy podpis, nie kolorowa plakietka: w liście
                              czterdziestu kategorii czterdzieści plakietek to szum. -->
                         <Label Grid.Column="1" Text="{Binding KindDisplay}"
                                Style="{StaticResource Caption}" VerticalOptions="Center" />
+
+                        <!-- Widoczny tylko na pulpicie: tam przeciagniecia wiersza nikt nie odkryje. -->
+                        <Button Grid.Column="2" Text="Archiwizuj" Style="{StaticResource RowAction}"
+                                VerticalOptions="Center" Padding="10,4"
+                                IsVisible="{OnPlatform Default=False, WinUI=True}"
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CategoriesViewModel}}, Path=ArchiveCategoryCommand}"
+                                CommandParameter="{Binding .}" />
                     </Grid>
                 </SwipeView>
             </DataTemplate>

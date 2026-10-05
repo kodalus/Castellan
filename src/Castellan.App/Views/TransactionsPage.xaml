@@ -48,7 +48,7 @@
                             </SwipeItems>
                         </SwipeView.RightItems>
 
-                        <Grid ColumnDefinitions="Auto,*,Auto" Padding="0,11" ColumnSpacing="12">
+                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" Padding="0,11" ColumnSpacing="12">
                             <Grid.GestureRecognizers>
                                 <TapGestureRecognizer
                                     Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=EditTransactionCommand}"
@@ -80,6 +80,16 @@
                                     </DataTrigger>
                                 </Label.Triggers>
                             </Label>
+
+                            <!-- Widoczne tylko na pulpicie: tam przeciągnięcia wiersza
+                                 nikt nie odkryje, a obsługa idzie z klawiatury, więc
+                                 działanie musi stać w kolejce Taba. Na telefonie zostaje
+                                 przeciągnięcie, gdzie jest naturalne i nie zajmuje miejsca. -->
+                            <Button Grid.Column="3" Text="⋮" Style="{StaticResource RowAction}"
+                                    VerticalOptions="Center" Padding="10,4"
+                                    IsVisible="{OnPlatform Default=False, WinUI=True}"
+                                    Command="{Binding Source={RelativeSource AncestorType={x:Type vm:TransactionsViewModel}}, Path=RowActionsCommand}"
+                                    CommandParameter="{Binding .}" />
                         </Grid>
                     </SwipeView>
                 </DataTemplate>

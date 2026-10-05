@@ -309,9 +309,17 @@
         wewnątrz pola. Wcześniej każdy ekran miał własne wartości, przez co przejście
         z „Nowy fundusz” na „Nowe zobowiązanie” wyglądało jak zmiana aplikacji.
     -->
+    <!--
+        Formularz to kolumna, nie tapeta. Na telefonie szerokość ekranu jest mniejsza
+        niż ten limit, więc nic się nie zmienia; na pulpicie bez niego pole „Nazwa"
+        rozciągało się na 1900 px, a etykieta zostawała samotnie przy lewej krawędzi
+        i oko musiało przebiegać pół ekranu, żeby ją powiązać z wartością.
+    -->
     <Style x:Key="FormBody" TargetType="VerticalStackLayout">
         <Setter Property="Padding" Value="16,16,16,32" />
         <Setter Property="Spacing" Value="18" />
+        <Setter Property="MaximumWidthRequest" Value="560" />
+        <Setter Property="HorizontalOptions" Value="Center" />
     </Style>
 
     <Style x:Key="Field" TargetType="VerticalStackLayout">

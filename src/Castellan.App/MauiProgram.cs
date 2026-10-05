@@ -31,6 +31,8 @@ public static class MauiProgram
         // Use cases
         builder.Services.AddTransient<CreateAccountUseCase>();
         builder.Services.AddTransient<UpdateAccountUseCase>();
+        builder.Services.AddTransient<DeleteAccountUseCase>();
+        builder.Services.AddTransient<ArchiveAccountUseCase>();
         builder.Services.AddTransient<GetUnrecognizedNotificationsUseCase>();
         builder.Services.AddTransient<GetMonthPlanDraftUseCase>();
         builder.Services.AddTransient<RecordReserveTransferUseCase>();
@@ -75,6 +77,13 @@ public static class MauiProgram
 #if ANDROID
         builder.Services.AddSingleton<INotificationPermissionService,
             Castellan.App.Platforms.Android.Services.AndroidNotificationPermissionService>();
+        builder.Services.AddSingleton<IBackupFileTarget, ShareBackupFile>();
+#else
+        // Pulpit nie czyta powiadomien — ale usluga musi istniec, bo InboxViewModel
+        // wymaga jej w konstruktorze i bez rejestracji kontener wywala sie na starcie.
+        builder.Services.AddSingleton<INotificationPermissionService, NoNotificationCapture>();
+        builder.Services.AddSingleton<IBackupFileTarget,
+            Castellan.App.Platforms.Windows.Services.SaveDialogBackupFile>();
 #endif
 
         // ViewModels

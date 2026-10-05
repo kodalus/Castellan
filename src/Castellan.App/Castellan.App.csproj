@@ -1,7 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-android36.0</TargetFramework>
+    <!-- Android to urzadzenie, na ktorym dziala przechwytywanie powiadomien bankowych
+         — tam aplikacja sie zaczela. Windows jest dla osob, ktore nie uzywaja telefonu
+         wcale: tam powiadomien nie ma i caly budzet wpisuje sie recznie. -->
+    <TargetFrameworks>net10.0-android36.0;net10.0-windows10.0.19041.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
     <RootNamespace>Castellan.App</RootNamespace>
     <UseMaui>true</UseMaui>
@@ -13,9 +16,23 @@
     <ApplicationDisplayVersion>0.1</ApplicationDisplayVersion>
     <ApplicationVersion>1</ApplicationVersion>
 
-    <!-- Android 10 (API 29) minimum, Android 16 (API 36) target -->
-    <SupportedOSPlatformVersion>29.0</SupportedOSPlatformVersion>
     <NeutralLanguage>pl-PL</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- Android 10 (API 29) minimum, Android 16 (API 36) target -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+    <SupportedOSPlatformVersion>29.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <!-- Windows 10 October 2018 Update — najnizsza wersja, ktora unosi WinUI 3. -->
+  <PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+
+    <!-- Bez pakowania w MSIX: zwykly exe, ktory da sie skopiowac i uruchomic. MSIX
+         wymagalby podpisu, a niepodpisany nie zainstaluje sie bez trybu dewelopera. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
   </PropertyGroup>
 
   <ItemGroup>

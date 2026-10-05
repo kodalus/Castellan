@@ -86,8 +86,17 @@
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                         <Label Grid.Column="0" Text="{Binding SuggestedMonthlyDisplay}"
                                                Style="{StaticResource Secondary}" VerticalOptions="Center" />
-                                        <Button Grid.Column="1" Text="Wpłać" Command="{Binding ContributeCommand}"
-                                                Style="{StaticResource RowAction}" />
+                                        <!-- Tylko na pulpicie: przeciagniecia wiersza mysza nikt nie odkrywa. -->
+                                        <HorizontalStackLayout Grid.Column="1" Spacing="6">
+                                            <Button Text="Edytuj" Command="{Binding EditCommand}"
+                                                    Style="{StaticResource RowAction}" Padding="10,4"
+                                                    IsVisible="{OnPlatform Default=False, WinUI=True}" />
+                                            <Button Text="Usuń" Command="{Binding DeleteCommand}"
+                                                    Style="{StaticResource RowAction}" Padding="10,4"
+                                                    IsVisible="{OnPlatform Default=False, WinUI=True}" />
+                                            <Button Text="Wpłać" Command="{Binding ContributeCommand}"
+                                                    Style="{StaticResource RowAction}" />
+                                        </HorizontalStackLayout>
                                     </Grid>
 
 

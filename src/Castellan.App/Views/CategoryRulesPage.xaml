@@ -24,13 +24,20 @@
                                        CommandParameter="{Binding .}" />
                         </SwipeItems>
                     </SwipeView.RightItems>
-                    <Grid ColumnDefinitions="*,Auto" Padding="0,13" ColumnSpacing="12">
+                    <Grid ColumnDefinitions="*,Auto,Auto" Padding="0,13" ColumnSpacing="12">
                         <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
                             <Label Text="{Binding Pattern}" Style="{StaticResource RowTitle}" />
                             <Label Text="gdy nazwa sprzedawcy zawiera" Style="{StaticResource Caption}" />
                         </VerticalStackLayout>
                         <Label Grid.Column="1" Text="{Binding CategoryName}"
                                Style="{StaticResource Secondary}" VerticalOptions="Center" />
+
+                        <!-- Widoczny tylko na pulpicie: tam przeciagniecia wiersza nikt nie odkryje. -->
+                        <Button Grid.Column="2" Text="Usuń" Style="{StaticResource RowAction}"
+                                VerticalOptions="Center" Padding="10,4"
+                                IsVisible="{OnPlatform Default=False, WinUI=True}"
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:CategoryRulesViewModel}}, Path=DeleteRuleCommand}"
+                                CommandParameter="{Binding .}" />
                     </Grid>
                 </SwipeView>
             </DataTemplate>

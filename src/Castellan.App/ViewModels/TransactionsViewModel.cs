@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Castellan.Application.Repositories;
+using Castellan.Application.Services;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
 using Castellan.Domain.Aggregates;
@@ -27,6 +28,9 @@ public sealed record TransactionRow(
 
 public partial class TransactionsViewModel : ObservableObject
 {
+    // Miesiac sam przechodzi na biezacy — ta zakladka zyje tak dlugo jak aplikacja.
+    private readonly MonthCursor _cursor = new();
+
     private readonly ITransactionRepository _transactions;
     private readonly ICategoryRepository _categories;
     private readonly IFundRepository _funds;
@@ -55,12 +59,14 @@ public partial class TransactionsViewModel : ObservableObject
         _funds = funds;
         _delete = delete;
         _payFromFund = payFromFund;
-        CurrentMonth = YearMonth.Current;
+        CurrentMonth = _cursor.Month;
     }
 
     [RelayCommand]
     public async Task LoadAsync(CancellationToken ct = default)
     {
+        CurrentMonth = _cursor.Refresh();
+
         Transactions.Clear();
         var txs = await _transactions.ListForMonthAsync(CurrentMonth, ct);
         var cats = await _categories.GetManyAsync(txs.Select(t => t.CategoryId).Distinct(), ct);
@@ -98,14 +104,14 @@ public partial class TransactionsViewModel : ObservableObject
     [RelayCommand]
     private async Task PreviousMonthAsync(CancellationToken ct = default)
     {
-        CurrentMonth = CurrentMonth.Previous();
+        CurrentMonth = _cursor.Previous();
         await LoadAsync(ct);
     }
 
     [RelayCommand]
     private async Task NextMonthAsync(CancellationToken ct = default)
     {
-        CurrentMonth = CurrentMonth.Next();
+        CurrentMonth = _cursor.Next();
         await LoadAsync(ct);
     }
 
@@ -161,7 +167,7 @@ public partial class TransactionsViewModel : ObservableObject
                 return;
             }
 
-            var choice = await page.DisplayActionSheet(
+            var choice = await page.DisplayActionSheetAsync(
                 "Pokryj z funduszu", "Anuluj", null, [.. funds.Select(f => f.Name)]);
             if (string.IsNullOrEmpty(choice) || choice == "Anuluj") return;
 
@@ -175,6 +181,40 @@ public partial class TransactionsViewModel : ObservableObject
         {
             await page.DisplayAlertAsync("Błąd", DescribeException(ex), "OK");
         }
+    }
+
+    private const string ActionEdit = "Edytuj";
+    private const string ActionDelete = "Usuń";
+
+    /// <summary>
+    /// Te same działania, co pod przeciągnięciem wiersza, ale uruchamiane przyciskiem.
+    ///
+    /// Na pulpicie przeciągnięcie trzeba zrobić myszą i nikt go nie odkrywa — a tam
+    /// aplikacja jest obsługiwana z klawiatury, więc działanie musi dać się wywołać
+    /// Tabem i Enterem. Przeciągnięcie zostaje na telefonie, gdzie jest naturalne.
+    ///
+    /// Lista zależy od wiersza, bo niektóre działania byłyby na nim bez sensu: przelewu
+    /// nie da się edytować pojedynczo (ma drugą nogę), a wydatek już pokryty z funduszu
+    /// potrzebuje cofnięcia, nie kolejnego pokrycia.
+    /// </summary>
+    [RelayCommand]
+    private async Task RowActionsAsync(TransactionRow row, CancellationToken ct = default)
+    {
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        var fundAction = row.IsPaidFromFund ? "Cofnij pokrycie z funduszu" : "Pokryj z funduszu";
+
+        string[] actions = row.IsTransfer
+            ? [ActionDelete]
+            : row.IsEditable
+                ? [ActionEdit, fundAction, ActionDelete]
+                : [fundAction, ActionDelete];
+
+        var choice = await page.DisplayActionSheetAsync("Transakcja", "Anuluj", null, actions);
+
+        if (choice == ActionEdit) await EditTransactionAsync(row);
+        else if (choice == fundAction) await PayFromFundAsync(row, ct);
+        else if (choice == ActionDelete) await DeleteTransactionAsync(row, ct);
     }
 
     [RelayCommand]
