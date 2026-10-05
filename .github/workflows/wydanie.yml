@@ -50,8 +50,32 @@ jobs:
       - name: Workload Androida
         run: dotnet workload install maui-android
 
+      # Bez wlasnego klucza kazdy przebieg generowalby swoj klucz diagnostyczny, wiec
+      # kazda kolejna wersja mialaby inny podpis i Android odmawialby aktualizacji —
+      # trzeba by odinstalowywac aplikacje (i tracic baze) przy KAZDYM wydaniu.
+      # Dlatego brak sekretu jest bledem, a nie cichym powrotem do starego zachowania.
+      - name: Klucz podpisu
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then
+            echo "::error::Brak sekretu ANDROID_KEYSTORE_BASE64 — APK bylby podpisany kluczem jednorazowym."
+            exit 1
+          fi
+          printf '%s' "$KS_B64" | base64 -d > "$RUNNER_TEMP/castellan.keystore"
+          test -s "$RUNNER_TEMP/castellan.keystore"
+
       - name: Publikacja APK
-        run: dotnet publish src/Castellan.App/Castellan.App.csproj -f net10.0-android36.0 -c Release
+        env:
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          dotnet publish src/Castellan.App/Castellan.App.csproj -f net10.0-android36.0 -c Release \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="$RUNNER_TEMP/castellan.keystore" \
+            -p:AndroidSigningStorePass="$KS_PASS" \
+            -p:AndroidSigningKeyAlias="$KS_ALIAS" \
+            -p:AndroidSigningKeyPass="$KS_PASS"
 
       - name: Zebranie pakietu
         run: |
@@ -77,6 +101,10 @@ jobs:
           name: apk
           path: artefakty/castellan.apk
           if-no-files-found: error
+
+      - name: Sprzatniecie klucza
+        if: always()
+        run: rm -f "$RUNNER_TEMP/castellan.keystore"
 
   pulpit:
     name: Windows (ZIP)
@@ -153,7 +181,7 @@ jobs:
           SUMA_ZIP=$(sha256sum "$ZIP" | awk '{print $1}')
 
           {
-            printf 'Budowanie z `%s`\n\n' "$GITHUB_SHA"
+            printf 'Budowanie z `%s`\n\n' "${GITHUB_SHA:0:7}"
             printf 'SHA-256 `castellan.apk`: `%s`\n\n' "$SUMA_APK"
             printf 'SHA-256 `castellan-windows.zip`: `%s`\n\n' "$SUMA_ZIP"
             printf 'Pliki pobrane u siebie powinny mieć te same sumy.\n\n---\n\n'

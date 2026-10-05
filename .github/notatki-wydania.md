@@ -1,11 +1,13 @@
 **Android (APK)** — instalacja z pominięciem sklepu.
 
-Pakiet jest podpisany kluczem diagnostycznym, a ten klucz powstaje od nowa przy każdym
-budowaniu. Android odmówi więc nadpisania aplikacji zainstalowanej z innego pakietu —
-trzeba odinstalować starą.
+Pakiet jest podpisany stałym kluczem projektu, więc **kolejne wersje instalują się na
+wierzch** — bez odinstalowywania i bez utraty danych.
 
-> **Przed odinstalowaniem zrób kopię zapasową w zakładce Kopia.** Odinstalowanie usuwa
-> bazę razem z aplikacją i nie ma skąd jej odzyskać.
+> **Jednorazowo, przy przejściu z wcześniejszych wydań:** pakiety sprzed wprowadzenia
+> tego klucza miały inny podpis, więc Android odmówi aktualizacji komunikatem o konflikcie
+> z istniejącym pakietem. Trzeba wtedy raz odinstalować starą wersję — a odinstalowanie
+> usuwa bazę razem z aplikacją. **Najpierw zrób kopię w zakładce Kopia**, potem
+> odinstaluj, zainstaluj i wczytaj kopię przez Kopia → Importuj.
 
 **Windows (ZIP)** — rozpakuj cały katalog i uruchom `Castellan.App.exe`.
 
