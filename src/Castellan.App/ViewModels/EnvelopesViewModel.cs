@@ -1,3 +1,4 @@
+using Castellan.Application.Services;
 using Castellan.Application.UseCases;
 using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -8,6 +9,9 @@ namespace Castellan.App.ViewModels;
 public partial class EnvelopesViewModel : ObservableObject
 {
     private readonly GetMonthOverviewUseCase _getOverview;
+
+    // Miesiac sam przechodzi na biezacy — ta zakladka zyje tak dlugo jak aplikacja.
+    private readonly MonthCursor _cursor = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentMonthDisplay))]
@@ -23,12 +27,14 @@ public partial class EnvelopesViewModel : ObservableObject
     public EnvelopesViewModel(GetMonthOverviewUseCase getOverview)
     {
         _getOverview = getOverview;
-        CurrentMonth = YearMonth.Current;
+        CurrentMonth = _cursor.Month;
     }
 
     [RelayCommand]
     public async Task LoadAsync(CancellationToken ct = default)
     {
+        CurrentMonth = _cursor.Refresh();
+
         MonthData = await _getOverview.ExecuteAsync(CurrentMonth, ct);
         HasData = MonthData is not null;
 
@@ -50,14 +56,14 @@ public partial class EnvelopesViewModel : ObservableObject
     [RelayCommand]
     private async Task PreviousMonthAsync(CancellationToken ct = default)
     {
-        CurrentMonth = CurrentMonth.Previous();
+        CurrentMonth = _cursor.Previous();
         await LoadAsync(ct);
     }
 
     [RelayCommand]
     private async Task NextMonthAsync(CancellationToken ct = default)
     {
-        CurrentMonth = CurrentMonth.Next();
+        CurrentMonth = _cursor.Next();
         await LoadAsync(ct);
     }
 

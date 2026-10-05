@@ -1,3 +1,4 @@
+using Castellan.Application.Services;
 using Castellan.Application.UseCases;
 using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -10,6 +11,9 @@ public partial class DashboardViewModel : ObservableObject
 {
     private readonly GetMonthOverviewUseCase _getOverview;
     private readonly SimulateDebtPayoffUseCase _debtPayoff;
+
+    // Miesiac sam przechodzi na biezacy — ta zakladka zyje tak dlugo jak aplikacja.
+    private readonly MonthCursor _cursor = new();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentMonthDisplay))]
@@ -29,12 +33,14 @@ public partial class DashboardViewModel : ObservableObject
     {
         _getOverview = getOverview;
         _debtPayoff = debtPayoff;
-        CurrentMonth = YearMonth.Current;
+        CurrentMonth = _cursor.Month;
     }
 
     [RelayCommand]
     public async Task LoadAsync(CancellationToken ct = default)
     {
+        CurrentMonth = _cursor.Refresh();
+
         IsLoading = true;
         try
         {
@@ -86,14 +92,14 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand]
     private async Task PreviousMonthAsync(CancellationToken ct = default)
     {
-        CurrentMonth = CurrentMonth.Previous();
+        CurrentMonth = _cursor.Previous();
         await LoadAsync(ct);
     }
 
     [RelayCommand]
     private async Task NextMonthAsync(CancellationToken ct = default)
     {
-        CurrentMonth = CurrentMonth.Next();
+        CurrentMonth = _cursor.Next();
         await LoadAsync(ct);
     }
 
