@@ -1,6 +1,17 @@
 # Castellan
 
-Prywatna aplikacja do budżetu domowego na Androida. Offline, jeden użytkownik, bez backendu i bez konta.
+Aplikacja do budżetu domowego na Androida i Windows. Offline, bez backendu i bez konta.
+
+## Pobranie
+
+Odnośniki są stałe i zawsze prowadzą na **najnowsze budowanie** z gałęzi `main`:
+
+- **Android** — [castellan.apk](https://github.com/kodalus/Castellan/releases/download/najnowsza/castellan.apk)
+- **Windows** — [castellan-windows.zip](https://github.com/kodalus/Castellan/releases/download/najnowsza/castellan-windows.zip)
+
+Sumy kontrolne obu plików stoją w opisie [wydania](https://github.com/kodalus/Castellan/releases/tag/najnowsza), razem z numerem wersji, z której powstały.
+
+Na pulpicie **nie ma czytania powiadomień bankowych** — to funkcja Androida, nie aplikacji. Wersja na Windows startuje w trybie ręcznym i wszystkie transakcje wpisuje się samemu.
 
 Metoda: budżet kopertowy oparty na dostępnych środkach. Założenie, wokół którego zbudowana jest całość: **aplikacja nie może polegać na pamięci użytkownika**. Stąd wyłapywanie transakcji z powiadomień bankowych zamiast proszenia o ich wpisywanie.
 

@@ -1,17 +1,27 @@
 name: Wydanie
 
-# Uruchamiane znacznikiem, np. `git tag v0.1.0 && git push origin v0.1.0`.
-# Artefakty przebiegu CI wygasają po 90 dniach i wymagają zalogowania;
-# wydanie daje stały, publiczny odnośnik do plików.
+# Jedno wydanie pod ruchomą etykietą „najnowsza", odświeżane przy każdym wejściu na
+# main. Wersji jeszcze nie numerujemy, a dwadzieścia wydań dziennie byłoby listą,
+# z której nic nie wynika — z czego powstało, mówi opis.
 #
-# Castellan ma dwa wydania naraz i nie da się ich zbudować na jednej maszynie:
-# APK wymaga workloadu Androida (najtaniej na Linuksie), a wersja na pulpit
-# wymaga WinUI, czyli Windowsa. Dlatego dwa osobne zadania budujące i trzecie,
-# które dopiero z ich wyników składa jedno wydanie — inaczej dwa zadania
-# tworzyłyby wydanie równolegle i jedno nadpisałoby drugie.
+# Nazwy plików są STAŁE, więc odnośnik do pobrania nigdy się nie zmienia i zawsze
+# prowadzi na najnowsze budowanie:
+#   https://github.com/kodalus/Castellan/releases/download/najnowsza/castellan.apk
+#   https://github.com/kodalus/Castellan/releases/download/najnowsza/castellan-windows.zip
+#
+# Artefakt przebiegu by tu nie wystarczył: przychodzi zapakowany w ZIP i tylko po
+# zalogowaniu, więc trzeba go pobrać na komputerze i przełożyć na telefon. Wydanie to
+# pojedynczy plik pod stałym adresem, bez logowania i bez archiwum — telefon pobiera
+# go sam.
+#
+# Castellan ma dwa wydania naraz i nie da się ich zbudować na jednej maszynie: APK
+# wymaga workloadu Androida (najtaniej na Linuksie), a wersja na pulpit wymaga WinUI,
+# czyli Windowsa. Stąd dwa zadania budujące i TRZECIE, które dopiero z ich wyników
+# składa wydanie. Gdyby każde dopisywało się samo, w opisie zostawałaby suma tego
+# pliku, którego zadanie skończyło później — czyli losowego.
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -32,7 +42,7 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -46,20 +56,26 @@ jobs:
       - name: Zebranie pakietu
         run: |
           mkdir -p artefakty
-          find src/Castellan.App/bin/Release -name '*-Signed.apk' -exec cp {} artefakty/ \;
-          # Gdyby konwencja nazw się zmieniła, bierzemy cokolwiek, co jest pakietem.
-          if [ -z "$(ls -A artefakty)" ]; then
-            find src/Castellan.App/bin/Release -name '*.apk' -exec cp {} artefakty/ \;
+
+          PAKIET=$(find src/Castellan.App/bin/Release -name '*-Signed.apk' | head -n 1)
+
+          if [ -z "$PAKIET" ]; then
+            ILE=$(find src/Castellan.App/bin/Release -name '*.apk' | wc -l)
+            if [ "$ILE" != "1" ]; then
+              echo "::error::Nie da się wskazać pakietu — znalezionych APK: $ILE."
+              find src/Castellan.App/bin/Release -name '*.apk'
+              exit 1
+            fi
+            PAKIET=$(find src/Castellan.App/bin/Release -name '*.apk')
           fi
-          apk="$(ls artefakty/*.apk | head -1)"
-          mv "$apk" "artefakty/Castellan-${GITHUB_REF_NAME}-android.apk"
+
+          cp "$PAKIET" artefakty/castellan.apk
           ls -l artefakty
-          test -n "$(ls -A artefakty)"
 
       - uses: actions/upload-artifact@v4
         with:
           name: apk
-          path: artefakty/*.apk
+          path: artefakty/castellan.apk
           if-no-files-found: error
 
   pulpit:
@@ -76,8 +92,8 @@ jobs:
         run: dotnet workload install maui-windows
 
       # Bez -r i bez --self-contained: jedno i drugie przestawia SDK na pakiet
-      # uruchomieniowy Mono (od Androida), którego dla win-x64 nie ma w ogóle.
-      # Domyślne ustawienia tego targetu dają to, co trzeba — razem
+      # uruchomieniowy Mono (przyniesiony przez target Androida), którego dla win-x64
+      # nie ma w ogóle. Domyślne ustawienia tego targetu dają to, co trzeba — razem
       # z WindowsAppSDKSelfContained z pliku projektu.
       - name: Publikacja na pulpit
         run: dotnet publish src/Castellan.App/Castellan.App.csproj -f net10.0-windows10.0.19041.0 -c Release
@@ -94,23 +110,23 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path artefakty | Out-Null
           Compress-Archive -Path (Join-Path $pub.FullName '*') `
-                           -DestinationPath "artefakty/Castellan-$env:GITHUB_REF_NAME-windows-x64.zip" `
+                           -DestinationPath "artefakty/castellan-windows.zip" `
                            -CompressionLevel Optimal
           Get-ChildItem artefakty
 
       - uses: actions/upload-artifact@v4
         with:
           name: pulpit
-          path: artefakty/*.zip
+          path: artefakty/castellan-windows.zip
           if-no-files-found: error
 
   wydanie:
-    name: Opublikowanie wydania
+    name: Odświeżenie wydania
     needs: [apk, pulpit]
     runs-on: ubuntu-latest
     steps:
-      # Potrzebne tylko dla pliku z notatkami — trzymanie ich w repozytorium zamiast
-      # w tym pliku omija cytowanie wielu linii w YAML-u i w powloce naraz.
+      # Potrzebny tylko dla pliku z notatkami — trzymanie ich w repozytorium zamiast
+      # w tym pliku omija cytowanie wielu linii w YAML-u i w powłoce naraz.
       - uses: actions/checkout@v4
 
       - uses: actions/download-artifact@v4
@@ -118,12 +134,37 @@ jobs:
           path: artefakty
           merge-multiple: true
 
+      # Sumy kontrolne są po to, żeby dało się sprawdzić, czy plik, który doszedł na
+      # telefon, jest tym, który tu powstał — a nie żeby uspokajać. To jedyna rzecz,
+      # którą da się o pliku stwierdzić z zewnątrz bez zaufania komukolwiek.
       - name: Wydanie
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          set -e
+          APK=artefakty/castellan.apk
+          ZIP=artefakty/castellan-windows.zip
+
           ls -l artefakty
-          gh release create "${{ github.ref_name }}" artefakty/* \
-            --title "Castellan ${{ github.ref_name }}" \
-            --notes-file .github/notatki-wydania.md \
-            --repo "${{ github.repository }}"
+          test -f "$APK"
+          test -f "$ZIP"
+
+          SUMA_APK=$(sha256sum "$APK" | awk '{print $1}')
+          SUMA_ZIP=$(sha256sum "$ZIP" | awk '{print $1}')
+
+          {
+            printf 'Budowanie z `%s`\n\n' "$GITHUB_SHA"
+            printf 'SHA-256 `castellan.apk`: `%s`\n\n' "$SUMA_APK"
+            printf 'SHA-256 `castellan-windows.zip`: `%s`\n\n' "$SUMA_ZIP"
+            printf 'Pliki pobrane u siebie powinny mieć te same sumy.\n\n---\n\n'
+            cat .github/notatki-wydania.md
+          } > opis.md
+
+          if gh release view najnowsza >/dev/null 2>&1; then
+            gh release upload najnowsza "$APK" "$ZIP" --clobber
+            gh release edit najnowsza --notes-file opis.md
+          else
+            gh release create najnowsza "$APK" "$ZIP" \
+              --title "Castellan — najnowsze budowanie" \
+              --notes-file opis.md
+          fi
