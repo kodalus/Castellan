@@ -110,6 +110,47 @@ public class CategorySeedingTests
         }
     }
 
+    [Fact]
+    public void A_renamed_category_keeps_its_identity_so_history_survives()
+    {
+        var dbPath = Path.Combine(Path.GetTempPath(), $"castellan_seed_{Guid.NewGuid():N}.db");
+        try
+        {
+            var provider = BuildProvider(dbPath);
+            provider.ApplyMigrations();
+            provider.SeedDefaultData();
+
+            CategoryId id;
+            using (var scope = provider.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
+
+                // Baza sprzed zmiany nazwy: dokladnie to, co ma u siebie ktos, kto
+                // uzywa aplikacji od dawna.
+                var partner = db.Categories.Single(c => c.Name == "Wpłata partnera");
+                id = partner.Id;
+                partner.Rename("Wpłata małżonka");
+                db.SaveChanges();
+            }
+
+            provider.SeedDefaultData();
+
+            using (var scope = provider.CreateScope())
+            {
+                var db = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
+
+                // Zmiana nazwy, a NIE nowa kategoria: transakcje i plany wiaza sie po ID,
+                // wiec dodanie nowej zostawiloby historie przy starej, osieroconej nazwie.
+                db.Categories.Should().NotContain(c => c.Name == "Wpłata małżonka");
+                db.Categories.Single(c => c.Name == "Wpłata partnera").Id.Should().Be(id);
+            }
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
     private static void Cleanup(string dbPath)
     {
         SqliteConnection.ClearAllPools();

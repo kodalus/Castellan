@@ -67,7 +67,7 @@ public static class InfrastructureServiceExtensions
             };
             var incomes = new[]
             {
-                "Wypłata", "Wpłata małżonka", "800+", "Inne",
+                "Wypłata", "Wpłata partnera", "800+", "Inne",
             };
 
             foreach (var name in expenses)
@@ -78,6 +78,30 @@ public static class InfrastructureServiceExtensions
             db.SaveChanges();
             return;
         }
+
+        // ZMIANY NAZW IDĄ PIERWSZE, przed dosiewem. Odwrotna kolejność cicho psuła
+        // historię: dosiew nie znajdował jeszcze nowej nazwy, więc DODAWAŁ drugą
+        // kategorię, a zmiana nazwy widziała wtedy nazwę docelową jako zajętą i nic
+        // nie robiła. Zostawały dwie kategorie, a wszystkie transakcje przy starej.
+        // Jeden paragon ze sklepu to zwykle jedzenie + chemia + higiena naraz,
+        // więc "Jedzenie" zmieniło się w szerszą kategorię zakupową.
+        RenameCategory(db, from: "Jedzenie", to: "Produkty do domu");
+
+        // Nazwy przychodów skrócone do tych realnie używanych. Zmiana nazwy (a nie
+        // dodanie nowej kategorii) zachowuje powiązane transakcje i reguły — te
+        // wiążą się po ID, nie po nazwie.
+        RenameCategory(db, from: "Wynagrodzenie", to: "Wypłata");
+        RenameCategory(db, from: "Inne przychody", to: "Inne");
+
+        // „Małżonek" zakłada stan cywilny, którego aplikacja nie ma po co znać.
+        // Zmiana nazwy, a nie nowa kategoria: transakcje i plany wiążą się po ID,
+        // więc historia zostaje nietknięta.
+        RenameCategory(db, from: "Wpłata małżonka", to: "Wpłata partnera");
+
+        // Zapis MUSI być tutaj, w środku. Sama kolejność wywołań nie wystarcza, bo
+        // EnsureCategory pyta BAZY, a nie trackera: dopóki zmiana nazwy nie jest zapisana,
+        // zapytanie widzi starą nazwę i dosiew dokłada drugą kategorię o nazwie docelowej.
+        db.SaveChanges();
 
         // Kategorie dodane po pierwszym seedzie — dopilnuj ich także w istniejących bazach.
         // Archiwizacja kategorii zachowuje nazwę, więc zarchiwizowane nie wracają.
@@ -93,17 +117,7 @@ public static class InfrastructureServiceExtensions
         // rzeczy kupowane w sklepie, ta jest wizytą. Dwie różne decyzje wydatkowe.
         EnsureCategory(db, "Kosmetyczka", CategoryKind.Expense);
         EnsureCategory(db, "800+", CategoryKind.Income);
-        EnsureCategory(db, "Wpłata małżonka", CategoryKind.Income);
-
-        // Jeden paragon ze sklepu to zwykle jedzenie + chemia + higiena naraz,
-        // więc "Jedzenie" zmieniło się w szerszą kategorię zakupową.
-        RenameCategory(db, from: "Jedzenie", to: "Produkty do domu");
-
-        // Nazwy przychodów skrócone do tych realnie używanych. Zmiana nazwy (a nie
-        // dodanie nowej kategorii) zachowuje powiązane transakcje i reguły — te
-        // wiążą się po ID, nie po nazwie.
-        RenameCategory(db, from: "Wynagrodzenie", to: "Wypłata");
-        RenameCategory(db, from: "Inne przychody", to: "Inne");
+        EnsureCategory(db, "Wpłata partnera", CategoryKind.Income);
 
         db.SaveChanges();
     }
