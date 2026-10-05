@@ -28,7 +28,14 @@ public sealed class CreateTransferUseCase(
         /// <summary>Odkładanie na rezerwę, a nie zwykłe przekładanie pieniędzy.</summary>
         bool IsReserve = false,
         /// <summary>Fundusz, którego saldo ma wzrosnąć. Dobrowolny nawet przy rezerwie.</summary>
-        FundId? ContributeTo = null);
+        FundId? ContributeTo = null,
+        /// <summary>
+        /// Fundusz, z którego te pieniądze są wyjmowane — przy przelewie z konta
+        /// oszczędnościowego na wydatkowe. Odkładanie się kończy, więc saldo funduszu
+        /// maleje. Same nogi przelewu zostają wykluczone z budżetu jak każdy przelew:
+        /// odpis obciążył kopertę „Rezerwy" w miesiącu, w którym pieniądze odkładano.
+        /// </summary>
+        FundId? WithdrawFrom = null);
 
     public async Task ExecuteAsync(Input input, CancellationToken ct = default)
     {
@@ -79,6 +86,14 @@ public sealed class CreateTransferUseCase(
         else
         {
             outgoing.SetTransferGroup(groupId);
+        }
+
+        // Wyjęcie pieniędzy z funduszu jest niezależne od kierunku „na rezerwę": tu
+        // pieniądze wracają do wydania, więc koperty nie dotyka ani jedna, ani druga noga.
+        if (input.WithdrawFrom is { } withdrawId)
+        {
+            var fund = await funds.GetAsync(withdrawId, ct);
+            fund?.Withdraw(new Money(magnitude));
         }
 
         await transactions.AddAsync(outgoing, ct);

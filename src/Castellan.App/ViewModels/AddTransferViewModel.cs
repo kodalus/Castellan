@@ -100,9 +100,11 @@ public partial class AddTransferViewModel : ObservableObject
         // odkładanie na rezerwę (budżet miesiąca ubywa). Wie to tylko użytkownik.
         var isReserve = false;
         FundId? contributeTo = null;
+        FundId? withdrawFrom = null;
 
-        if (_kinds.GetValueOrDefault(toId) == AccountKind.Savings
-            && Shell.Current?.CurrentPage is Page page)
+        var page = Shell.Current?.CurrentPage;
+
+        if (_kinds.GetValueOrDefault(toId) == AccountKind.Savings && page is not null)
         {
             isReserve = await page.DisplayAlertAsync(
                 "Odkładasz na rezerwę?",
@@ -114,13 +116,35 @@ public partial class AddTransferViewModel : ObservableObject
             if (isReserve) contributeTo = await AskForFundAsync(page, ct);
         }
 
+        // Kierunek odwrotny: pieniądze WRACAJĄ z oszczędności do wydania. Jeśli były
+        // odkładane na konkretny cel, odkładanie właśnie się kończy i saldo funduszu
+        // musi zmaleć — inaczej fundusz pokazywałby zebrane pieniądze, których już nie ma.
+        //
+        // Pytanie zadajemy tylko wtedy, gdy pieniądze opuszczają świat oszczędności.
+        // Przelew oszczędnościowe → oszczędnościowe to przełożenie w obrębie odkładania
+        // i pyta wyłącznie o rezerwę, wyżej.
+        else if (_kinds.GetValueOrDefault(fromId) == AccountKind.Savings
+            && _kinds.GetValueOrDefault(toId) != AccountKind.Savings
+            && page is not null)
+        {
+            var fromFund = await page.DisplayAlertAsync(
+                "Wyjmujesz z funduszu?",
+                "Przelew z konta oszczędnościowego może być wyjęciem odłożonych pieniędzy "
+                + "(saldo funduszu zmaleje) albo zwykłym przekładaniem między kontami "
+                + "(fundusze bez zmian).",
+                "Z funduszu", "Przekładam");
+
+            if (fromFund) withdrawFrom = await AskWithdrawFundAsync(page, new Money(grosze), ct);
+        }
+
         IsBusy = true;
         try
         {
             await _createTransfer.ExecuteAsync(
                 new CreateTransferUseCase.Input(
-                    fromId, toId, new Money(grosze), occurredAt, Note, isReserve, contributeTo), ct);
-            await Shell.Current.GoToAsync("..");
+                    fromId, toId, new Money(grosze), occurredAt, Note,
+                    isReserve, contributeTo, withdrawFrom), ct);
+            if (Shell.Current is { } shell) await shell.GoToAsync("..");
         }
         catch (Exception ex)
         {
@@ -146,6 +170,39 @@ public partial class AddTransferViewModel : ObservableObject
         if (string.IsNullOrEmpty(choice) || choice == "Bez funduszu") return null;
 
         return active.FirstOrDefault(f => f.Name == choice)?.Id;
+    }
+
+    /// <summary>
+    /// Wybór funduszu do wyjęcia pieniędzy. Salda są pokazane przy nazwach, bo bez nich
+    /// nie da się trafić w ten właściwy — nazwa sama nie mówi, ile w nim jeszcze jest.
+    ///
+    /// Kwota większa niż saldo wymaga potwierdzenia. Zwykle znaczy pomyłkę w funduszu
+    /// albo dwukrotne zdjęcie tej samej kwoty, a saldo zeszłoby wtedy po cichu poniżej
+    /// zera — liczba, której żaden ekran nie umie sensownie pokazać.
+    /// </summary>
+    private async Task<FundId?> AskWithdrawFundAsync(Page page, Money amount, CancellationToken ct)
+    {
+        var active = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
+        if (active.Count == 0) return null;
+
+        var labels = active.ToDictionary(f => $"{f.Name} ({f.Balance})", f => f);
+
+        var choice = await page.DisplayActionSheetAsync(
+            "Z którego funduszu?", "Bez funduszu", null, [.. labels.Keys]);
+        if (string.IsNullOrEmpty(choice) || choice == "Bez funduszu") return null;
+        if (!labels.TryGetValue(choice, out var fund)) return null;
+
+        if (amount.Grosze > fund.Balance.Grosze)
+        {
+            var confirmed = await page.DisplayAlertAsync(
+                "Więcej, niż jest w funduszu",
+                $"W funduszu „{fund.Name}” jest {fund.Balance}, a wyjmujesz {amount}. "
+                + "Saldo funduszu zejdzie poniżej zera.",
+                "Mimo to wyjmij", "Anuluj");
+            if (!confirmed) return null;
+        }
+
+        return fund.Id;
     }
 
     [RelayCommand]
