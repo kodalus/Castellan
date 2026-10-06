@@ -318,11 +318,14 @@
     <Style x:Key="FormBody" TargetType="VerticalStackLayout">
         <Setter Property="Padding" Value="16,16,16,32" />
         <Setter Property="Spacing" Value="18" />
-        <!-- Sam limit szerokości, BEZ wyśrodkowania. VerticalStackLayout ustawiony na
-             Center przestaje wypełniać rodzica i mierzy się do zawartości, więc każde
-             pole kurczy się do szerokości najdłuższej etykiety — na telefonie, gdzie
-             limit nawet nie działa, formularz i tak zrobił się węższy od ekranu. -->
-        <Setter Property="MaximumWidthRequest" Value="560" />
+        <!-- Limit szerokości TYLKO na pulpicie. Na telefonie ekran jest węższy, więc
+             limit i tak nic nie robi — a skoro nic nie wnosi, nie ma po co go tam
+             ustawiać i liczyć na to, że układ potraktuje go łagodnie. Formularze na
+             Androidzie mają po prostu wypełniać szerokość, bez żadnego ograniczenia.
+             Wyśrodkowania nie ma nigdzie: VerticalStackLayout ustawiony na Center
+             przestaje wypełniać rodzica i mierzy się do zawartości, przez co każde
+             pole kurczy się do szerokości najdłuższej etykiety. -->
+        <Setter Property="MaximumWidthRequest" Value="{OnPlatform WinUI=560, Default=100000}" />
     </Style>
 
     <Style x:Key="Field" TargetType="VerticalStackLayout">
