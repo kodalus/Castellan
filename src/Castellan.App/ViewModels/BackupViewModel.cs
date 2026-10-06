@@ -79,7 +79,13 @@ public partial class BackupViewModel(
             using (var reader = new StreamReader(stream))
                 json = await reader.ReadToEndAsync(ct);
 
-            await import.ExecuteAsync(json, ct);
+            var wczytano = await import.ExecuteAsync(json, ct);
+
+            // Liczby, nie samo „zakończono". Import zastępuje wszystko i jest
+            // nieodwracalny, a plik z nazwy wygląda tak samo jak każdy inny — to jest
+            // ostatni moment, w którym widać, że wczytała się nie ta kopia.
+            if (Shell.Current?.CurrentPage is Page page)
+                await page.DisplayAlertAsync("Wczytano kopię", wczytano.Describe(), "OK");
 
             StatusMessage = "Import zakończony. Uruchom aplikację ponownie lub przejdź do innej zakładki, aby odświeżyć dane.";
             HasStatus = true;
