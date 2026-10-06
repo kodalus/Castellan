@@ -66,6 +66,12 @@
             <Label Style="{StaticResource Caption}" Margin="4,14,4,0"
                    Text="Dane nie opuszczają telefonu — nie ma konta ani serwera. Jedynym zabezpieczeniem jest kopia zapasowa." />
 
+            <!-- Od kiedy wydania budują się same, „sprawdź, czy masz najnowszą wersję"
+                 było pytaniem bez odpowiedzi — ani użytkownik, ani ja nie mieliśmy jak
+                 jej poznać. Tu stoi numer budowania, który da się przepisać. -->
+            <Label Style="{StaticResource Caption}" Margin="4,10,4,0"
+                   Text="{Binding VersionDisplay}" />
+
         </VerticalStackLayout>
     </ScrollView>
 

@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Reflection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -31,6 +32,36 @@ public sealed partial class HelpSection(string title, string lead, IReadOnlyList
 public partial class HelpViewModel : ObservableObject
 {
     public ObservableCollection<HelpSection> Sections { get; } = [];
+
+    /// <summary>
+    /// Wersja i numer budowania. Odkąd wydania powstają same przy każdym wejściu na
+    /// main, „sprawdź, czy masz najnowszą" było pytaniem bez odpowiedzi: ani użytkownik,
+    /// ani ja nie mieliśmy jak jej poznać, więc każda zgłoszona usterka zaczynała się od
+    /// zgadywania, z którego budowania pochodzi.
+    ///
+    /// Numer budowania wstawia CI przez InformationalVersion. Przy budowaniu lokalnym
+    /// zostaje sama wersja — i to też jest informacja: że pakiet nie pochodzi z wydania.
+    /// </summary>
+    public string VersionDisplay
+    {
+        get
+        {
+            var wersja = AppInfo.VersionString;
+            var budowanie = typeof(HelpViewModel).Assembly
+                .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()
+                ?.InformationalVersion;
+
+            // Domyslny InformationalVersion to sama wersja (czasem z sufiksem po "+"),
+            // wiec bez znacznika z CI nie ma czego pokazywac poza numerem wersji.
+            var znacznik = budowanie?.Contains('+') == true
+                ? budowanie[(budowanie.IndexOf('+') + 1)..]
+                : null;
+
+            return znacznik is null
+                ? $"Wersja {wersja} (budowanie lokalne)"
+                : $"Wersja {wersja}, budowanie {znacznik}";
+        }
+    }
 
     public HelpViewModel()
     {
