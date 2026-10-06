@@ -318,8 +318,11 @@
     <Style x:Key="FormBody" TargetType="VerticalStackLayout">
         <Setter Property="Padding" Value="16,16,16,32" />
         <Setter Property="Spacing" Value="18" />
+        <!-- Sam limit szerokości, BEZ wyśrodkowania. VerticalStackLayout ustawiony na
+             Center przestaje wypełniać rodzica i mierzy się do zawartości, więc każde
+             pole kurczy się do szerokości najdłuższej etykiety — na telefonie, gdzie
+             limit nawet nie działa, formularz i tak zrobił się węższy od ekranu. -->
         <Setter Property="MaximumWidthRequest" Value="560" />
-        <Setter Property="HorizontalOptions" Value="Center" />
     </Style>
 
     <Style x:Key="Field" TargetType="VerticalStackLayout">
