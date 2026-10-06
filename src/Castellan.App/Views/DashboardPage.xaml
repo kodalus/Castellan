@@ -48,6 +48,29 @@
                     </FormattedString>
                 </Label.FormattedText>
             </Label>
+
+            <!-- Odłożone osobno od wydanych. Obie kwoty zabierają z tego, co zostało
+                 do wydania, ale tylko jedna z nich naprawdę wyszła z kieszeni. -->
+            <Label Style="{StaticResource Secondary}" IsVisible="{Binding MonthData.HasSaved}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="{Binding MonthData.TotalSaved}" />
+                        <Span Text=" odłożone na rezerwę" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+
+            <!-- Przekroczony plan z samego odkładania to nie to samo co przepuszczone
+                 pieniądze — one leżą na oszczędnościach i da się je wycofać. -->
+            <Label Style="{StaticResource InfoCaption}" IsVisible="{Binding MonthData.IsOverspentBySaving}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="Plan przekroczony tylko przez odkładanie. Bez nadwyżki na rezerwie zostałoby " />
+                        <Span Text="{Binding MonthData.RemainingWithoutExtraSaving}" />
+                        <Span Text="." />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
             <ProgressBar Progress="{Binding MonthData.SpentRatio}" Margin="0,7,0,0"
                          ProgressColor="{Binding MonthData.SpentFraction, Converter={StaticResource SpentFractionToColor}}" />
         </VerticalStackLayout>

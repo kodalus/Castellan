@@ -57,7 +57,11 @@ public sealed record MonthOverview(
     IReadOnlyList<EnvelopeOverview> Envelopes,
     IReadOnlyList<IncomeOverview> Incomes,
     Money TotalPlannedIncome,
-    Money TotalActualIncome)
+    Money TotalActualIncome,
+    /// <summary>Odłożone na rezerwę — osobno, bo to nie jest wydane.</summary>
+    Money TotalSaved,
+    /// <summary>Ile odłożono PONAD plan. Zero, gdy odłożono tyle albo mniej.</summary>
+    Money SavedOverPlan)
 {
     // 0.0–1.0 przycięte (dla ProgressBar.Progress)
     public double SpentRatio => TotalPlanned.Grosze == 0 ? 0.0
@@ -68,6 +72,20 @@ public sealed record MonthOverview(
         : (double)Math.Abs(TotalSpent.Grosze) / TotalPlanned.Grosze;
 
     public bool IsOverspent => RemainingToSpend.IsNegative;
+
+    public bool HasSaved => TotalSaved.Grosze > 0;
+
+    /// <summary>
+    /// Plan przekroczony WYŁĄCZNIE przez odkładanie ponad plan — bez tej nadwyżki
+    /// budżet by się spiął. To zupełnie inna sytuacja niż przepuszczenie pieniędzy:
+    /// one nie zniknęły, tylko leżą na koncie oszczędnościowym i da się je wycofać.
+    /// </summary>
+    public bool IsOverspentBySaving =>
+        IsOverspent && RemainingToSpend.Grosze + SavedOverPlan.Grosze >= 0;
+
+    /// <summary>Ile zostałoby do wydania, gdyby odłożyć dokładnie tyle, ile w planie.</summary>
+    public Money RemainingWithoutExtraSaving =>
+        new(RemainingToSpend.Grosze + SavedOverPlan.Grosze);
 }
 
 public sealed class GetMonthOverviewUseCase(
@@ -110,7 +128,25 @@ public sealed class GetMonthOverviewUseCase(
         // nigdy z aktywów ani funduszy — te pozostają poza budżetem miesiąca.
         // Odwrocony znak, nie wartosc bezwzgledna: koperta z nadwyzka zwrotow ma
         // faktyczna kwote DODATNIA, a modul zamienialby ten zwrot z powrotem w wydatek.
-        var totalSpent = new Money(envelopes.Sum(e => -e.Actual.Grosze));
+        //
+        // Rezerwy liczą się do zużycia budżetu, ale NIE do „wydanych": odłożone
+        // pieniądze przestają być do wydania w tym miesiącu, lecz nie zniknęły —
+        // leżą na koncie oszczędnościowym. Nazywanie tego wydatkiem każe się bać
+        // czegoś, co jest dokładnie odwrotnością szkody.
+        var reserveId = cats.FirstOrDefault(c =>
+            c.Name.Equals(ConfirmTransferUseCase.ReserveCategoryName, StringComparison.OrdinalIgnoreCase))?.Id;
+
+        var reserve = reserveId is null
+            ? null
+            : envelopes.FirstOrDefault(e => e.CategoryId == reserveId);
+
+        var totalSaved = new Money(reserve is null ? 0 : -reserve.Actual.Grosze);
+        var totalSpent = new Money(envelopes
+            .Where(e => reserve is null || e.CategoryId != reserve.CategoryId)
+            .Sum(e => -e.Actual.Grosze));
+
+        var savedOverPlan = new Money(Math.Max(
+            0, totalSaved.Grosze - (reserve?.Planned.Grosze ?? 0)));
 
         // Faktyczne wpływy: dodatnie, nieodrzucone transakcje — ta sama definicja
         // co w statystykach. Transfery między własnymi kontami są wykluczone przez
@@ -157,10 +193,12 @@ public sealed class GetMonthOverviewUseCase(
             totalPlanned,
             budget.AvailableFunds - totalPlanned,
             totalSpent,
-            totalPlanned - totalSpent,
+            new Money(totalPlanned.Grosze - totalSpent.Grosze - totalSaved.Grosze),
             envelopes,
             incomes,
             budget.TotalPlannedIncome,
-            new Money(incomes.Sum(i => i.Actual.Grosze)));
+            new Money(incomes.Sum(i => i.Actual.Grosze)),
+            totalSaved,
+            savedOverPlan);
     }
 }
