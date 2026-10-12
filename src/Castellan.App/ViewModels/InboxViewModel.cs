@@ -144,13 +144,14 @@ public partial class InboxViewModel : ObservableObject
             {
                 var groupId = p.GroupId;
                 var toIsSavings = p.ToIsSavings;
+                var leavesSavings = p.LeavesSavings;
                 Proposals.Add(new TransferProposalRow(
                     groupId,
                     p.FromAccountName,
                     p.ToAccountName,
                     p.Amount.ToString(),
                     p.OccurredAt.ToLocalTime().ToString("dd.MM HH:mm"),
-                    new AsyncRelayCommand(() => ConfirmProposalAsync(groupId, toIsSavings)),
+                    new AsyncRelayCommand(() => ConfirmProposalAsync(groupId, toIsSavings, leavesSavings)),
                     new AsyncRelayCommand(() => RejectProposalAsync(groupId))));
             }
             HasProposals = Proposals.Count > 0;
@@ -201,9 +202,11 @@ public partial class InboxViewModel : ObservableObject
         await LoadAsync();
     }
 
-    private async Task ConfirmProposalAsync(Guid groupId, bool toIsSavings)
+    private async Task ConfirmProposalAsync(Guid groupId, bool toIsSavings, bool leavesSavings)
     {
-        if (toIsSavings && Shell.Current?.CurrentPage is Page page)
+        var page = Shell.Current?.CurrentPage;
+
+        if (toIsSavings && page is not null)
         {
             var isReserve = await page.DisplayAlertAsync(
                 "Odkładasz na rezerwę?",
@@ -216,6 +219,28 @@ public partial class InboxViewModel : ObservableObject
             {
                 var fundId = await AskForFundAsync(page);
                 await _confirmTransfer.ExecuteAsReserveAsync(groupId, fundId);
+                RemoveProposal(groupId);
+                return;
+            }
+        }
+
+        // Kierunek odwrotny: pieniądze WRACAJĄ z oszczędności do wydania. To samo pytanie
+        // zadaje ręczny formularz przelewu — a przelew złapany z powiadomień opisuje
+        // dokładnie to samo zdarzenie, więc nie ma powodu, żeby tu go nie było.
+        // Bez tego jedyną drogą było ręczne poprawianie salda funduszu.
+        else if (leavesSavings && page is not null)
+        {
+            var fromFund = await page.DisplayAlertAsync(
+                "Wyjmujesz z funduszu?",
+                "Przelew z konta oszczędnościowego może być wyjęciem odłożonych pieniędzy "
+                + "(saldo funduszu zmaleje) albo zwykłym przekładaniem między kontami "
+                + "(fundusze bez zmian).",
+                "Z funduszu", "Przekładam");
+
+            if (fromFund)
+            {
+                var fundId = await AskForFundAsync(page);
+                await _confirmTransfer.ExecuteWithWithdrawalAsync(groupId, fundId);
                 RemoveProposal(groupId);
                 return;
             }

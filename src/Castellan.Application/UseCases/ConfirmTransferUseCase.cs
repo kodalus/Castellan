@@ -59,6 +59,39 @@ public sealed class ConfirmTransferUseCase(
         await uow.SaveChangesAsync(ct);
     }
 
+    /// <summary>
+    /// Wyjęcie odłożonych pieniędzy: obie nogi wypadają z budżetu jak przy zwykłym
+    /// przelewie — odpis obciążył kopertę „Rezerwy" w miesiącu, w którym odkładano,
+    /// więc powrót nie może go ani cofnąć, ani policzyć drugi raz. Maleje natomiast
+    /// saldo funduszu, bo odkładanie na ten cel się skończyło.
+    ///
+    /// Odpowiednik tego, co przy ręcznym przelewie robi CreateTransferUseCase: ta sama
+    /// decyzja musi być do podjęcia niezależnie od tego, czy przelew wpisano samemu,
+    /// czy złapały go powiadomienia.
+    /// </summary>
+    public async Task ExecuteWithWithdrawalAsync(
+        Guid proposedGroupId, FundId? withdrawFrom, CancellationToken ct = default)
+    {
+        // Para szukana PRZED potwierdzeniem: potwierdzenie czyści propozycję, więc potem
+        // nie ma już po czym jej znaleźć — a kwotę bierzemy z transakcji, nie z ekranu.
+        var pair = await FindPairAsync(proposedGroupId, ct);
+        if (pair is null) return;
+
+        var kwota = new Money(Math.Abs(pair.Value.From.Amount.Grosze));
+
+        var groupId = Guid.NewGuid();
+        pair.Value.From.SetTransferGroup(groupId);
+        pair.Value.To.SetTransferGroup(groupId);
+
+        if (withdrawFrom is { } fundId)
+        {
+            var fund = await funds.GetAsync(fundId, ct);
+            fund?.Withdraw(kwota);
+        }
+
+        await uow.SaveChangesAsync(ct);
+    }
+
     private async Task<(Domain.Aggregates.Transaction From, Domain.Aggregates.Transaction To)?>
         FindPairAsync(Guid proposedGroupId, CancellationToken ct)
     {

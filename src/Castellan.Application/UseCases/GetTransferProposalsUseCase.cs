@@ -10,7 +10,12 @@ public sealed record TransferProposalOverview(
     string ToAccountName,
     Money Amount,
     DateTimeOffset OccurredAt,
-    bool ToIsSavings);
+    bool ToIsSavings,
+    /// <summary>
+    /// Pieniądze OPUSZCZAJĄ oszczędności. Kierunek odwrotny do odkładania, więc pytanie
+    /// jest inne: nie „czy odkładasz", tylko „czy wyjmujesz z funduszu".
+    /// </summary>
+    bool LeavesSavings);
 
 public sealed class GetTransferProposalsUseCase(
     ITransactionRepository transactions,
@@ -44,7 +49,9 @@ public sealed class GetTransferProposalsUseCase(
                 from.OccurredAt,
                 // Przelew NA własne oszczędnościowe to zwykle odkładanie na rezerwę,
                 // a nie zwykłe przekładanie pieniędzy — ekran ma o to dopytać.
-                toAccount?.Kind == AccountKind.Savings));
+                toAccount?.Kind == AccountKind.Savings,
+                fromAccount?.Kind == AccountKind.Savings
+                    && toAccount?.Kind != AccountKind.Savings));
         }
 
         return result;
