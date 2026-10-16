@@ -20,10 +20,20 @@ public sealed record TransactionRow(
     string? FundName = null,
     bool IsEditable = true,
     bool IsIncome = false,
-    bool IsTransfer = false)
+    bool IsTransfer = false,
+    bool IsProposedTransfer = false)
 {
     public bool IsPaidFromFund => FundName is not null;
     public string FundLabel => FundName is not null ? $"⛃ z funduszu: {FundName}" : "";
+
+    /// <summary>
+    /// Noga wykrytego przelewu, na którą użytkownik jeszcze nie odpowiedział. Do tego
+    /// momentu obie strony LICZĄ SIĘ do budżetu — jedna jako wydatek, druga jako
+    /// przychód — bo aplikacja nie wie, czy to naprawdę przelew własny. Wiersz musi
+    /// o tym mówić, inaczej wygląda jak zwykły nieprzypisany wydatek i zaprasza do
+    /// nadania kategorii zamiast do rozstrzygnięcia w Skrzynce.
+    /// </summary>
+    public string ProposedLabel => "⇄ przelew wykryty — potwierdź w Skrzynce";
 }
 
 public partial class TransactionsViewModel : ObservableObject
@@ -76,6 +86,13 @@ public partial class TransactionsViewModel : ObservableObject
         foreach (var tx in txs)
         {
             var catName = catMap.TryGetValue(tx.CategoryId, out var cat) ? cat.Name : "?";
+            var isProposed = tx.ProposedTransferGroupId.HasValue;
+
+            // Tytulem wiersza jest to, co w nim najwazniejsze. Przy wykrytym przelewie
+            // nie jest nim kategoria "Nieprzypisane" — ta nazwa mowi "nadaj mi kategorie",
+            // a wlasciwa odpowiedz brzmi "rozstrzygnij w Skrzynce". Po odrzuceniu
+            // propozycji wiersz wraca do swojej kategorii i da sie go sortowac normalnie.
+            if (isProposed) catName = "Przelew — do potwierdzenia";
             string? fundName = tx.PaidFromFundId is { } fid && fundMap.TryGetValue(fid, out var fn) ? fn : null;
             // Transfery mają parę powiązanych wpisów, a wpisy pokryte z funduszu już
             // zdjęły kwotę z jego salda — edycja tych pól tutaj rozjechałaby dane
@@ -96,7 +113,8 @@ public partial class TransactionsViewModel : ObservableObject
                 fundName,
                 isEditable,
                 !tx.Amount.IsNegative,
-                tx.Kind == TransactionKind.Transfer));
+                tx.Kind == TransactionKind.Transfer,
+                isProposed));
         }
         IsEmpty = Transactions.Count == 0;
     }

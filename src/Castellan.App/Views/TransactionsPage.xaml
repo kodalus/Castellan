@@ -65,6 +65,8 @@
                                        IsVisible="{Binding Note, Converter={StaticResource IsNotEmpty}}" />
                                 <Label Text="{Binding FundLabel}" Style="{StaticResource InfoCaption}"
                                        IsVisible="{Binding IsPaidFromFund}" />
+                                <Label Text="{Binding ProposedLabel}" Style="{StaticResource BrassCaption}"
+                                       IsVisible="{Binding IsProposedTransfer}" />
                             </VerticalStackLayout>
 
                             <!-- Wpływ na zielono, wydatek neutralnie: w gęstej liście to jedyna
