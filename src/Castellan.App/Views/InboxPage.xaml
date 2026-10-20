@@ -107,9 +107,15 @@
 
                                         <Label Text="{Binding DateDisplay}" Style="{StaticResource Caption}" />
 
+                                        <!-- Propozycja bez pary: potwierdzenie nie mialoby czego
+                                             spiac, wiec zostaje samo odrzucenie. -->
+                                        <Label Style="{StaticResource Caption}" IsVisible="{Binding IsBroken}"
+                                               Text="Druga strona tego przelewu nie została znaleziona — nie ma czego spiąć w parę. Odrzuć, żeby wpis wrócił do zwykłego obiegu." />
+
                                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
                                             <Button Grid.Column="0" Text="Tak, to przelew"
                                                     Command="{Binding ConfirmCommand}"
+                                                    IsVisible="{Binding CanConfirm}"
                                                     Style="{StaticResource RowAction}" />
                                             <Button Grid.Column="1" Text="Nie"
                                                     Command="{Binding RejectCommand}"

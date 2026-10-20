@@ -23,7 +23,16 @@ public sealed record TransferProposalRow(
     string AmountDisplay,
     string DateDisplay,
     ICommand ConfirmCommand,
-    ICommand RejectCommand);
+    ICommand RejectCommand,
+    bool CanConfirm = true)
+{
+    /// <summary>
+    /// Propozycja bez kompletu dwóch nóg. Potwierdzenie nie miałoby czego spiąć w parę,
+    /// więc zostaje samo odrzucenie — ono zdejmuje oznaczenie i przywraca wpis do
+    /// normalnego obiegu, zamiast zostawiać go w stanie bez wyjścia.
+    /// </summary>
+    public bool IsBroken => !CanConfirm;
+}
 
 public partial class InboxViewModel : ObservableObject
 {
@@ -145,6 +154,7 @@ public partial class InboxViewModel : ObservableObject
                 var groupId = p.GroupId;
                 var toIsSavings = p.ToIsSavings;
                 var leavesSavings = p.LeavesSavings;
+                var canConfirm = p.CanConfirm;
                 Proposals.Add(new TransferProposalRow(
                     groupId,
                     p.FromAccountName,
@@ -152,7 +162,8 @@ public partial class InboxViewModel : ObservableObject
                     p.Amount.ToString(),
                     p.OccurredAt.ToLocalTime().ToString("dd.MM HH:mm"),
                     new AsyncRelayCommand(() => ConfirmProposalAsync(groupId, toIsSavings, leavesSavings)),
-                    new AsyncRelayCommand(() => RejectProposalAsync(groupId))));
+                    new AsyncRelayCommand(() => RejectProposalAsync(groupId)),
+                    canConfirm));
             }
             HasProposals = Proposals.Count > 0;
 

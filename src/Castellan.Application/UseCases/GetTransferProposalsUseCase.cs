@@ -15,7 +15,13 @@ public sealed record TransferProposalOverview(
     /// Pieniądze OPUSZCZAJĄ oszczędności. Kierunek odwrotny do odkładania, więc pytanie
     /// jest inne: nie „czy odkładasz", tylko „czy wyjmujesz z funduszu".
     /// </summary>
-    bool LeavesSavings);
+    bool LeavesSavings,
+    /// <summary>
+    /// Czy propozycja ma komplet dwóch nóg. Bez kompletu potwierdzenie NIC NIE ROBI —
+    /// nie ma czego spiąć w parę — więc jedyne sensowne wyjście to odrzucenie, które
+    /// zdejmuje oznaczenie i przywraca wpis do normalnego obiegu.
+    /// </summary>
+    bool CanConfirm);
 
 public sealed class GetTransferProposalsUseCase(
     ITransactionRepository transactions,
@@ -31,15 +37,20 @@ public sealed class GetTransferProposalsUseCase(
 
         foreach (var group in proposed.GroupBy(t => t.ProposedTransferGroupId!.Value))
         {
-            var pair = group.ToList();
-            if (pair.Count != 2) continue;
+            var legs = group.ToList();
 
-            // Outgoing = negative amount
-            var from = pair[0].Amount.IsNegative ? pair[0] : pair[1];
-            var to   = pair[0].Amount.IsNegative ? pair[1] : pair[0];
+            // Grupa bez kompletu dwóch nóg BYŁA tu wcześniej pomijana — i to była cicha
+            // pułapka: oznaczenie zostawało na transakcji, wiersz w Transakcjach pisał
+            // „potwierdź w Skrzynce", a Skrzynka była pusta. Potwierdzenie i tak nic by
+            // nie dało, bo nie ma czego spiąć w parę. Taka propozycja musi być widoczna,
+            // żeby dało się ją odrzucić i uwolnić wpis.
+            var paired = legs.Count == 2;
+
+            var from = legs.FirstOrDefault(t => t.Amount.IsNegative) ?? legs[0];
+            var to   = legs.FirstOrDefault(t => !t.Amount.IsNegative);
 
             var fromAccount = accountMap.GetValueOrDefault(from.AccountId);
-            var toAccount   = accountMap.GetValueOrDefault(to.AccountId);
+            var toAccount   = to is null ? null : accountMap.GetValueOrDefault(to.AccountId);
 
             result.Add(new TransferProposalOverview(
                 group.Key,
@@ -49,9 +60,10 @@ public sealed class GetTransferProposalsUseCase(
                 from.OccurredAt,
                 // Przelew NA własne oszczędnościowe to zwykle odkładanie na rezerwę,
                 // a nie zwykłe przekładanie pieniędzy — ekran ma o to dopytać.
-                toAccount?.Kind == AccountKind.Savings,
-                fromAccount?.Kind == AccountKind.Savings
-                    && toAccount?.Kind != AccountKind.Savings));
+                paired && toAccount?.Kind == AccountKind.Savings,
+                paired && fromAccount?.Kind == AccountKind.Savings
+                    && toAccount?.Kind != AccountKind.Savings,
+                paired));
         }
 
         return result;
