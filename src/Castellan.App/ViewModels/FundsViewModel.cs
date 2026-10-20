@@ -23,6 +23,7 @@ public sealed class FundRow
     public bool IsDelayed { get; }
     public double Progress { get; }
     public ICommand ContributeCommand { get; }
+    public ICommand MoveCommand { get; }
     public ICommand EditCommand { get; }
     public ICommand DeleteCommand { get; }
 
@@ -32,7 +33,8 @@ public sealed class FundRow
         FundId id, string name, string kindDisplay, string balanceDisplay, string targetDisplay,
         string suggestedMonthlyDisplay, string periodsRemainingDisplay, string deadlineDisplay,
         string deficitDisplay, bool isDelayed, double progress,
-        ICommand contributeCommand, ICommand editCommand, ICommand deleteCommand)
+        ICommand contributeCommand, ICommand moveCommand,
+        ICommand editCommand, ICommand deleteCommand)
     {
         Id = id;
         Name = name;
@@ -46,6 +48,7 @@ public sealed class FundRow
         IsDelayed = isDelayed;
         Progress = progress;
         ContributeCommand = contributeCommand;
+        MoveCommand = moveCommand;
         EditCommand = editCommand;
         DeleteCommand = deleteCommand;
     }
@@ -124,6 +127,8 @@ public partial class FundsViewModel : ObservableObject
                     s.Progress,
                     new AsyncRelayCommand(() =>
                         Shell.Current.GoToAsync($"contributeFund?fundId={fundId.Value}")),
+                    new AsyncRelayCommand(() =>
+                        Shell.Current.GoToAsync($"moveFund?fundId={fundId.Value}")),
                     new AsyncRelayCommand(() =>
                         Shell.Current.GoToAsync($"editFund?fundId={fundId.Value}")),
                     new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance))));

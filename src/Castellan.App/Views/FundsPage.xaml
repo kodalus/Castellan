@@ -94,6 +94,8 @@
                                             <Button Text="Usuń" Command="{Binding DeleteCommand}"
                                                     Style="{StaticResource RowAction}" Padding="10,4"
                                                     IsVisible="{OnPlatform Default=False, WinUI=True}" />
+                                            <Button Text="Przenieś" Command="{Binding MoveCommand}"
+                                                    Style="{StaticResource RowAction}" Padding="10,4" />
                                             <Button Text="Wpłać" Command="{Binding ContributeCommand}"
                                                     Style="{StaticResource RowAction}" />
                                         </HorizontalStackLayout>

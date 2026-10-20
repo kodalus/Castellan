@@ -118,6 +118,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("addFund",           typeof(AddFundPage));
         Routing.RegisterRoute("editFund",          typeof(EditFundPage));
         Routing.RegisterRoute("contributeFund",    typeof(ContributeFundPage));
+        Routing.RegisterRoute("moveFund",          typeof(MoveFundPage));
         Routing.RegisterRoute("addAsset",          typeof(AddAssetPage));
         Routing.RegisterRoute("updateAssetValue",  typeof(UpdateAssetValuePage));
         Routing.RegisterRoute("addDebt",           typeof(AddDebtPage));
