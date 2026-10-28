@@ -259,7 +259,28 @@ public partial class TransactionsViewModel : ObservableObject
                 if (!ok) return;
             }
 
-            var removed = await _delete.ExecuteAsync(row.Id, ct);
+            // Przelew WYKRYTY, ale jeszcze niepotwierdzony, to inna sytuacja niż
+            // potwierdzony: para może być prawdziwym przelewem albo przypadkowym
+            // zestawieniem dwóch niezwiązanych kwot. Tego aplikacja nie rozstrzygnie,
+            // a pomyłka w jedną stronę kasuje cudzą transakcję, w drugą — zostawia
+            // sierotę, przez którą saldo nie wraca do stanu sprzed przelewu.
+            var removeBoth = false;
+            if (row.IsProposedTransfer)
+            {
+                if (Shell.Current?.CurrentPage is not Page proposedPage) return;
+
+                const string obie = "Usuń obie strony";
+                const string sama = "Usuń tylko tę";
+
+                var wybor = await proposedPage.DisplayActionSheetAsync(
+                    "To jedna z dwóch stron wykrytego przelewu — jeszcze niepotwierdzonego.",
+                    "Anuluj", null, obie, sama);
+
+                if (wybor == obie) removeBoth = true;
+                else if (wybor != sama) return;
+            }
+
+            var removed = await _delete.ExecuteAsync(row.Id, removeBoth, ct);
 
             // Usuń WSZYSTKIE wiersze, które naprawdę zniknęły z bazy. Sam dotknięty
             // wiersz to za mało: przy przelewie druga noga zostawała na ekranie i przy

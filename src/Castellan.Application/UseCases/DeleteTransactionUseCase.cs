@@ -16,7 +16,15 @@ public sealed class DeleteTransactionUseCase(
     /// Brak transakcji nie jest błędem: dwa szybkie przesunięcia albo nieodświeżona
     /// lista to zwykłe sytuacje, a nie awaria. Tak samo zachowuje się usuwanie aktywa.
     /// </summary>
-    public async Task<IReadOnlyList<TransactionId>> ExecuteAsync(TransactionId id, CancellationToken ct = default)
+    /// <param name="removeProposedPair">
+    /// Dotyczy przelewu WYKRYTEGO, ale jeszcze niepotwierdzonego. Para z propozycji może
+    /// być prawdziwym przelewem (wtedy obie strony mają zniknąć razem) albo przypadkowym
+    /// zestawieniem dwóch niezwiązanych kwot (wtedy druga strona jest prawdziwą
+    /// transakcją i nie wolno jej ruszać). Tego nie da się rozstrzygnąć w kodzie —
+    /// decyduje użytkownik.
+    /// </param>
+    public async Task<IReadOnlyList<TransactionId>> ExecuteAsync(
+        TransactionId id, bool removeProposedPair = false, CancellationToken ct = default)
     {
         var tx = await transactions.GetAsync(id, ct);
         if (tx is null) return [];
@@ -31,6 +39,32 @@ public sealed class DeleteTransactionUseCase(
             {
                 await transactions.RemoveAsync(leg, ct);
                 removed.Add(leg.Id);
+            }
+        }
+        // Przelew wykryty, ale jeszcze niepotwierdzony, trzyma pare pod INNYM polem —
+        // ProposedTransferGroupId zamiast TransferGroupId. Tego przypadku tu nie bylo,
+        // wiec usuwalo sie tylko dotknieta noge, a druga zostawala na swoim koncie:
+        // saldo nie wracalo do stanu sprzed przelewu, mimo ze przelew "zniknal".
+        else if (tx.ProposedTransferGroupId is { } proposedId)
+        {
+            var legs = (await transactions.ListProposedTransfersAsync(ct))
+                .Where(t => t.ProposedTransferGroupId == proposedId)
+                .ToList();
+
+            foreach (var leg in legs)
+            {
+                if (removeProposedPair || leg.Id == tx.Id)
+                {
+                    await transactions.RemoveAsync(leg, ct);
+                    removed.Add(leg.Id);
+                }
+                else
+                {
+                    // Noga, ktora zostaje, nie moze zostac z propozycja wskazujaca na
+                    // grupe bez pary — takiej propozycji nie da sie juz potwierdzic
+                    // i wpis utknalby z napisem "potwierdz w Skrzynce" na zawsze.
+                    leg.ClearTransferProposal();
+                }
             }
         }
         else
