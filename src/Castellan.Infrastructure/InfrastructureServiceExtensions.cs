@@ -61,7 +61,7 @@ public static class InfrastructureServiceExtensions
                 "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
                 "Rozrywka", "Subskrypcje", "Ubrania i obuwie", "Elektronika", "Edukacja",
                 "Sport i rekreacja", "Higiena i kosmetyki", "Kosmetyczka", "Podróże",
-                "Inne wydatki",
+                "Prezenty", "Inne wydatki",
                 "Inwestycje", "Dobroczynność", "Dzieci", "Przedszkole", "Rezerwy",
                 "Kredyty i pożyczki",
             };
@@ -116,6 +116,12 @@ public static class InfrastructureServiceExtensions
         // Usługa u kosmetyczki, osobno od „Higiena i kosmetyki" — tamta kategoria to
         // rzeczy kupowane w sklepie, ta jest wizytą. Dwie różne decyzje wydatkowe.
         EnsureCategory(db, "Kosmetyczka", CategoryKind.Expense);
+
+        // Prezenty osobno od „Dobroczynności”: darowizna idzie równym strumieniem i ustala
+        // się ją raz, a prezenty skaczą — urodziny, imieniny, grudzień. Razem żadnej z tych
+        // liczb nie da się odczytać: grudniowa górka wygląda jak przypływ hojności,
+        // a stała darowizna ginie w jej szumie. Dwie różne decyzje, dwie koperty.
+        EnsureCategory(db, "Prezenty", CategoryKind.Expense);
         EnsureCategory(db, "800+", CategoryKind.Income);
         EnsureCategory(db, "Wpłata partnera", CategoryKind.Income);
 

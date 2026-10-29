@@ -20,8 +20,29 @@ public class CategorySeedingTests
     private static ServiceProvider BuildProvider(string dbPath) =>
         new ServiceCollection().AddInfrastructure(dbPath).BuildServiceProvider();
 
-    [Fact]
-    public void A_fresh_install_gets_the_category()
+    /// <summary>
+    /// Kategorie dodane po pierwszym wydaniu — te, które MUSZĄ stać na obu listach.
+    /// Każda nowa dopisywana tutaj od razu dostaje oba testy, bo pamiętanie o drugiej
+    /// liście jest dokładnie tym, o czym się zapomina.
+    /// </summary>
+    public static TheoryData<string, CategoryKind> DosianeKategorie() => new()
+    {
+        { "Inwestycje",        CategoryKind.Expense },
+        { "Dobroczynność",     CategoryKind.Expense },
+        { "Dzieci",            CategoryKind.Expense },
+        { "Kredyty i pożyczki", CategoryKind.Expense },
+        { "Przedszkole",       CategoryKind.Expense },
+        { "Rezerwy",           CategoryKind.Expense },
+        { "Subskrypcje",       CategoryKind.Expense },
+        { "Kosmetyczka",       CategoryKind.Expense },
+        { "Prezenty",          CategoryKind.Expense },
+        { "800+",              CategoryKind.Income  },
+        { "Wpłata partnera",  CategoryKind.Income  },
+    };
+
+    [Theory]
+    [MemberData(nameof(DosianeKategorie))]
+    public void A_fresh_install_gets_the_category(string nazwa, CategoryKind rodzaj)
     {
         var dbPath = Path.Combine(Path.GetTempPath(), $"castellan_seed_{Guid.NewGuid():N}.db");
         try
@@ -33,7 +54,7 @@ public class CategorySeedingTests
             using var scope = provider.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
 
-            db.Categories.Should().Contain(c => c.Name == "Kosmetyczka" && c.Kind == CategoryKind.Expense);
+            db.Categories.Should().Contain(c => c.Name == nazwa && c.Kind == rodzaj);
         }
         finally
         {
@@ -41,8 +62,9 @@ public class CategorySeedingTests
         }
     }
 
-    [Fact]
-    public void An_existing_database_gets_the_category_on_the_next_start()
+    [Theory]
+    [MemberData(nameof(DosianeKategorie))]
+    public void An_existing_database_gets_the_category_on_the_next_start(string nazwa, CategoryKind rodzaj)
     {
         // Baza sprzed dodania kategorii: pelna innych kategorii, ale bez tej jednej.
         // To jest ten przypadek, ktory pierwszy zasiew omija szerokim lukiem, bo
@@ -57,9 +79,9 @@ public class CategorySeedingTests
             using (var scope = provider.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
-                db.Categories.RemoveRange(db.Categories.Where(c => c.Name == "Kosmetyczka"));
+                db.Categories.RemoveRange(db.Categories.Where(c => c.Name == nazwa));
                 db.SaveChanges();
-                db.Categories.Should().NotContain(c => c.Name == "Kosmetyczka");
+                db.Categories.Should().NotContain(c => c.Name == nazwa);
             }
 
             provider.SeedDefaultData();
@@ -67,7 +89,7 @@ public class CategorySeedingTests
             using (var scope = provider.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<CastellanDbContext>();
-                db.Categories.Should().Contain(c => c.Name == "Kosmetyczka");
+                db.Categories.Should().Contain(c => c.Name == nazwa && c.Kind == rodzaj);
             }
         }
         finally
