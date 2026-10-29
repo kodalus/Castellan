@@ -10,7 +10,12 @@ public sealed record EnvelopeOverview(
     CategoryKind Kind,
     Money Planned,
     Money Actual,
-    Money Remaining)
+    Money Remaining,
+    /// <summary>
+    /// Wydatek w kategorii, która nie ma koperty w tym miesiącu. Pieniądze wyszły
+    /// tak samo jak każde inne, tylko plan o nich nie wiedział.
+    /// </summary>
+    bool IsUnplanned = false)
 {
     // 0.0–1.0 capped (for ProgressBar.Progress)
     public double SpentRatio => Planned.Grosze == 0 ? 0.0
@@ -20,12 +25,19 @@ public sealed record EnvelopeOverview(
     public double SpentFraction => Planned.Grosze == 0 ? 0.0
         : (double)Math.Abs(Actual.Grosze) / (double)Planned.Grosze;
 
-    public bool IsOverBudget => SpentFraction > 1.0;
+    // Wydatek bez koperty jest przekroczeniem z definicji: plan na niego wynosi zero.
+    public bool IsOverBudget => SpentFraction > 1.0 || (IsUnplanned && Actual.IsNegative);
 
     public string PlannedDisplay   => Planned.ToString();
     public string ActualDisplay    => Actual.Abs().ToString();
     public string RemainingDisplay => Remaining.ToString();
-    public string ProgressLabel    => $"{ActualDisplay} z {PlannedDisplay}";
+
+    public string ProgressLabel => IsUnplanned
+        ? $"{ActualDisplay} — poza planem, bez koperty"
+        : $"{ActualDisplay} z {PlannedDisplay}";
+
+    /// <summary>Druga połowa podpisu kwoty na pulpicie, dopisywana po kwocie wydanej.</summary>
+    public string TrailingLabel => IsUnplanned ? " — poza planem" : $" / {PlannedDisplay}";
 }
 
 /// <summary>Planowany kontra faktyczny przychód z jednego źródła.</summary>
@@ -61,8 +73,19 @@ public sealed record MonthOverview(
     /// <summary>Odłożone na rezerwę — osobno, bo to nie jest wydane.</summary>
     Money TotalSaved,
     /// <summary>Ile odłożono PONAD plan. Zero, gdy odłożono tyle albo mniej.</summary>
-    Money SavedOverPlan)
+    Money SavedOverPlan,
+    /// <summary>Wydatki w kategoriach, które nie mają koperty w tym miesiącu.</summary>
+    IReadOnlyList<EnvelopeOverview> Unplanned,
+    Money TotalUnplanned)
 {
+    public bool HasUnplanned => TotalUnplanned.Grosze > 0;
+
+    /// <summary>
+    /// Koperty plus wydatki bez koperty — do list na ekranach. Osobna właściwość, bo
+    /// <see cref="Envelopes"/> ma pozostać dokładnie tym, co zaplanowano.
+    /// </summary>
+    public IReadOnlyList<EnvelopeOverview> EnvelopesWithUnplanned => [.. Envelopes, .. Unplanned];
+
     // 0.0–1.0 przycięte (dla ProgressBar.Progress)
     public double SpentRatio => TotalPlanned.Grosze == 0 ? 0.0
         : Math.Clamp((double)Math.Abs(TotalSpent.Grosze) / TotalPlanned.Grosze, 0.0, 1.0);
@@ -124,8 +147,9 @@ public sealed class GetMonthOverviewUseCase(
 
         var totalPlanned = budget.Envelopes.Select(e => e.PlannedAmount).Sum();
 
-        // "Wydano" / "Pozostało do wydania" liczone wyłącznie z planu (kopert),
-        // nigdy z aktywów ani funduszy — te pozostają poza budżetem miesiąca.
+        // "Wydano" / "Pozostało do wydania" liczone z transakcji miesiąca, nigdy z aktywów
+        // ani funduszy — te pozostają poza budżetem miesiąca. Nie tylko z kopert: wydatki
+        // w kategoriach bez koperty dochodzą niżej, bo te pieniądze też wyszły.
         // Odwrocony znak, nie wartosc bezwzgledna: koperta z nadwyzka zwrotow ma
         // faktyczna kwote DODATNIA, a modul zamienialby ten zwrot z powrotem w wydatek.
         //
@@ -144,6 +168,37 @@ public sealed class GetMonthOverviewUseCase(
         var totalSpent = new Money(envelopes
             .Where(e => reserve is null || e.CategoryId != reserve.CategoryId)
             .Sum(e => -e.Actual.Grosze));
+
+        // Wydatek w kategorii bez koperty też jest wydatkiem. Dopóki „wydane” sumowało
+        // same koperty, wystarczyło wyzerować kopertę — a wyzerowana znika z planu — żeby
+        // razem z nią z pulpitu zniknęły wszystkie wydatki tej kategorii. Ekran pokazywał
+        // wtedy MNIEJ wydane, niż było naprawdę, czyli mylił w stronę uspokajającą.
+        //
+        // Liczone są tylko kategorie na minusie: kategoria, w której jest sam zwrot,
+        // nie jest wydatkiem i nie ma czego dopisywać do „wydane”.
+        var planned = budget.Envelopes.Select(e => e.CategoryId).ToHashSet();
+        var unplanned = spendingByCategory
+            .Where(kv => !planned.Contains(kv.Key) && kv.Value.IsNegative)
+            .Select(kv =>
+            {
+                catMap.TryGetValue(kv.Key, out var cat);
+                return new EnvelopeOverview(
+                    kv.Key,
+                    cat?.Name ?? kv.Key.ToString(),
+                    cat?.Kind ?? CategoryKind.Expense,
+                    Money.Zero,
+                    kv.Value,
+                    kv.Value,
+                    IsUnplanned: true);
+            })
+            // Przychód to nie wydatek, nawet gdy w danym miesiącu wyszedł na minus
+            // (korekta, oddana nadpłata) — taka kwota należy do zestawienia przychodów.
+            .Where(e => e.Kind != CategoryKind.Income)
+            .OrderBy(e => e.Actual.Grosze)
+            .ToList();
+
+        var totalUnplanned = new Money(unplanned.Sum(e => -e.Actual.Grosze));
+        totalSpent = new Money(totalSpent.Grosze + totalUnplanned.Grosze);
 
         var savedOverPlan = new Money(Math.Max(
             0, totalSaved.Grosze - (reserve?.Planned.Grosze ?? 0)));
@@ -199,6 +254,8 @@ public sealed class GetMonthOverviewUseCase(
             budget.TotalPlannedIncome,
             new Money(incomes.Sum(i => i.Actual.Grosze)),
             totalSaved,
-            savedOverPlan);
+            savedOverPlan,
+            unplanned,
+            totalUnplanned);
     }
 }

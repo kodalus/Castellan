@@ -40,7 +40,8 @@ public partial class EnvelopesViewModel : ObservableObject
 
         if (MonthData is { Envelopes.Count: > 0 })
         {
-            var actualGrosze  = MonthData.Envelopes.Sum(e => Math.Abs(e.Actual.Grosze));
+            // Z wydatkami bez koperty, żeby pasek u góry zgadzał się z sumą wierszy pod nim.
+            var actualGrosze  = MonthData.EnvelopesWithUnplanned.Sum(e => Math.Abs(e.Actual.Grosze));
             var plannedGrosze = MonthData.Envelopes.Sum(e => e.Planned.Grosze);
             TotalSpentRatio   = plannedGrosze == 0 ? 0.0
                 : Math.Clamp((double)actualGrosze / plannedGrosze, 0.0, 1.0);

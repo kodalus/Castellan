@@ -51,7 +51,7 @@
             </Border>
         </Grid>
 
-        <CollectionView Grid.Row="2" ItemsSource="{Binding MonthData.Envelopes}" Margin="16,0">
+        <CollectionView Grid.Row="2" ItemsSource="{Binding MonthData.EnvelopesWithUnplanned}" Margin="16,0">
             <CollectionView.EmptyView>
                 <Label Text="{x:Static strings:AppResources.Envelopes_Empty}" Style="{StaticResource EmptyState}" />
             </CollectionView.EmptyView>

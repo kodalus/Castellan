@@ -49,6 +49,19 @@
                 </Label.FormattedText>
             </Label>
 
+            <!-- Wydatek bez koperty znikał z „wydane”, bo suma szła po kopertach. Teraz
+                 się liczy — i musi być widoczny, inaczej „wydane” nie zgadza się z sumą
+                 kopert i nie da się tego samodzielnie odtworzyć. -->
+            <Label Style="{StaticResource Secondary}" IsVisible="{Binding MonthData.HasUnplanned}">
+                <Label.FormattedText>
+                    <FormattedString>
+                        <Span Text="w tym " />
+                        <Span Text="{Binding MonthData.TotalUnplanned}" />
+                        <Span Text=" poza planem — w kategoriach bez koperty" />
+                    </FormattedString>
+                </Label.FormattedText>
+            </Label>
+
             <!-- Odłożone osobno od wydanych. Obie kwoty zabierają z tego, co zostało
                  do wydania, ale tylko jedna z nich naprawdę wyszła z kieszeni. -->
             <Label Style="{StaticResource Secondary}" IsVisible="{Binding MonthData.HasSaved}">
@@ -114,7 +127,7 @@
 
         <Label Grid.Row="5" Text="Koperty" Style="{StaticResource SectionHeader}" Margin="16,12,16,6" />
 
-        <CollectionView Grid.Row="6" ItemsSource="{Binding MonthData.Envelopes}" Margin="16,0,16,0">
+        <CollectionView Grid.Row="6" ItemsSource="{Binding MonthData.EnvelopesWithUnplanned}" Margin="16,0,16,0">
             <CollectionView.EmptyView>
                 <Label Text="{x:Static strings:AppResources.Dashboard_NoBudget}" Style="{StaticResource EmptyState}" />
             </CollectionView.EmptyView>
@@ -128,8 +141,7 @@
                                 <Label.FormattedText>
                                     <FormattedString>
                                         <Span Text="{Binding ActualDisplay}" TextColor="{StaticResource TextPrimary}" />
-                                        <Span Text=" / " />
-                                        <Span Text="{Binding PlannedDisplay}" />
+                                        <Span Text="{Binding TrailingLabel}" />
                                     </FormattedString>
                                 </Label.FormattedText>
                             </Label>
