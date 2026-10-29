@@ -145,6 +145,12 @@ public class Fund
             ? ElapsedPaydates(StartMonth, paydateDay, today)
             : Math.Max(0, (today.Year - StartMonth.Year) * 12 + (today.Month - StartMonth.Month));
 
+        // Po terminie okresy przestają przybywać. Bez tego „ile powinno być odłożone”
+        // rośnie dalej bez końca: fundusz z zebranym całym celem pokazuje brak, i to tym
+        // większy, im dawniej termin minął. Odłożone ma być tyle, ile wynosi cel —
+        // nigdy więcej, bo to jest cel, a nie rata.
+        elapsed = Math.Min(elapsed, totalPeriods);
+
         return new Money((long)Math.Round(TargetAmount.Grosze * (double)elapsed / totalPeriods));
     }
 
