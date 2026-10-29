@@ -40,7 +40,7 @@
             </Border>
 
             <Label Text="Brak funduszy. Dodaj pierwszy tapując +." Style="{StaticResource EmptyState}"
-                   IsVisible="{Binding IsEmpty}" />
+                   IsVisible="{Binding ShowEmptyState}" />
 
             <VerticalStackLayout BindableLayout.ItemsSource="{Binding Items}" IsVisible="{Binding IsNotEmpty}">
                 <BindableLayout.ItemTemplate>
@@ -86,14 +86,12 @@
                                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                                         <Label Grid.Column="0" Text="{Binding SuggestedMonthlyDisplay}"
                                                Style="{StaticResource Secondary}" VerticalOptions="Center" />
-                                        <!-- Tylko na pulpicie: przeciagniecia wiersza mysza nikt nie odkrywa. -->
+                                        <!-- Edycja, zakończenie i usunięcie idą pod „Więcej”: na telefonie
+                                             były wyłącznie pod przeciągnięciem wiersza, a piąty przycisk
+                                             w wierszu i tak by się nie zmieścił. -->
                                         <HorizontalStackLayout Grid.Column="1" Spacing="6">
-                                            <Button Text="Edytuj" Command="{Binding EditCommand}"
-                                                    Style="{StaticResource RowAction}" Padding="10,4"
-                                                    IsVisible="{OnPlatform Default=False, WinUI=True}" />
-                                            <Button Text="Usuń" Command="{Binding DeleteCommand}"
-                                                    Style="{StaticResource RowAction}" Padding="10,4"
-                                                    IsVisible="{OnPlatform Default=False, WinUI=True}" />
+                                            <Button Text="Więcej" Command="{Binding MoreCommand}"
+                                                    Style="{StaticResource RowAction}" Padding="10,4" />
                                             <Button Text="Przenieś" Command="{Binding MoveCommand}"
                                                     Style="{StaticResource RowAction}" Padding="10,4" />
                                             <Button Text="Wpłać" Command="{Binding ContributeCommand}"
@@ -107,6 +105,36 @@
                         </SwipeView>
                     </DataTemplate>
                 </BindableLayout.ItemTemplate>
+            </VerticalStackLayout>
+
+            <!-- Zakończone zostają na oku: inaczej „zakończ” byłoby nie do odróżnienia od
+                 „usuń” — koperta znika z ekranu i nie ma jak sprawdzić, gdzie poszła reszta. -->
+            <VerticalStackLayout IsVisible="{Binding HasClosed}" Spacing="0">
+
+                <Label Text="Zakończone" Style="{StaticResource SectionHeader}" />
+
+                <VerticalStackLayout BindableLayout.ItemsSource="{Binding Closed}">
+                    <BindableLayout.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ClosedFundRow">
+                            <Border Style="{StaticResource Card}">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                    <VerticalStackLayout Grid.Column="0" Spacing="2" VerticalOptions="Center">
+                                        <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
+                                        <Label Text="{Binding KindDisplay}" Style="{StaticResource Caption}" />
+                                        <Label Text="{Binding BalanceDisplay}" Style="{StaticResource RowMeta}" />
+                                    </VerticalStackLayout>
+                                    <HorizontalStackLayout Grid.Column="1" Spacing="6" VerticalOptions="Center">
+                                        <Button Text="Przywróć" Command="{Binding ReopenCommand}"
+                                                Style="{StaticResource RowAction}" Padding="10,4" />
+                                        <Button Text="Usuń" Command="{Binding DeleteCommand}"
+                                                Style="{StaticResource RowAction}" Padding="10,4" />
+                                    </HorizontalStackLayout>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </BindableLayout.ItemTemplate>
+                </VerticalStackLayout>
+
             </VerticalStackLayout>
 
         </VerticalStackLayout>

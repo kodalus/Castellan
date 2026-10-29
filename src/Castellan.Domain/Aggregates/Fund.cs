@@ -72,6 +72,13 @@ public class Fund
     public void Archive() => IsArchived = true;
 
     /// <summary>
+    /// Cofnięcie zakończenia. Zakończenie funduszu nic nie niszczy — chowa kopertę
+    /// razem z jej saldem i historią płatności z niej pokrytych — więc musi być
+    /// odwracalne jednym ruchem, inaczej pomyłka w wyborze kończy się usuwaniem.
+    /// </summary>
+    public void Reopen() => IsArchived = false;
+
+    /// <summary>
     /// Edycja parametrów funduszu. Celowo nie rusza Balance ani StartMonth:
     /// saldo zmienia się tylko przez wpłaty/wypłaty, a StartMonth jest kotwicą
     /// dla wyliczeń "ile powinno być odłożone do teraz" — przesunięcie go

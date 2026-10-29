@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:strings="clr-namespace:Castellan.App.Resources.Strings"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.CloseFundPage"
+             x:DataType="vm:CloseFundViewModel"
+             Title="Zakończ fundusz">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Zakończ" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="{x:Static strings:AppResources.Button_Cancel}" Command="{Binding CancelCommand}" />
+    </ContentPage.ToolbarItems>
+
+    <ScrollView>
+        <VerticalStackLayout Style="{StaticResource FormBody}">
+
+            <Border Style="{StaticResource ErrorBanner}" IsVisible="{Binding HasError}">
+                <Label Text="{Binding ErrorMessage}" Style="{StaticResource ErrorText}" />
+            </Border>
+
+            <VerticalStackLayout Style="{StaticResource Field}">
+                <Label Text="{Binding Name}" Style="{StaticResource RowTitle}" />
+                <Label Text="{Binding BalanceDisplay}" Style="{StaticResource Secondary}" />
+            </VerticalStackLayout>
+
+            <!-- Główna różnica między „zakończ” a „usuń”, powiedziana wprost: usunięcie
+                 odpina wydatki pokryte z funduszu, więc koperty sprzed miesięcy nagle
+                 pokazują inne kwoty. Zakończenie nie rusza niczego wstecz. -->
+            <Label Style="{StaticResource FieldHint}"
+                   Text="Fundusz zniknie z list wyboru i z sumy odpisów, ale zostanie na liście zakończonych i da się go przywrócić. Wydatki pokryte z tego funduszu zostają tam, gdzie były — zakończenie nie zmienia żadnego minionego miesiąca." />
+
+            <VerticalStackLayout Style="{StaticResource Field}" IsVisible="{Binding HasRemainder}">
+                <Label Text="Co z resztą?" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Plans}" ItemDisplayBinding="{Binding Display}"
+                        SelectedItem="{Binding SelectedPlan}" />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}" IsVisible="{Binding MovesToExistingFund}">
+                <Label Text="Na fundusz" Style="{StaticResource FieldLabel}" />
+                <Picker ItemsSource="{Binding Targets}" ItemDisplayBinding="{Binding Display}"
+                        SelectedItem="{Binding Target}" />
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Pieniądze nie ruszą się z konta — zmienią się tylko salda dwóch funduszy. Żadna transakcja nie powstanie." />
+            </VerticalStackLayout>
+
+            <VerticalStackLayout IsVisible="{Binding CreatesNewFund}" Spacing="0">
+
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Pola są wypełnione parametrami kończonego funduszu — przy odnowieniu na kolejny rok zwykle nie ma czego poprawiać poza terminem." />
+
+                <VerticalStackLayout Style="{StaticResource Field}">
+                    <Label Text="Nazwa nowego funduszu" Style="{StaticResource FieldLabel}" />
+                    <Entry Text="{Binding NewName}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Style="{StaticResource Field}">
+                    <Label Text="Rodzaj" Style="{StaticResource FieldLabel}" />
+                    <Picker ItemsSource="{Binding Kinds}" SelectedItem="{Binding NewKind}"
+                            ItemDisplayBinding="{Binding Display}" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Style="{StaticResource Field}">
+                    <Label Text="Kwota docelowa (zł)" Style="{StaticResource FieldLabel}" />
+                    <Entry Text="{Binding NewTargetText}" Keyboard="Numeric" />
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Style="{StaticResource Field}">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <Label Grid.Column="0" Text="Zbieram bez terminu" Style="{StaticResource RowTitle}"
+                               VerticalOptions="Center" />
+                        <Switch Grid.Column="1" IsToggled="{Binding NewIsOpenEnded}" VerticalOptions="Center" />
+                    </Grid>
+                </VerticalStackLayout>
+
+                <VerticalStackLayout Style="{StaticResource Field}" IsVisible="{Binding NewHasDeadline}">
+                    <Label Text="Termin" Style="{StaticResource FieldLabel}" />
+                    <DatePicker Date="{Binding NewDeadline}" Format="MMMM yyyy"
+                                MinimumDate="2025-01-01" MaximumDate="2035-12-31" />
+                </VerticalStackLayout>
+
+            </VerticalStackLayout>
+
+            <VerticalStackLayout Style="{StaticResource Field}" IsVisible="{Binding ReleasesRemainder}">
+                <Label Style="{StaticResource FieldHint}"
+                       Text="Reszta zostanie zapisana przy zakończonym funduszu, ale przestanie być odłożona: wypadnie z sumy „Zebrane w funduszach”. Pieniądze leżą tam, gdzie leżały — na koncie — i nic się z nimi nie dzieje." />
+            </VerticalStackLayout>
+
+            <HorizontalStackLayout Spacing="8" Margin="0,12,0,0">
+                <Button Text="Zakończ fundusz" Command="{Binding SaveCommand}" />
+                <Button Text="{x:Static strings:AppResources.Button_Cancel}" Command="{Binding CancelCommand}"
+                        Style="{StaticResource GhostButton}" />
+            </HorizontalStackLayout>
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
+                               HorizontalOptions="Center" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

@@ -22,10 +22,14 @@ public sealed record FundSummary(
     public bool IsOpenEnded => Deadline is null;
 }
 
+/// <summary>Zakończony fundusz — tyle, ile trzeba, żeby go pokazać na liście i przywrócić.</summary>
+public sealed record ClosedFundSummary(FundId Id, string Name, string KindDisplay, Money Balance);
+
 public sealed record FundOverview(
     IReadOnlyList<FundSummary> Items,
     Money TotalBalance,
-    Money TotalSuggestedMonthly);
+    Money TotalSuggestedMonthly,
+    IReadOnlyList<ClosedFundSummary> Closed);
 
 public sealed class GetFundOverviewUseCase(IFundRepository funds)
 {
@@ -53,11 +57,21 @@ public sealed class GetFundOverviewUseCase(IFundRepository funds)
             .ThenBy(s => s.Deadline)
             .ToList();
 
+        // Zakończone fundusze zostają widoczne osobno: inaczej „zakończ” byłoby nie do
+        // odróżnienia od „usuń” — koperta znika z ekranu i nie ma jak sprawdzić, czy
+        // poszła tam, gdzie miała, ani jak cofnąć pomyłki.
+        var closed = all
+            .Where(f => f.IsArchived)
+            .OrderBy(f => f.Name)
+            .Select(f => new ClosedFundSummary(f.Id, f.Name, KindDisplay(f.Kind), f.Balance))
+            .ToList();
+
         return new FundOverview(
             items,
             new Money(items.Sum(s => s.Balance.Grosze)),
             // Suma odpisów = podpowiedź kwoty koperty "Rezerwy" na najbliższy miesiąc.
-            new Money(items.Sum(s => s.SuggestedMonthly.Grosze)));
+            new Money(items.Sum(s => s.SuggestedMonthly.Grosze)),
+            closed);
     }
 
     private static string KindDisplay(FundKind kind) => kind switch

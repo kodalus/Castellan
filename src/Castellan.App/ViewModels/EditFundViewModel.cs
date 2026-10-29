@@ -115,6 +115,18 @@ public partial class EditFundViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Zakończenie ma własny ekran, bo musi zapytać o resztę salda. Stoi tutaj, obok
+    /// edycji, bo „ten cel jest już załatwiony” to zmiana statusu funduszu, a nie
+    /// osobna operacja na liście.
+    /// </summary>
+    [RelayCommand]
+    private async Task CloseFundAsync()
+    {
+        if (_id is not { } id) return;
+        if (Shell.Current is { } shell) await shell.GoToAsync($"closeFund?fundId={id.Value}");
+    }
+
     [RelayCommand]
     private static async Task CancelAsync() => await Shell.Current.GoToAsync("..");
 

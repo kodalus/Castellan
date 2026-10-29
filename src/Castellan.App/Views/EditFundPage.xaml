@@ -65,6 +65,11 @@
             <ActivityIndicator IsRunning="{Binding IsBusy}" IsVisible="{Binding IsBusy}"
                                HorizontalOptions="Center" />
 
+            <!-- Zakończenie, nie usunięcie: cel się wydarzył, koperta nie ma już czego
+                 pilnować. Zwykły przycisk, a nie ostrzegawczy, bo nic tu nie przepada. -->
+            <Button Text="Zakończ fundusz" Command="{Binding CloseFundCommand}"
+                    Style="{StaticResource GhostButton}" Margin="0,12,0,0" />
+
         </VerticalStackLayout>
     </ScrollView>
 

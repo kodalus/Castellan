@@ -26,6 +26,7 @@ public sealed class FundRow
     public ICommand MoveCommand { get; }
     public ICommand EditCommand { get; }
     public ICommand DeleteCommand { get; }
+    public ICommand MoreCommand { get; }
 
     public bool IsNotDelayed => !IsDelayed;
 
@@ -34,7 +35,7 @@ public sealed class FundRow
         string suggestedMonthlyDisplay, string periodsRemainingDisplay, string deadlineDisplay,
         string deficitDisplay, bool isDelayed, double progress,
         ICommand contributeCommand, ICommand moveCommand,
-        ICommand editCommand, ICommand deleteCommand)
+        ICommand editCommand, ICommand deleteCommand, ICommand moreCommand)
     {
         Id = id;
         Name = name;
@@ -51,21 +52,46 @@ public sealed class FundRow
         MoveCommand = moveCommand;
         EditCommand = editCommand;
         DeleteCommand = deleteCommand;
+        MoreCommand = moreCommand;
     }
 }
+
+/// <summary>
+/// Zakończony fundusz. Został na liście, żeby „zakończ” nie wyglądało jak „usuń”:
+/// widać, ile mu zostało w chwili zamknięcia, i da się go przywrócić jednym tapnięciem.
+/// </summary>
+public sealed record ClosedFundRow(
+    string Name,
+    string KindDisplay,
+    string BalanceDisplay,
+    ICommand ReopenCommand,
+    ICommand DeleteCommand);
 
 public partial class FundsViewModel : ObservableObject
 {
     private readonly GetFundOverviewUseCase _overview;
     private readonly DeleteFundUseCase _deleteFund;
+    private readonly CloseFundUseCase _closeFund;
 
     public ObservableCollection<FundRow> Items { get; } = [];
+    public ObservableCollection<ClosedFundRow> Closed { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyState))]
+    private bool _hasClosed;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsNotEmpty))]
+    [NotifyPropertyChangedFor(nameof(ShowEmptyState))]
     private bool _isEmpty = true;
 
     public bool IsNotEmpty => !IsEmpty;
+
+    /// <summary>
+    /// „Brak funduszy. Dodaj pierwszy” jest nieprawdą, gdy wszystkie fundusze są
+    /// zakończone — wtedy lista zakończonych mówi sama za siebie.
+    /// </summary>
+    public bool ShowEmptyState => IsEmpty && !HasClosed;
 
     // Paydate setup
     [ObservableProperty]
@@ -81,10 +107,12 @@ public partial class FundsViewModel : ObservableObject
 
     public FundsViewModel(
         GetFundOverviewUseCase overview,
-        DeleteFundUseCase deleteFund)
+        DeleteFundUseCase deleteFund,
+        CloseFundUseCase closeFund)
     {
         _overview = overview;
         _deleteFund = deleteFund;
+        _closeFund = closeFund;
         PaydateDay = Microsoft.Maui.Storage.Preferences.Get("paydate_day", 0);
         PaydateText = PaydateDay > 0 ? PaydateDay.ToString() : "";
     }
@@ -131,9 +159,23 @@ public partial class FundsViewModel : ObservableObject
                         Shell.Current.GoToAsync($"moveFund?fundId={fundId.Value}")),
                     new AsyncRelayCommand(() =>
                         Shell.Current.GoToAsync($"editFund?fundId={fundId.Value}")),
-                    new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance))));
+                    new AsyncRelayCommand(() => DeleteFundAsync(fundId, s.Name, s.Balance)),
+                    new AsyncRelayCommand(() => MoreAsync(fundId, s.Name, s.Balance))));
             }
             IsEmpty = Items.Count == 0;
+
+            Closed.Clear();
+            foreach (var c in overview.Closed)
+            {
+                var closedId = c.Id;
+                Closed.Add(new ClosedFundRow(
+                    c.Name,
+                    c.KindDisplay,
+                    c.Balance.Grosze > 0 ? $"Zostało: {c.Balance}" : "Wyzerowany",
+                    new AsyncRelayCommand(() => ReopenFundAsync(closedId, c.Name)),
+                    new AsyncRelayCommand(() => DeleteFundAsync(closedId, c.Name, c.Balance))));
+            }
+            HasClosed = Closed.Count > 0;
         }
         catch (Exception ex)
         {
@@ -160,6 +202,47 @@ public partial class FundsViewModel : ObservableObject
     private async Task AddFundAsync()
         => await Shell.Current.GoToAsync("addFund");
 
+    /// <summary>
+    /// Edycja, zakończenie i usunięcie pod jednym przyciskiem. Na telefonie były
+    /// wyłącznie pod przeciągnięciem wiersza, czyli pod gestem, którego nic nie zapowiada
+    /// — a trzeci przycisk w wierszu i tak by się nie zmieścił.
+    /// </summary>
+    private async Task MoreAsync(FundId id, string name, Money balance)
+    {
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        var choice = await page.DisplayActionSheetAsync(
+            name, "Anuluj", null, "Edytuj", "Zakończ fundusz", "Usuń");
+
+        switch (choice)
+        {
+            case "Edytuj":
+                await Shell.Current.GoToAsync($"editFund?fundId={id.Value}");
+                break;
+            case "Zakończ fundusz":
+                await Shell.Current.GoToAsync($"closeFund?fundId={id.Value}");
+                break;
+            case "Usuń":
+                await DeleteFundAsync(id, name, balance);
+                break;
+        }
+    }
+
+    private async Task ReopenFundAsync(FundId id, string name)
+    {
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        try
+        {
+            await _closeFund.ReopenAsync(id);
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            await page.DisplayAlertAsync($"Nie udało się przywrócić „{name}”", ex.Message, "OK");
+        }
+    }
+
     private async Task DeleteFundAsync(FundId id, string name, Money balance)
     {
         if (Shell.Current?.CurrentPage is not Page page) return;
@@ -172,7 +255,8 @@ public partial class FundsViewModel : ObservableObject
             // pokryte z tego funduszu wrócą do kopert i znów obciążą budżet miesiąca.
             var warnings = new List<string>();
             if (balance.Grosze != 0)
-                warnings.Add($"Zebrane {balance} przestanie być widoczne w Majątku.");
+                warnings.Add($"Ślad po zebranych {balance} zniknie — same pieniądze zostają na koncie, "
+                             + "ale nic już nie będzie pamiętało, że były odłożone na ten cel.");
             if (linked > 0)
                 warnings.Add($"{linked} transakcji pokrytych z tego funduszu wróci do kopert i znów obciąży budżet.");
 
@@ -182,7 +266,8 @@ public partial class FundsViewModel : ObservableObject
 
             var confirmed = await page.DisplayAlertAsync(
                 $"Usunąć „{name}”?",
-                $"Tej operacji nie można cofnąć.{details}",
+                $"Tej operacji nie można cofnąć. Jeśli cel się po prostu wydarzył, wybierz "
+                + $"zamiast tego „Zakończ fundusz” — to zachowuje historię.{details}",
                 "Usuń", "Anuluj");
             if (!confirmed) return;
 
