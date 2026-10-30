@@ -33,6 +33,16 @@ public sealed partial class IngestRawNotificationUseCase(
     /// </summary>
     private const int OwnTransferLegWindowMinutes = 5;
 
+    /// <summary>
+    /// Okno na drugą nogę przelewu między własnymi kontami, składaną z dwóch osobnych
+    /// powiadomień. Trzy godziny: tyle, ile pokrywa opóźnienie „Twojego Asystenta” z ING.
+    ///
+    /// Były tu dwie doby. Warunkiem jest sama kwota ze znakiem przeciwnym na innym koncie,
+    /// a przelewy robi się na równe kwoty — przez dwie doby kwota przeciwna znajdzie się
+    /// niemal zawsze i prawie nigdy nie będzie to drugia noga tego przelewu.
+    /// </summary>
+    private const int TransferPairWindowMinutes = 180;
+
     public static readonly IReadOnlySet<string> AllowedPackages = new HashSet<string>(StringComparer.Ordinal)
     {
         "pl.ing.mojeing",
@@ -369,13 +379,23 @@ public sealed partial class IngestRawNotificationUseCase(
         RawNotification notification,
         CancellationToken ct)
     {
-        var orphan = recent.FirstOrDefault(t =>
-            t.Amount.Grosze == grosze &&
-            !t.SupersededById.HasValue &&
-            t.TransferGroupId is null &&
-            t.ProposedTransferGroupId is null &&
-            pool.Any(a => a.Id == t.AccountId) &&
-            Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= 15);
+        // Najpierw wpis, który już leży na właściwym koncie, potem najbliższy w czasie.
+        // Bez tej kolejności przygarniany był pierwszy z brzegu wpis o tej samej kwocie
+        // — a že repozytorium nie sortuje, w praktyce najstarszy. Prawdziwy zakup sprzed
+        // kilkunastu minut na tę samą kwotę wędrował wtedy na inne konto i stawał się
+        // nogą przelewu, którego nie było.
+        var orphan = recent
+            .Where(t =>
+                t.Amount.Grosze == grosze &&
+                !t.SupersededById.HasValue &&
+                t.TransferGroupId is null &&
+                t.ProposedTransferGroupId is null &&
+                pool.Any(a => a.Id == t.AccountId) &&
+                Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= 15)
+            .OrderByDescending(t => t.AccountId == accountId)
+            .ThenBy(t => Math.Abs((t.OccurredAt - postedAt).Ticks))
+            .ThenBy(t => t.Id.Value)
+            .FirstOrDefault();
 
         if (orphan is not null)
         {
@@ -471,22 +491,42 @@ public sealed partial class IngestRawNotificationUseCase(
         return accountTokens.Any(t => t.Length >= 2 && t == acronym);
     }
 
+    /// <summary>
+    /// Szuka drugiej nogi przelewu między własnymi kontami: tej samej kwoty ze znakiem
+    /// przeciwnym na innym koncie.
+    ///
+    /// Decyduje BLISKOŚĆ W CZASIE, a nie kolejność w bazie. Wcześniej brana była pierwsza
+    /// z brzegu kwota przeciwna z ostatnich 48 godzin — czyli w praktyce najstarsza, bo
+    /// repozytorium nie sortuje. Przelew z ING osobistego na OKO ING łączył się wtedy
+    /// z przypadkową wpłatą o tej samej kwocie sprzed dwóch dni na zupełnie inne konto,
+    /// a prawdziwa druga noga — ta sprzed sekund — zostawała bez pary.
+    ///
+    /// Zbieg kwot jest częstszy, niż się wydaje: przelewy robi się na równe kwoty,
+    /// a 500 zł na jednym koncie łatwo trafia na 500 zł na drugim.
+    /// </summary>
     private async Task TryProposeTransferAsync(
         Transaction tx,
         AccountId ownAccountId,
         DateTimeOffset postedAt,
         CancellationToken ct)
     {
-        var since = postedAt.AddHours(-48);
+        var since = postedAt.AddMinutes(-TransferPairWindowMinutes);
         var recent = await transactions.ListRecentAsync(since, ct);
 
-        var match = recent.FirstOrDefault(t =>
-            t.AccountId != ownAccountId &&
-            t.Amount.Grosze == -tx.Amount.Grosze &&
-            t.Kind != TransactionKind.Transfer &&
-            t.ProposedTransferGroupId is null &&
-            !t.SupersededById.HasValue &&
-            t.Id != tx.Id);
+        var match = recent
+            .Where(t =>
+                t.AccountId != ownAccountId &&
+                t.Amount.Grosze == -tx.Amount.Grosze &&
+                t.Kind != TransactionKind.Transfer &&
+                t.ProposedTransferGroupId is null &&
+                !t.SupersededById.HasValue &&
+                t.Id != tx.Id &&
+                Math.Abs((t.OccurredAt - postedAt).TotalMinutes) <= TransferPairWindowMinutes)
+            .OrderBy(t => Math.Abs((t.OccurredAt - postedAt).Ticks))
+            // Przy remisie co do sekundy rozstrzyga identyfikator: cokolwiek, byle
+            // wynik nie zależał od kolejności wierszy zwróconej przez bazę.
+            .ThenBy(t => t.Id.Value)
+            .FirstOrDefault();
 
         if (match is null) return;
 
