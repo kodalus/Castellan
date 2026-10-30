@@ -14,6 +14,41 @@ namespace Castellan.App.Platforms.Android.Services;
 [IntentFilter(["android.service.notification.NotificationListenerService"])]
 public class CastellanNotificationListenerService : NotificationListenerService
 {
+    /// <summary>
+    /// Android rozpina nasłuch powiadomień sam z siebie: przy aktualizacji aplikacji,
+    /// przy czyszczeniu pamięci, przy oszczędzaniu baterii. Uprawnienie zostaje przyznane,
+    /// ikona w ustawieniach dalej jest zaznaczona — tylko nic już nie przychodzi, aż do
+    /// restartu telefonu albo przełączenia uprawnienia w ustawieniach.
+    ///
+    /// <c>RequestRebind</c> to przewidziany na to sygnał: prosi system o ponowne
+    /// podpięcie. Bez niego cisza trwa, dopóki użytkownik sam się nie zorientuje —
+    /// a zorientuje się dopiero po tym, jak zabraknie transakcji za kilka dni.
+    /// </summary>
+    public static void RequestRebind()
+    {
+        try
+        {
+            var context = global::Android.App.Application.Context;
+            var component = new ComponentName(
+                context, Java.Lang.Class.FromType(typeof(CastellanNotificationListenerService)));
+            NotificationListenerService.RequestRebind(component);
+        }
+        catch (Exception ex)
+        {
+            // Bez przyznanego uprawnienia system odmawia — to nie jest błąd do pokazania,
+            // bo ekran Skrzynki i tak prosi wtedy o uprawnienie.
+            global::Android.Util.Log.Warn("Castellan.NLS", ex.ToString());
+        }
+    }
+
+    public override void OnListenerDisconnected()
+    {
+        base.OnListenerDisconnected();
+
+        // Jedyny moment, w którym wiadomo na pewno, że nasłuch przestał działać.
+        RequestRebind();
+    }
+
     public override void OnNotificationPosted(StatusBarNotification? sbn)
     {
         if (sbn is null) return;

@@ -11,6 +11,7 @@ public partial class DashboardViewModel : ObservableObject
 {
     private readonly GetMonthOverviewUseCase _getOverview;
     private readonly SimulateDebtPayoffUseCase _debtPayoff;
+    private readonly Services.INotificationPermissionService _notifications;
 
     // Miesiac sam przechodzi na biezacy — ta zakladka zyje tak dlugo jak aplikacja.
     private readonly MonthCursor _cursor = new();
@@ -29,10 +30,14 @@ public partial class DashboardViewModel : ObservableObject
 
     public string CurrentMonthDisplay => CurrentMonth.ToDisplayString();
 
-    public DashboardViewModel(GetMonthOverviewUseCase getOverview, SimulateDebtPayoffUseCase debtPayoff)
+    public DashboardViewModel(
+        GetMonthOverviewUseCase getOverview,
+        SimulateDebtPayoffUseCase debtPayoff,
+        Services.INotificationPermissionService notifications)
     {
         _getOverview = getOverview;
         _debtPayoff = debtPayoff;
+        _notifications = notifications;
         CurrentMonth = _cursor.Month;
     }
 
@@ -87,6 +92,14 @@ public partial class DashboardViewModel : ObservableObject
         var ticks = Preferences.Get("last_notification_at", 0L);
         IsNotificationWarningVisible = ticks == 0 ||
             (DateTimeOffset.UtcNow - new DateTimeOffset(ticks, TimeSpan.Zero)).TotalDays > 1;
+
+        // Cisza znaczy najczęściej nie „brak uprawnienia”, tylko „Android rozpiął nasłuch”
+        // — a to wygląda identycznie: uprawnienie przyznane, ikona zaznaczona, nic nie
+        // przychodzi. Prośba o ponowne podpięcie nic nie kosztuje, gdy wszystko działa,
+        // i jest jedynym, co może pomóc, gdy nie działa. Baner zostaje: potwierdzi go
+        // dopiero pierwsze złapane powiadomienie.
+        if (IsNotificationWarningVisible && _notifications.IsGranted())
+            _notifications.RequestRebind();
     }
 
     [RelayCommand]

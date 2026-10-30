@@ -13,5 +13,7 @@ public sealed class NoNotificationCapture : INotificationPermissionService
 {
     public bool IsGranted() => false;
 
+    public void RequestRebind() { }
+
     public void OpenSettings() { }
 }

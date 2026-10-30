@@ -13,6 +13,8 @@ public class AndroidNotificationPermissionService : INotificationPermissionServi
         return context.PackageName is { } pkg && (enabled?.Contains(pkg) == true);
     }
 
+    public void RequestRebind() => CastellanNotificationListenerService.RequestRebind();
+
     public void OpenSettings()
     {
         var context = global::Android.App.Application.Context;
