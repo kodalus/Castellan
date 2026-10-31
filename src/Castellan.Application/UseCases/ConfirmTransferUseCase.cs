@@ -60,10 +60,20 @@ public sealed class ConfirmTransferUseCase(
     }
 
     /// <summary>
-    /// Wyjęcie odłożonych pieniędzy: obie nogi wypadają z budżetu jak przy zwykłym
-    /// przelewie — odpis obciążył kopertę „Rezerwy" w miesiącu, w którym odkładano,
-    /// więc powrót nie może go ani cofnąć, ani policzyć drugi raz. Maleje natomiast
-    /// saldo funduszu, bo odkładanie na ten cel się skończyło.
+    /// Wyjęcie odłożonych pieniędzy — dokładne odwrócenie odkładania. Noga przychodząca,
+    /// ta lądująca na koncie do wydawania, zostaje wpisem w kategorii „Rezerwy" z kwotą
+    /// DODATNIĄ, więc koperta maleje o tyle, ile zabrano. Maleje też saldo funduszu,
+    /// bo odkładanie na ten cel się skończyło.
+    ///
+    /// Wcześniej obie nogi wypadały z budżetu jak przy zwykłym przelewie, w obawie przed
+    /// policzeniem odpisu drugi raz. To było pomylenie dwóch rzeczy: odpisu z minionego
+    /// miesiąca rzeczywiście nie wolno cofać wstecz, ale pieniądze wracają do wydawania
+    /// W MIESIĄCU, W KTÓRYM JE WYJĘTO — i tam muszą być widoczne. Bez tego koperta
+    /// Rezerwy pokazywała samą sumę wpłat: „19 000 odłożone" przy niespełna połowie tej
+    /// kwoty naprawdę odłożonej, a budżet miesiąca był zaniżony o całą resztę.
+    ///
+    /// Sumarycznie nic się nie dubluje: odkładanie zabiera z jednego miesiąca, wyjęcie
+    /// oddaje do drugiego, a per saldo odłożone zostaje tyle, ile zostało.
     ///
     /// Odpowiednik tego, co przy ręcznym przelewie robi CreateTransferUseCase: ta sama
     /// decyzja musi być do podjęcia niezależnie od tego, czy przelew wpisano samemu,
@@ -79,9 +89,18 @@ public sealed class ConfirmTransferUseCase(
 
         var kwota = new Money(Math.Abs(pair.Value.From.Amount.Grosze));
 
+        var reserve = (await categories.ListAsync(ct))
+            .FirstOrDefault(c => c.Name.Equals(ReserveCategoryName, StringComparison.OrdinalIgnoreCase));
+
         var groupId = Guid.NewGuid();
         pair.Value.From.SetTransferGroup(groupId);
-        pair.Value.To.SetTransferGroup(groupId);
+
+        // Bez kategorii „Rezerwy" nie ma czego uznawać — wtedy zwykły przelew jest
+        // bezpieczniejszy niż wpis wrzucony do przypadkowej kategorii.
+        if (reserve is not null)
+            pair.Value.To.MarkAsReserveMove(reserve.Id);
+        else
+            pair.Value.To.SetTransferGroup(groupId);
 
         if (withdrawFrom is { } fundId)
         {

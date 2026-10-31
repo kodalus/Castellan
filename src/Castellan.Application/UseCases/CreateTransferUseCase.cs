@@ -30,12 +30,17 @@ public sealed class CreateTransferUseCase(
         /// <summary>Fundusz, którego saldo ma wzrosnąć. Dobrowolny nawet przy rezerwie.</summary>
         FundId? ContributeTo = null,
         /// <summary>
-        /// Fundusz, z którego te pieniądze są wyjmowane — przy przelewie z konta
-        /// oszczędnościowego na wydatkowe. Odkładanie się kończy, więc saldo funduszu
-        /// maleje. Same nogi przelewu zostają wykluczone z budżetu jak każdy przelew:
-        /// odpis obciążył kopertę „Rezerwy" w miesiącu, w którym pieniądze odkładano.
+        /// Fundusz, z którego te pieniądze są wyjmowane. Odkładanie się kończy, więc saldo
+        /// funduszu maleje. Dobrowolny: część rezerw nie ma przypisanego celu.
         /// </summary>
-        FundId? WithdrawFrom = null);
+        FundId? WithdrawFrom = null,
+        /// <summary>
+        /// Wyjęcie odłożonych pieniędzy, a nie zwykłe przekładanie — odwrotność
+        /// <see cref="IsReserve"/>. Osobna flaga, a nie samo <see cref="WithdrawFrom"/>,
+        /// bo wskazanie funduszu jest dobrowolne: „wyjmuję z rezerwy, ale bez konkretnego
+        /// celu" musi dawać się odróżnić od „przekładam między kontami".
+        /// </summary>
+        bool IsReserveReturn = false);
 
     public async Task ExecuteAsync(Input input, CancellationToken ct = default)
     {
@@ -60,22 +65,26 @@ public sealed class CreateTransferUseCase(
             input.ToAccountId, new Money(magnitude), input.OccurredAt, Category.TransferId, input.Note);
 
         // Wspólny TransferGroupId ustawia też Kind=Transfer i kategorię systemową,
-        // dzięki czemu obie strony są wyłączone z kopert i ze statystyk przychodów.
+        // dzięki czemu dana strona jest wyłączona z kopert i ze statystyk przychodów.
         var groupId = Guid.NewGuid();
-        incoming.SetTransferGroup(groupId);
 
-        // Odkładanie na rezerwę zostawia nogę wychodzącą zwykłym wydatkiem w kategorii
-        // „Rezerwy" — te pieniądze przestają być do wydania w tym miesiącu, więc muszą
-        // obciążyć kopertę. Noga przychodząca i tak wypada z budżetu, inaczej ta sama
-        // kwota wyszłaby jako przychód na koncie docelowym.
-        var reserve = input.IsReserve
+        // Rezerwa działa w obie strony i w obie strony dotyka tej samej koperty.
+        // Przy odkładaniu w „Rezerwach" ląduje noga WYCHODZĄCA (kwota ujemna): pieniądze
+        // przestają być do wydania w tym miesiącu, więc muszą obciążyć kopertę.
+        // Przy wyjmowaniu — noga PRZYCHODZĄCA (kwota dodatnia): wracają do wydania
+        // w miesiącu, w którym je wyjęto, więc koperta musi o tyle zmaleć.
+        //
+        // Druga noga wypada z budżetu jak każdy przelew, inaczej ta sama kwota wyszłaby
+        // drugi raz — jako przychód albo jako wydatek na drugim koncie.
+        var reserve = input.IsReserve || input.IsReserveReturn
             ? (await categories.ListAsync(ct)).FirstOrDefault(c =>
                 c.Name.Equals(ConfirmTransferUseCase.ReserveCategoryName, StringComparison.OrdinalIgnoreCase))
             : null;
 
-        if (reserve is not null)
+        if (reserve is not null && input.IsReserve)
         {
             outgoing.MarkAsReserveMove(reserve.Id);
+            incoming.SetTransferGroup(groupId);
 
             if (input.ContributeTo is { } fundId)
             {
@@ -83,13 +92,17 @@ public sealed class CreateTransferUseCase(
                 fund?.Contribute(new Money(magnitude));
             }
         }
+        else if (reserve is not null && input.IsReserveReturn)
+        {
+            outgoing.SetTransferGroup(groupId);
+            incoming.MarkAsReserveMove(reserve.Id);
+        }
         else
         {
             outgoing.SetTransferGroup(groupId);
+            incoming.SetTransferGroup(groupId);
         }
 
-        // Wyjęcie pieniędzy z funduszu jest niezależne od kierunku „na rezerwę": tu
-        // pieniądze wracają do wydania, więc koperty nie dotyka ani jedna, ani druga noga.
         if (input.WithdrawFrom is { } withdrawId)
         {
             var fund = await funds.GetAsync(withdrawId, ct);

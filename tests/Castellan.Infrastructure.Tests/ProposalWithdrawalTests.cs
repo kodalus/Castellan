@@ -18,6 +18,9 @@ namespace Castellan.Infrastructure.Tests;
 /// Ręczny formularz pytał o to od dawna; propozycja ze Skrzynki pytała wyłącznie
 /// o kierunek przeciwny („odkładasz na rezerwę?”), więc przy wyjmowaniu jedyną drogą
 /// było ręczne poprawianie salda funduszu.
+///
+/// Wyjęcie jest odwrotnością odkładania i dotyka tej samej koperty: noga wracająca na
+/// konto do wydawania zostaje wpisem w „Rezerwach” z kwotą dodatnią.
 /// </summary>
 public class ProposalWithdrawalTests
 {
@@ -67,7 +70,7 @@ public class ProposalWithdrawalTests
     }
 
     [Fact]
-    public async Task Confirming_as_a_withdrawal_lowers_the_fund_and_leaves_the_budget_alone()
+    public async Task Confirming_as_a_withdrawal_lowers_the_fund_and_gives_the_money_back_to_the_month()
     {
         var dbPath = NewDbPath();
         try
@@ -80,10 +83,23 @@ public class ProposalWithdrawalTests
             db.ChangeTracker.Clear();
             (await db.Funds.SingleAsync()).Balance.Grosze.Should().Be(FundBalance - Moved);
 
-            // Odpis obciążył kopertę „Rezerwy” w miesiącu, w którym odkładano, więc
-            // powrót nie może go ani cofnąć, ani policzyć drugi raz.
+            // Ten test wymagał wcześniej, żeby OBIE nogi wypadały z budżetu — w obawie
+            // przed policzeniem odpisu drugi raz. To było pomylenie dwóch rzeczy: odpisu
+            // z MINIONEGO miesiąca nie wolno cofać wstecz, ale pieniądze wracają do
+            // wydawania w miesiącu, w którym je wyjęto. Koperta „Rezerwy” pokazywała
+            // przez to samą sumę wpłat, a budżet był zaniżony o wszystko, co wróciło.
+            var rezerwy = await db.Categories.SingleAsync(
+                c => c.Name == ConfirmTransferUseCase.ReserveCategoryName);
             var txs = await db.Transactions.ToListAsync();
-            txs.Should().OnlyContain(t => t.IsExcludedFromCalculations);
+
+            var wracajaca = txs.Single(t => t.AccountId == checking);
+            wracajaca.CategoryId.Should().Be(rezerwy.Id);
+            wracajaca.Amount.Grosze.Should().Be(Moved);
+            wracajaca.IsExcludedFromCalculations.Should().BeFalse();
+
+            // Druga noga wypada z budżetu jak każdy przelew, inaczej ta sama kwota
+            // policzyłaby się dwa razy.
+            txs.Single(t => t.AccountId == savings).IsExcludedFromCalculations.Should().BeTrue();
             txs.Should().OnlyContain(t => t.ProposedTransferGroupId == null);
         }
         finally
@@ -93,7 +109,7 @@ public class ProposalWithdrawalTests
     }
 
     [Fact]
-    public async Task Confirming_as_a_plain_move_leaves_every_fund_alone()
+    public async Task Taking_money_out_without_naming_a_fund_still_gives_it_back_to_the_month()
     {
         var dbPath = NewDbPath();
         try
@@ -101,8 +117,36 @@ public class ProposalWithdrawalTests
             var (db, savings, checking, _) = await SetupAsync(dbPath);
             var groupId = await ProposeAsync(db, from: savings, to: checking);
 
-            // Ten sam kierunek, ale użytkownik odpowiedział „przekładam”.
+            // „Wyjmuję, ale bez wskazania celu” — wskazanie funduszu jest dobrowolne,
+            // bo część rezerw nie ma przypisanego celu.
             await Confirm(db).ExecuteWithWithdrawalAsync(groupId, withdrawFrom: null);
+
+            db.ChangeTracker.Clear();
+            (await db.Funds.SingleAsync()).Balance.Grosze.Should().Be(FundBalance);
+
+            var rezerwy = await db.Categories.SingleAsync(
+                c => c.Name == ConfirmTransferUseCase.ReserveCategoryName);
+            (await db.Transactions.SingleAsync(t => t.AccountId == checking))
+                .CategoryId.Should().Be(rezerwy.Id);
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task Confirming_as_a_plain_move_leaves_both_the_funds_and_the_budget_alone()
+    {
+        var dbPath = NewDbPath();
+        try
+        {
+            var (db, savings, checking, _) = await SetupAsync(dbPath);
+            var groupId = await ProposeAsync(db, from: savings, to: checking);
+
+            // Kontrola negatywna: „przekładam” idące zwykłym potwierdzeniem. Bez tego
+            // każdy ruch z oszczędnościowego podnosiłby kwotę do wydania.
+            await Confirm(db).ExecuteAsync(groupId);
 
             db.ChangeTracker.Clear();
             (await db.Funds.SingleAsync()).Balance.Grosze.Should().Be(FundBalance);

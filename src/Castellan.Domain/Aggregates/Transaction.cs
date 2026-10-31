@@ -121,6 +121,11 @@ public class Transaction
     ///
     /// Noga przychodząca jest wykluczana jak każdy przelew (SetTransferGroup) — inaczej
     /// ta sama kwota wyszłaby jako przychód na koncie docelowym.
+    ///
+    /// TO SAMO DZIAŁA W DRUGĄ STRONĘ. Gdy odłożone pieniądze wracają z oszczędności do
+    /// wydawania, nogą w kategorii „Rezerwy” jest ta PRZYCHODZĄCA — z kwotą dodatnią,
+    /// więc koperta Rezerwy maleje o tyle, ile zabrano. Operacja jest identyczna,
+    /// kierunek rozstrzyga sam znak kwoty.
     /// </summary>
     public void MarkAsReserveMove(CategoryId reserveCategory)
     {

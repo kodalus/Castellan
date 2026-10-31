@@ -99,6 +99,7 @@ public partial class AddTransferViewModel : ObservableObject
         // aplikacji nierozróżnialne: przekładanie pieniędzy (budżet bez zmian) albo
         // odkładanie na rezerwę (budżet miesiąca ubywa). Wie to tylko użytkownik.
         var isReserve = false;
+        var isReserveReturn = false;
         FundId? contributeTo = null;
         FundId? withdrawFrom = null;
 
@@ -127,14 +128,15 @@ public partial class AddTransferViewModel : ObservableObject
             && _kinds.GetValueOrDefault(toId) != AccountKind.Savings
             && page is not null)
         {
-            var fromFund = await page.DisplayAlertAsync(
-                "Wyjmujesz z funduszu?",
+            isReserveReturn = await page.DisplayAlertAsync(
+                "Wyjmujesz odłożone?",
                 "Przelew z konta oszczędnościowego może być wyjęciem odłożonych pieniędzy "
-                + "(saldo funduszu zmaleje) albo zwykłym przekładaniem między kontami "
-                + "(fundusze bez zmian).",
-                "Z funduszu", "Przekładam");
+                + "(wrócą do wydania w tym miesiącu, koperta „Rezerwy” zmaleje, a saldo "
+                + "wskazanego funduszu też) albo zwykłym przekładaniem między kontami "
+                + "(budżet i fundusze bez zmian).",
+                "Wyjmuję", "Przekładam");
 
-            if (fromFund) withdrawFrom = await AskWithdrawFundAsync(page, new Money(grosze), ct);
+            if (isReserveReturn) withdrawFrom = await AskWithdrawFundAsync(page, new Money(grosze), ct);
         }
 
         IsBusy = true;
@@ -143,7 +145,7 @@ public partial class AddTransferViewModel : ObservableObject
             await _createTransfer.ExecuteAsync(
                 new CreateTransferUseCase.Input(
                     fromId, toId, new Money(grosze), occurredAt, Note,
-                    isReserve, contributeTo, withdrawFrom), ct);
+                    isReserve, contributeTo, withdrawFrom, isReserveReturn), ct);
             if (Shell.Current is { } shell) await shell.GoToAsync("..");
         }
         catch (Exception ex)

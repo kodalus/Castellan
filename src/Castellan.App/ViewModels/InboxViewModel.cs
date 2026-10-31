@@ -4,6 +4,7 @@ using Castellan.App.Services;
 using Castellan.Application.Repositories;
 using Castellan.Application.UseCases;
 using Castellan.Domain;
+using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -161,7 +162,7 @@ public partial class InboxViewModel : ObservableObject
                     p.ToAccountName,
                     p.Amount.ToString(),
                     p.OccurredAt.ToLocalTime().ToString("dd.MM HH:mm"),
-                    new AsyncRelayCommand(() => ConfirmProposalAsync(groupId, toIsSavings, leavesSavings)),
+                    new AsyncRelayCommand(() => ConfirmProposalAsync(groupId, toIsSavings, leavesSavings, p.Amount)),
                     new AsyncRelayCommand(() => RejectProposalAsync(groupId)),
                     canConfirm));
             }
@@ -213,7 +214,7 @@ public partial class InboxViewModel : ObservableObject
         await LoadAsync();
     }
 
-    private async Task ConfirmProposalAsync(Guid groupId, bool toIsSavings, bool leavesSavings)
+    private async Task ConfirmProposalAsync(Guid groupId, bool toIsSavings, bool leavesSavings, Money amount)
     {
         var page = Shell.Current?.CurrentPage;
 
@@ -242,15 +243,16 @@ public partial class InboxViewModel : ObservableObject
         else if (leavesSavings && page is not null)
         {
             var fromFund = await page.DisplayAlertAsync(
-                "Wyjmujesz z funduszu?",
+                "Wyjmujesz odłożone?",
                 "Przelew z konta oszczędnościowego może być wyjęciem odłożonych pieniędzy "
-                + "(saldo funduszu zmaleje) albo zwykłym przekładaniem między kontami "
-                + "(fundusze bez zmian).",
-                "Z funduszu", "Przekładam");
+                + "(wrócą do wydania w tym miesiącu, koperta „Rezerwy” zmaleje, a saldo "
+                + "wskazanego funduszu też) albo zwykłym przekładaniem między kontami "
+                + "(budżet i fundusze bez zmian).",
+                "Wyjmuję", "Przekładam");
 
             if (fromFund)
             {
-                var fundId = await AskForFundAsync(page);
+                var fundId = await AskWithdrawFundAsync(page, amount);
                 await _confirmTransfer.ExecuteWithWithdrawalAsync(groupId, fundId);
                 RemoveProposal(groupId);
                 return;
@@ -275,6 +277,43 @@ public partial class InboxViewModel : ObservableObject
         if (string.IsNullOrEmpty(choice) || choice == "Bez funduszu") return null;
 
         return active.FirstOrDefault(f => f.Name == choice)?.Id;
+    }
+
+    /// <summary>
+    /// Wybór funduszu, z którego pieniądze są wyjmowane. Osobno od pytania o odkładanie,
+    /// bo to inny kierunek i inna wiedza potrzebna do odpowiedzi: przy wyjmowaniu trzeba
+    /// wiedzieć, ile w którym funduszu jeszcze jest — sama nazwa tego nie powie.
+    ///
+    /// Skrzynka pytała tu wcześniej „Na który fundusz?”, czyli pytaniem od odkładania,
+    /// bez sald i bez ostrzeżenia o przekroczeniu. To samo zdarzenie w banku musi pytać
+    /// tak samo niezależnie od tego, czy wpisano je ręcznie, czy złapały powiadomienia.
+    /// </summary>
+    private async Task<FundId?> AskWithdrawFundAsync(Page page, Money amount)
+    {
+        var active = (await _funds.ListAsync()).Where(f => !f.IsArchived).ToList();
+        if (active.Count == 0) return null;
+
+        var labels = active.ToDictionary(f => $"{f.Name} ({f.Balance})", f => f);
+
+        var choice = await page.DisplayActionSheetAsync(
+            "Z którego funduszu?", "Bez funduszu", null, [.. labels.Keys]);
+        if (string.IsNullOrEmpty(choice) || choice == "Bez funduszu") return null;
+        if (!labels.TryGetValue(choice, out var fund)) return null;
+
+        // Kwota większa niż saldo zwykle znaczy pomyłkę w funduszu albo dwukrotne zdjęcie
+        // tej samej kwoty, a saldo zeszłoby po cichu poniżej zera.
+        var magnitude = new Money(Math.Abs(amount.Grosze));
+        if (magnitude.Grosze > fund.Balance.Grosze)
+        {
+            var confirmed = await page.DisplayAlertAsync(
+                "Więcej, niż jest w funduszu",
+                $"W funduszu „{fund.Name}” jest {fund.Balance}, a wyjmujesz {magnitude}. "
+                + "Saldo funduszu zejdzie poniżej zera.",
+                "Mimo to wyjmij", "Anuluj");
+            if (!confirmed) return null;
+        }
+
+        return fund.Id;
     }
 
     private void RemoveProposal(Guid groupId)
