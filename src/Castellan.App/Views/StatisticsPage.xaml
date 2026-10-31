@@ -42,6 +42,12 @@
                 </Border>
             </Grid>
 
+            <!-- Odłożone nie jest wydatkiem, ale jest prawdziwym ubytkiem z miesiąca,
+                 więc stoi osobno, a nie znika. Netto odejmuje je dalej — inaczej ekran
+                 pokazywałby nadwyżkę w miesiącu, w którym konto zjechało w dół. -->
+            <Label Text="{Binding SavedDisplay}" Style="{StaticResource Caption}"
+                   IsVisible="{Binding HasSaved}" Margin="4,2,4,0" />
+
             <Label Text="Wydatki — ostatnie 6 miesięcy" Style="{StaticResource SectionHeader}"
                    Margin="4,14,4,0" />
             <Border Style="{StaticResource Card}" Margin="0">
@@ -51,9 +57,20 @@
                         <DataTemplate x:DataType="vm:MonthBar">
                             <VerticalStackLayout WidthRequest="44" Spacing="5">
                                 <Grid HeightRequest="120">
-                                    <BoxView VerticalOptions="End" HorizontalOptions="Fill"
-                                             HeightRequest="{Binding BarHeight}"
-                                             Color="{Binding BarColor}" CornerRadius="3,3,0,0" />
+                                    <!-- Dwa segmenty: odłożone na górze, wydane pod spodem.
+                                         Jedna wysokość zrównałaby miesiąc, w którym dużo
+                                         odłożono, z miesiącem, w którym dużo przepuszczono.
+                                         Dla słupków przychodów górny segment jest pusty. -->
+                                    <VerticalStackLayout VerticalOptions="End" HorizontalOptions="Fill"
+                                                         Spacing="1">
+                                        <BoxView HorizontalOptions="Fill"
+                                                 HeightRequest="{Binding SavedHeight}"
+                                                 IsVisible="{Binding HasSaved}"
+                                                 Color="{Binding SavedColor}" CornerRadius="3,3,0,0" />
+                                        <BoxView HorizontalOptions="Fill"
+                                                 HeightRequest="{Binding BarHeight}"
+                                                 Color="{Binding BarColor}" CornerRadius="3,3,0,0" />
+                                    </VerticalStackLayout>
                                 </Grid>
                                 <Label Text="{Binding Label}" Style="{StaticResource Caption}"
                                        HorizontalTextAlignment="Center" />
@@ -72,9 +89,20 @@
                         <DataTemplate x:DataType="vm:MonthBar">
                             <VerticalStackLayout WidthRequest="44" Spacing="5">
                                 <Grid HeightRequest="120">
-                                    <BoxView VerticalOptions="End" HorizontalOptions="Fill"
-                                             HeightRequest="{Binding BarHeight}"
-                                             Color="{Binding BarColor}" CornerRadius="3,3,0,0" />
+                                    <!-- Dwa segmenty: odłożone na górze, wydane pod spodem.
+                                         Jedna wysokość zrównałaby miesiąc, w którym dużo
+                                         odłożono, z miesiącem, w którym dużo przepuszczono.
+                                         Dla słupków przychodów górny segment jest pusty. -->
+                                    <VerticalStackLayout VerticalOptions="End" HorizontalOptions="Fill"
+                                                         Spacing="1">
+                                        <BoxView HorizontalOptions="Fill"
+                                                 HeightRequest="{Binding SavedHeight}"
+                                                 IsVisible="{Binding HasSaved}"
+                                                 Color="{Binding SavedColor}" CornerRadius="3,3,0,0" />
+                                        <BoxView HorizontalOptions="Fill"
+                                                 HeightRequest="{Binding BarHeight}"
+                                                 Color="{Binding BarColor}" CornerRadius="3,3,0,0" />
+                                    </VerticalStackLayout>
                                 </Grid>
                                 <Label Text="{Binding Label}" Style="{StaticResource Caption}"
                                        HorizontalTextAlignment="Center" />
@@ -86,6 +114,10 @@
 
             <Label Text="Największe kategorie (6 mies.)" Style="{StaticResource SectionHeader}"
                    Margin="4,14,4,0" />
+            <!-- Lista odpowiada na pytanie „na co wydaję”, a „Rezerwy” stały na niej
+                 na stałe na pierwszym miejscu i wypychały z widoku prawdziwe kategorie. -->
+            <Label Text="Bez odłożonego na rezerwę — ta kwota stoi wyżej, osobno."
+                   Style="{StaticResource Caption}" Margin="4,0,4,2" />
             <Border Style="{StaticResource Card}" Margin="0">
                 <VerticalStackLayout Spacing="14" BindableLayout.ItemsSource="{Binding TopCategories}">
                     <BindableLayout.ItemTemplate>

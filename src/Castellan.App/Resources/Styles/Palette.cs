@@ -18,4 +18,6 @@ internal static class Palette
     public static Color Positive    => Get("Positive");
     public static Color PositiveDim => Get("PositiveDim");
     public static Color Brass       => Get("Brass");
+    public static Color Info        => Get("Info");
+    public static Color InfoDim     => Get("InfoDim");
 }
