@@ -61,7 +61,7 @@ public static class InfrastructureServiceExtensions
                 "Mieszkanie i czynsz", "Media i rachunki", "Zdrowie i apteka",
                 "Rozrywka", "Subskrypcje", "Ubrania i obuwie", "Elektronika", "Edukacja",
                 "Sport i rekreacja", "Higiena i kosmetyki", "Kosmetyczka", "Podróże",
-                "Prezenty", "Inne wydatki",
+                "Prezenty", "Zwierzak", "Inne wydatki",
                 "Inwestycje", "Dobroczynność", "Dzieci", "Przedszkole", "Rezerwy",
                 "Kredyty i pożyczki",
             };
@@ -122,6 +122,12 @@ public static class InfrastructureServiceExtensions
         // liczb nie da się odczytać: grudniowa górka wygląda jak przypływ hojności,
         // a stała darowizna ginie w jej szumie. Dwie różne decyzje, dwie koperty.
         EnsureCategory(db, "Prezenty", CategoryKind.Expense);
+
+        // Karma, żwirek, weterynarz i zabawki idą razem: to jedna decyzja — ile kosztuje
+        // utrzymanie zwierzaka — tak samo jak „Dzieci” obejmują wszystko dla dziecka.
+        // Rozbicie na karmę i leczenie dałoby dwie koperty, z których żadnej nie da się
+        // sensownie zaplanować osobno.
+        EnsureCategory(db, "Zwierzak", CategoryKind.Expense);
         EnsureCategory(db, "800+", CategoryKind.Income);
         EnsureCategory(db, "Wpłata partnera", CategoryKind.Income);
 

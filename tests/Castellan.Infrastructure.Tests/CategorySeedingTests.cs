@@ -36,6 +36,7 @@ public class CategorySeedingTests
         { "Subskrypcje",       CategoryKind.Expense },
         { "Kosmetyczka",       CategoryKind.Expense },
         { "Prezenty",          CategoryKind.Expense },
+        { "Zwierzak",          CategoryKind.Expense },
         { "800+",              CategoryKind.Income  },
         { "Wpłata partnera",  CategoryKind.Income  },
     };
