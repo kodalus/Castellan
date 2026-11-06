@@ -113,6 +113,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute("categories",        typeof(CategoriesPage));
         Routing.RegisterRoute("addCategory",       typeof(AddCategoryPage));
         Routing.RegisterRoute("statistics",        typeof(StatisticsPage));
+        Routing.RegisterRoute("categoryTx",        typeof(CategoryTransactionsPage));
         Routing.RegisterRoute("income",            typeof(IncomePage));
         Routing.RegisterRoute("assignCategory",    typeof(AssignCategoryPage));
         Routing.RegisterRoute("addFund",           typeof(AddFundPage));

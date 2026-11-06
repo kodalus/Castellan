@@ -9,6 +9,28 @@
     <ScrollView>
         <VerticalStackLayout Padding="12,12,12,24" Spacing="8" IsVisible="{Binding HasData}">
 
+            <!-- Okres jest kontekstem dla wszystkiego poniżej, więc stoi na samej górze.
+                 Strzałki przesuwają wybrany miesiąc, przycisk po prawej przełącza między
+                 jednym miesiącem a sześcioma. -->
+            <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,0,0,2">
+                <Button Grid.Column="0" Text="‹" Style="{StaticResource StepperButton}"
+                        Command="{Binding PreviousMonthCommand}" />
+                <Label Grid.Column="1" Text="{Binding PeriodDisplay}"
+                       Style="{StaticResource SectionHeader}"
+                       HorizontalTextAlignment="Center" VerticalOptions="Center" />
+                <Button Grid.Column="2" Text="›" Style="{StaticResource StepperButton}"
+                        Command="{Binding NextMonthCommand}" />
+            </Grid>
+
+            <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,0,0,6">
+                <Button Text="Jeden miesiąc" Command="{Binding ToggleScopeCommand}"
+                        Style="{StaticResource RowAction}" Padding="12,5"
+                        IsVisible="{Binding IsRange}" />
+                <Button Text="6 miesięcy" Command="{Binding ToggleScopeCommand}"
+                        Style="{StaticResource RowAction}" Padding="12,5"
+                        IsVisible="{Binding IsSingleMonth}" />
+            </HorizontalStackLayout>
+
             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
                 <Border Grid.Column="0" Style="{StaticResource StatTile}">
                     <VerticalStackLayout Spacing="3">
@@ -48,7 +70,7 @@
             <Label Text="{Binding SavedDisplay}" Style="{StaticResource Caption}"
                    IsVisible="{Binding HasSaved}" Margin="4,2,4,0" />
 
-            <Label Text="Wydatki — ostatnie 6 miesięcy" Style="{StaticResource SectionHeader}"
+            <Label Text="Wydatki — 6 miesięcy (stuknij słupek, by wybrać miesiąc)" Style="{StaticResource SectionHeader}"
                    Margin="4,14,4,0" />
             <Border Style="{StaticResource Card}" Margin="0">
                 <HorizontalStackLayout Spacing="6" HorizontalOptions="Center"
@@ -56,6 +78,10 @@
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:MonthBar">
                             <VerticalStackLayout WidthRequest="44" Spacing="5">
+                                <VerticalStackLayout.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectCommand}"
+                                                          CommandParameter="{Binding SelectParameter}" />
+                                </VerticalStackLayout.GestureRecognizers>
                                 <Grid HeightRequest="120">
                                     <!-- Dwa segmenty: odłożone na górze, wydane pod spodem.
                                          Jedna wysokość zrównałaby miesiąc, w którym dużo
@@ -80,7 +106,7 @@
                 </HorizontalStackLayout>
             </Border>
 
-            <Label Text="Przychody — ostatnie 6 miesięcy" Style="{StaticResource SectionHeader}"
+            <Label Text="Przychody — 6 miesięcy" Style="{StaticResource SectionHeader}"
                    Margin="4,14,4,0" />
             <Border Style="{StaticResource Card}" Margin="0">
                 <HorizontalStackLayout Spacing="6" HorizontalOptions="Center"
@@ -88,6 +114,10 @@
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:MonthBar">
                             <VerticalStackLayout WidthRequest="44" Spacing="5">
+                                <VerticalStackLayout.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding SelectCommand}"
+                                                          CommandParameter="{Binding SelectParameter}" />
+                                </VerticalStackLayout.GestureRecognizers>
                                 <Grid HeightRequest="120">
                                     <!-- Dwa segmenty: odłożone na górze, wydane pod spodem.
                                          Jedna wysokość zrównałaby miesiąc, w którym dużo
@@ -112,22 +142,28 @@
                 </HorizontalStackLayout>
             </Border>
 
-            <Label Text="Największe kategorie (6 mies.)" Style="{StaticResource SectionHeader}"
+            <Label Text="{Binding TopHeader}" Style="{StaticResource SectionHeader}"
                    Margin="4,14,4,0" />
             <!-- Lista odpowiada na pytanie „na co wydaję”, a „Rezerwy” stały na niej
                  na stałe na pierwszym miejscu i wypychały z widoku prawdziwe kategorie. -->
-            <Label Text="Bez odłożonego na rezerwę — ta kwota stoi wyżej, osobno."
+            <Label Text="Bez odłożonego na rezerwę — ta kwota stoi wyżej, osobno. Stuknij kategorię, by zobaczyć jej transakcje."
                    Style="{StaticResource Caption}" Margin="4,0,4,2" />
             <Border Style="{StaticResource Card}" Margin="0">
                 <VerticalStackLayout Spacing="14" BindableLayout.ItemsSource="{Binding TopCategories}">
                     <BindableLayout.ItemTemplate>
                         <DataTemplate x:DataType="vm:TopCatRow">
                             <VerticalStackLayout Spacing="5">
-                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <VerticalStackLayout.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding OpenCommand}"
+                                                          CommandParameter="{Binding OpenParameter}" />
+                                </VerticalStackLayout.GestureRecognizers>
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
                                     <Label Grid.Column="0" Text="{Binding CategoryName}"
                                            Style="{StaticResource RowTitle}" VerticalOptions="Center" />
                                     <Label Grid.Column="1" Text="{Binding AmountDisplay}"
                                            Style="{StaticResource RowValue}" VerticalOptions="Center" />
+                                    <Label Grid.Column="2" Text="›" Style="{StaticResource Secondary}"
+                                           VerticalOptions="Center" />
                                 </Grid>
                                 <ProgressBar Progress="{Binding FillRatio}" HeightRequest="4"
                                              ProgressColor="{StaticResource Negative}" />

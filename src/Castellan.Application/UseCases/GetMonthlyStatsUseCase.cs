@@ -25,7 +25,12 @@ public sealed record MonthlyStat(YearMonth Month, Money Expense, Money Income, M
         .ToString("MMM", CultureInfo.GetCultureInfo("pl-PL"));
 }
 
-public sealed record TopCategoryStat(string CategoryName, Money TotalSpent);
+/// <param name="CategoryId">
+/// Potrzebny do przejścia z wykresu na listę transakcji tej kategorii. Sama nazwa by
+/// nie wystarczyła: dwie kategorie mogą nazywać się tak samo po zmianie nazwy, a wiązanie
+/// po nazwie jest dokładnie tym, co psuło już historię przy dosiewie kategorii.
+/// </param>
+public sealed record TopCategoryStat(CategoryId CategoryId, string CategoryName, Money TotalSpent);
 
 public sealed record MonthlyStats(
     IReadOnlyList<MonthlyStat> Months,
@@ -96,6 +101,7 @@ public sealed class GetMonthlyStatsUseCase(
         var topCats = allExpenseTxs
             .GroupBy(t => t.CategoryId)
             .Select(g => new TopCategoryStat(
+                g.Key,
                 catMap.TryGetValue(g.Key, out var c) ? c.Name : "?",
                 new Money(g.Sum(t => RefundAccounting.NetExpenseGrosze(t, catMap)))))
             .OrderByDescending(x => x.TotalSpent.Grosze)

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Castellan.App.ViewModels"
+             x:Class="Castellan.App.Views.CategoryTransactionsPage"
+             x:DataType="vm:CategoryTransactionsViewModel"
+             Title="{Binding Title}">
+
+    <Grid RowDefinitions="Auto,*" RowSpacing="0">
+
+        <!-- Suma na górze i w tej samej definicji co na Statystykach: to jest ta sama
+             liczba, w którą użytkownik przed chwilą tapnął. Gdyby się różniła, nie
+             byłoby jak dojść, która z dwóch kłamie. -->
+        <VerticalStackLayout Grid.Row="0" Padding="16,10,16,12" Spacing="2">
+            <Label Text="{Binding PeriodDisplay}" Style="{StaticResource SectionHeader}" />
+            <Label Text="{Binding TotalDisplay}" Style="{StaticResource SubHero}" />
+        </VerticalStackLayout>
+
+        <Label Grid.Row="1" Style="{StaticResource EmptyState}" IsVisible="{Binding IsEmpty}"
+               Text="W tej kategorii nie ma transakcji w wybranym okresie." />
+
+        <CollectionView Grid.Row="1" ItemsSource="{Binding Items}" Margin="16,0,16,0"
+                        IsVisible="{Binding IsNotEmpty}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:CategoryTxRow">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Padding="0,10">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding OpenCommand}" />
+                        </Grid.GestureRecognizers>
+
+                        <Label Grid.Column="0" Text="{Binding DateDisplay}" Style="{StaticResource Caption}"
+                               VerticalOptions="Center" />
+
+                        <VerticalStackLayout Grid.Column="1" Spacing="2" VerticalOptions="Center">
+                            <Label Text="{Binding Title}" Style="{StaticResource RowTitle}" />
+                            <Label Text="{Binding AccountName}" Style="{StaticResource Caption}" />
+                            <Label Text="{Binding RefundLabel}" Style="{StaticResource PositiveCaption}"
+                                   IsVisible="{Binding IsRefund}" />
+                        </VerticalStackLayout>
+
+                        <Label Grid.Column="2" Text="{Binding AmountDisplay}" Style="{StaticResource RowValue}"
+                               VerticalOptions="Center" />
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+
+</ContentPage>
