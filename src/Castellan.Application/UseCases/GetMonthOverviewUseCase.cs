@@ -30,11 +30,18 @@ public sealed record EnvelopeOverview(
 
     public string PlannedDisplay   => Planned.ToString();
     public string ActualDisplay    => Actual.Abs().ToString();
-    public string RemainingDisplay => Remaining.ToString();
+    // Kategoria bez koperty i bez wydatkow nie ma kwoty do pokazania. "0,00 zl"
+    // czytaloby sie jako "nic juz nie zostalo", czyli dokladnie odwrotnie.
+    public string RemainingDisplay => IsUnused ? "—" : Remaining.ToString();
 
-    public string ProgressLabel => IsUnplanned
-        ? $"{ActualDisplay} — poza planem, bez koperty"
-        : $"{ActualDisplay} z {PlannedDisplay}";
+    /// <summary>Kategoria bez koperty, na którą w tym miesiącu nic jeszcze nie poszło.</summary>
+    public bool IsUnused => IsUnplanned && Actual.Grosze == 0;
+
+    public string ProgressLabel => IsUnused
+        ? "Bez koperty w tym miesiącu"
+        : IsUnplanned
+            ? $"{ActualDisplay} — poza planem, bez koperty"
+            : $"{ActualDisplay} z {PlannedDisplay}";
 
     /// <summary>Druga połowa podpisu kwoty na pulpicie, dopisywana po kwocie wydanej.</summary>
     public string TrailingLabel => IsUnplanned ? " — poza planem" : $" / {PlannedDisplay}";
@@ -76,7 +83,14 @@ public sealed record MonthOverview(
     Money SavedOverPlan,
     /// <summary>Wydatki w kategoriach, które nie mają koperty w tym miesiącu.</summary>
     IReadOnlyList<EnvelopeOverview> Unplanned,
-    Money TotalUnplanned)
+    Money TotalUnplanned,
+    /// <summary>
+    /// Kategorie bez koperty, na które w tym miesiącu nic jeszcze nie poszło. Nie mają
+    /// żadnej kwoty do pokazania, ale muszą być widoczne: koperta ustawiona na zero znika
+    /// z planu, więc bez tej listy kategoria, której naprawdę się używa, po cichu wypada
+    /// z ekranu i nie ma jak zauważyć, że przestała być planowana.
+    /// </summary>
+    IReadOnlyList<EnvelopeOverview> Unused)
 {
     public bool HasUnplanned => TotalUnplanned.Grosze > 0;
 
@@ -85,6 +99,13 @@ public sealed record MonthOverview(
     /// <see cref="Envelopes"/> ma pozostać dokładnie tym, co zaplanowano.
     /// </summary>
     public IReadOnlyList<EnvelopeOverview> EnvelopesWithUnplanned => [.. Envelopes, .. Unplanned];
+
+    /// <summary>
+    /// Wszystkie kategorie wydatkowe — zaplanowane, wydane poza planem i nietknięte.
+    /// Dla zakładki Koperty, gdzie lista ma odpowiadać na pytanie „co mam w tym miesiącu”,
+    /// a nie tylko „gdzie poszły pieniądze”. Pulpit zostaje przy krótszej liście.
+    /// </summary>
+    public IReadOnlyList<EnvelopeOverview> AllCategories => [.. Envelopes, .. Unplanned, .. Unused];
 
     // 0.0–1.0 przycięte (dla ProgressBar.Progress)
     public double SpentRatio => TotalPlanned.Grosze == 0 ? 0.0
@@ -197,6 +218,17 @@ public sealed class GetMonthOverviewUseCase(
             .OrderBy(e => e.Actual.Grosze)
             .ToList();
 
+        // Kategorie, które w tym miesiącu nie mają ani koperty, ani żadnego wydatku.
+        // Systemowych nie ma na liście: „Nieprzypisane” to brak decyzji, a nie koperta.
+        var widoczne = planned.Concat(unplanned.Select(e => e.CategoryId)).ToHashSet();
+        var unused = cats
+            .Where(c => !c.IsSystem && !c.IsArchived && c.Kind == CategoryKind.Expense
+                        && !widoczne.Contains(c.Id))
+            .OrderBy(c => c.Name)
+            .Select(c => new EnvelopeOverview(
+                c.Id, c.Name, c.Kind, Money.Zero, Money.Zero, Money.Zero, IsUnplanned: true))
+            .ToList();
+
         var totalUnplanned = new Money(unplanned.Sum(e => -e.Actual.Grosze));
         totalSpent = new Money(totalSpent.Grosze + totalUnplanned.Grosze);
 
@@ -256,6 +288,7 @@ public sealed class GetMonthOverviewUseCase(
             totalSaved,
             savedOverPlan,
             unplanned,
-            totalUnplanned);
+            totalUnplanned,
+            unused);
     }
 }
