@@ -24,10 +24,22 @@
                 </Grid>
             </Border>
 
+            <!-- Wpływ to dwa różne zdarzenia. Przychód to nowe pieniądze. Zwrot kosztów
+                 to pieniądze wracające za coś już kupionego — i ma pomniejszyć kategorię,
+                 z której poszła pierwotna płatność, zamiast zawyżać przychody. -->
+            <HorizontalStackLayout Spacing="16" IsVisible="{Binding IsInflow}">
+                <RadioButton Content="Przychód" GroupName="inflowKind"
+                             IsChecked="{Binding IsIncome, Mode=TwoWay}" />
+                <RadioButton Content="Zwrot kosztów" GroupName="inflowKind"
+                             IsChecked="{Binding IsRefund, Mode=TwoWay}" />
+            </HorizontalStackLayout>
+
             <VerticalStackLayout Style="{StaticResource Field}">
                 <Label Text="Kategoria" Style="{StaticResource FieldLabel}" />
                 <Picker ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}"
                         ItemDisplayBinding="{Binding Name}" Title="Wybierz kategorię…" />
+                <Label Text="{Binding RefundHint}" Style="{StaticResource Caption}"
+                       IsVisible="{Binding IsRefund}" />
             </VerticalStackLayout>
 
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" IsVisible="{Binding HasMerchantKey}">
