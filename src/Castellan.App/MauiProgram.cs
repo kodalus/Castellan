@@ -45,6 +45,7 @@ public static class MauiProgram
         builder.Services.AddTransient<GetMonthOverviewUseCase>();
         builder.Services.AddTransient<GetAccountsWithBalancesUseCase>();
         builder.Services.AddTransient<ReconcileAccountUseCase>();
+        builder.Services.AddTransient<CheckBalanceImpactUseCase>();
         builder.Services.AddTransient<IngestRawNotificationUseCase>();
         builder.Services.AddTransient<AuditNotificationAmountsUseCase>();
         builder.Services.AddTransient<CorrectTransactionAmountUseCase>();
@@ -74,6 +75,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SimulateDebtPayoffUseCase>();
         builder.Services.AddTransient<ApplyDebtPaymentUseCase>();
         builder.Services.AddTransient<CategoryLinkPrompt>();
+        builder.Services.AddTransient<BalanceImpactPrompt>();
         builder.Services.AddTransient<ExportDataUseCase>();
         builder.Services.AddTransient<ImportDataUseCase>();
 

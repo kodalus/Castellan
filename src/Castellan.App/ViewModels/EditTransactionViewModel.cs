@@ -18,6 +18,7 @@ public partial class EditTransactionViewModel : ObservableObject
     private readonly ICategoryRepository _categories;
     private readonly ITransactionRepository _transactions;
     private readonly UpdateTransactionUseCase _update;
+    private readonly Castellan.App.Services.BalanceImpactPrompt _balanceImpact;
 
     private IReadOnlyList<Category> _allCategories = [];
     private TransactionId? _transactionId;
@@ -69,12 +70,14 @@ public partial class EditTransactionViewModel : ObservableObject
         IAccountRepository accounts,
         ICategoryRepository categories,
         ITransactionRepository transactions,
-        UpdateTransactionUseCase update)
+        UpdateTransactionUseCase update,
+        Castellan.App.Services.BalanceImpactPrompt balanceImpact)
     {
         _accounts = accounts;
         _categories = categories;
         _transactions = transactions;
         _update = update;
+        _balanceImpact = balanceImpact;
     }
 
     partial void OnTxIdChanged(string value)
@@ -170,6 +173,10 @@ public partial class EditTransactionViewModel : ObservableObject
         var occurredAt = Date == _originalDate
             ? _originalOccurredAt
             : ManualEntryDateResolver.Resolve(Date, DateTimeOffset.Now);
+
+        // Jak przy dodawaniu: zmiana daty albo konta może wypchnąć transakcję przed
+        // uzgodnienie, a wtedy saldo przestanie ją widzieć.
+        if (!await _balanceImpact.ConfirmAsync([(accountId, occurredAt)], ct)) return;
 
         try
         {

@@ -16,6 +16,7 @@ public partial class AddTransferViewModel : ObservableObject
     private readonly IAccountRepository _accounts;
     private readonly IFundRepository _funds;
     private readonly CreateTransferUseCase _createTransfer;
+    private readonly BalanceImpactPrompt _balanceImpact;
 
     // Rodzaje kont docelowych, żeby dało się rozpoznać oszczędnościowe bez ponownego
     // pytania bazy w momencie zapisu.
@@ -40,11 +41,13 @@ public partial class AddTransferViewModel : ObservableObject
     public AddTransferViewModel(
         IAccountRepository accounts,
         IFundRepository funds,
-        CreateTransferUseCase createTransfer)
+        CreateTransferUseCase createTransfer,
+        BalanceImpactPrompt balanceImpact)
     {
         _accounts = accounts;
         _funds = funds;
         _createTransfer = createTransfer;
+        _balanceImpact = balanceImpact;
     }
 
     [RelayCommand]
@@ -94,6 +97,12 @@ public partial class AddTransferViewModel : ObservableObject
         if (grosze == 0) { ErrorMessage = "Kwota musi być większa od zera."; return; }
 
         var occurredAt = ManualEntryDateResolver.Resolve(Date, DateTimeOffset.Now);
+
+        // Przelew to jedno zdarzenie na dwóch kontach, a uzgodnienie jest osobne dla
+        // każdego. Gdy data wypadnie przed uzgodnieniem jednego z nich, ta strona nie
+        // ruszy salda, a druga ruszy — i salda przestaną się zgadzać. Pytamy przed
+        // pytaniami o rezerwę, żeby rezygnacja kosztowała jedno tapnięcie.
+        if (!await _balanceImpact.ConfirmAsync([(fromId, occurredAt), (toId, occurredAt)], ct)) return;
 
         // Przelew na własne konto oszczędnościowe kryje dwa różne zdarzenia, dla
         // aplikacji nierozróżnialne: przekładanie pieniędzy (budżet bez zmian) albo

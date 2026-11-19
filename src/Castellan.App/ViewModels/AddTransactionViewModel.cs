@@ -33,6 +33,7 @@ public partial class AddTransactionViewModel : ObservableObject
     private readonly ICategoryRepository _categories;
     private readonly AddManualTransactionUseCase _addTx;
     private readonly CategoryLinkPrompt _categoryLink;
+    private readonly BalanceImpactPrompt _balanceImpact;
 
     private IReadOnlyList<Category> _allCategories = [];
 
@@ -80,12 +81,14 @@ public partial class AddTransactionViewModel : ObservableObject
         IAccountRepository accounts,
         ICategoryRepository categories,
         AddManualTransactionUseCase addTx,
-        CategoryLinkPrompt categoryLink)
+        CategoryLinkPrompt categoryLink,
+        BalanceImpactPrompt balanceImpact)
     {
         _accounts = accounts;
         _categories = categories;
         _addTx = addTx;
         _categoryLink = categoryLink;
+        _balanceImpact = balanceImpact;
     }
 
     [RelayCommand]
@@ -167,6 +170,10 @@ public partial class AddTransactionViewModel : ObservableObject
         var categoryName = CategoryIndex >= 0 && CategoryIndex < CategoryOptions.Count
             ? CategoryOptions[CategoryIndex].Name
             : null;
+
+        // Data sprzed uzgodnienia konta zapisuje się poprawnie, ale saldem nie ruszy.
+        // Lepiej powiedzieć to przed zapisem niż zostawić liczbę, która nie chce się zmienić.
+        if (!await _balanceImpact.ConfirmAsync([(accountId, occurredAt)], ct)) return;
 
         try
         {
