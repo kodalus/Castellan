@@ -22,6 +22,14 @@ internal sealed class TransactionRepository(CastellanDbContext db) : ITransactio
         return [.. all.OrderByDescending(t => t.OccurredAt)];
     }
 
+    public async Task<IReadOnlyList<Transaction>> ListAllAsync(CancellationToken ct = default)
+    {
+        // Sortowanie po stronie klienta jak wyżej: SQLite nie tłumaczy porównań
+        // DateTimeOffset, więc porządek musi powstać już na obiektach.
+        var all = await db.Transactions.ToListAsync(ct);
+        return [.. all.OrderByDescending(t => t.OccurredAt)];
+    }
+
     public async Task<IReadOnlyList<Transaction>> ListForMonthAsync(
         YearMonth month, CancellationToken ct = default)
     {

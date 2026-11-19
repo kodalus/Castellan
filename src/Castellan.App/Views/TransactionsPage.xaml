@@ -12,14 +12,33 @@
         <ToolbarItem Text="Reguły" Command="{Binding ManageRulesCommand}" Order="Secondary" Priority="1" />
         <ToolbarItem Text="Kategorie" Command="{Binding ManageCategoriesCommand}" Order="Secondary" Priority="2" />
         <ToolbarItem Text="Sprawdź kwoty z powiadomień" Command="{Binding AuditAmountsCommand}" Order="Secondary" Priority="3" />
-        <ToolbarItem Text="⚡" Command="{Binding QuickAddCommand}" Priority="0" />
-        <ToolbarItem Text="+" Command="{Binding AddTransactionCommand}" Priority="1" />
+        <ToolbarItem Text="🔍" Command="{Binding ToggleSearchCommand}" Priority="0" />
+        <ToolbarItem Text="⚡" Command="{Binding QuickAddCommand}" Priority="1" />
+        <ToolbarItem Text="+" Command="{Binding AddTransactionCommand}" Priority="2" />
     </ContentPage.ToolbarItems>
 
-    <Grid RowDefinitions="Auto,*" RowSpacing="0">
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="0">
 
-        <!-- Ten sam pasek miesiąca co na Głównej — kontekst, nie liczba, więc cichy. -->
-        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="8,10,8,4">
+        <!-- Lupka rozwija się nad listą, nie zasłania jej i nie zostawia po sobie
+             śladu: zwinięcie kasuje tekst, bo lista z niewidocznym filtrem wygląda
+             na kompletną, a nie jest. -->
+        <VerticalStackLayout Grid.Row="0" IsVisible="{Binding IsSearching}" Margin="8,8,8,0" Spacing="2">
+            <SearchBar Text="{Binding Query}" Placeholder="Szukaj: sklep, kategoria, kwota, data…" />
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12" Margin="4,0,4,4">
+                <Label Grid.Column="0" Text="{Binding ResultSummary}" Style="{StaticResource Caption}"
+                       VerticalOptions="Center" />
+                <HorizontalStackLayout Grid.Column="1" Spacing="8">
+                    <Label Text="Cała historia" Style="{StaticResource Caption}" VerticalOptions="Center" />
+                    <Switch IsToggled="{Binding SearchesEverything}" VerticalOptions="Center" />
+                </HorizontalStackLayout>
+            </Grid>
+        </VerticalStackLayout>
+
+        <!-- Ten sam pasek miesiąca co na Głównej — kontekst, nie liczba, więc cichy.
+             Przy szukaniu w całej historii znika: twierdziłby, że pokazuje listopad,
+             pokazując wyniki z sierpnia. -->
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" Margin="8,10,8,4"
+              IsVisible="{Binding ShowsMonthBar}">
             <Button Grid.Column="0" Text="‹" Style="{StaticResource StepperButton}"
                     Command="{Binding PreviousMonthCommand}" />
             <Label Grid.Column="1" Text="{Binding CurrentMonthDisplay}"
@@ -29,9 +48,14 @@
                     Command="{Binding NextMonthCommand}" />
         </Grid>
 
-        <CollectionView Grid.Row="1" ItemsSource="{Binding Transactions}" Margin="16,0">
+        <CollectionView Grid.Row="2" ItemsSource="{Binding Transactions}" Margin="16,0">
             <CollectionView.EmptyView>
-                <Label Text="{x:Static strings:AppResources.Transactions_Empty}" Style="{StaticResource EmptyState}" />
+                <VerticalStackLayout>
+                    <Label Text="{x:Static strings:AppResources.Transactions_Empty}"
+                           Style="{StaticResource EmptyState}" IsVisible="{Binding HasNoQuery}" />
+                    <Label Text="Nic nie pasuje do szukanego tekstu. Spróbuj krótszego słowa albo włącz „Cała historia”."
+                           Style="{StaticResource EmptyState}" IsVisible="{Binding HasQuery}" />
+                </VerticalStackLayout>
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:TransactionRow">

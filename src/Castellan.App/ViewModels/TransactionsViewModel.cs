@@ -49,13 +49,69 @@ public partial class TransactionsViewModel : ObservableObject
 
     public ObservableCollection<TransactionRow> Transactions { get; } = [];
 
+    // Pełny wczytany zestaw; `Transactions` to zawsze jego przefiltrowany widok.
+    // Dwie listy, a nie jedna przeładowywana przy każdej literze — baza jest lokalna,
+    // ale przeładowanie gubiłoby pozycję listy przy pisaniu.
+    private readonly List<TransactionRow> _loaded = [];
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CurrentMonthDisplay))]
     private YearMonth _currentMonth;
 
     [ObservableProperty] private bool _isEmpty = true;
 
+    /// <summary>Lupka rozwinięta. Dopóki nie jest, ekran wygląda dokładnie jak wcześniej.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsMonthBar))]
+    [NotifyPropertyChangedFor(nameof(HasQuery))]
+    [NotifyPropertyChangedFor(nameof(HasNoQuery))]
+    private bool _isSearching;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasQuery))]
+    [NotifyPropertyChangedFor(nameof(HasNoQuery))]
+    private string _query = "";
+
+    /// <summary>
+    /// Szukanie po całej historii zamiast po jednym miesiącu. Osobny przełącznik, bo
+    /// pasek miesiąca musi wtedy zniknąć — inaczej ekran twierdziłby, że pokazuje
+    /// listopad, pokazując wyniki z sierpnia.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsMonthBar))]
+    private bool _searchesEverything;
+
+    [ObservableProperty] private string _resultSummary = "";
+
+    public bool ShowsMonthBar => !(IsSearching && SearchesEverything);
+
+    // Pusta lista znaczy co innego w pustym miesiącu, a co innego po nieudanym szukaniu.
+    public bool HasQuery => IsSearching && !string.IsNullOrWhiteSpace(Query);
+    public bool HasNoQuery => !HasQuery;
+
     public string CurrentMonthDisplay => CurrentMonth.ToDisplayString();
+
+    partial void OnQueryChanged(string value) => ApplyFilter();
+
+    partial void OnSearchesEverythingChanged(bool value) => _ = LoadAsync();
+
+    /// <summary>
+    /// Zwinięcie lupki kasuje też tekst i zakres. Zostawiony filtr jest gorszy niż brak
+    /// filtra: lista wygląda wtedy na kompletną, a nie jest.
+    /// </summary>
+    [RelayCommand]
+    private async Task ToggleSearchAsync(CancellationToken ct = default)
+    {
+        IsSearching = !IsSearching;
+        if (IsSearching) return;
+
+        Query = "";
+        if (SearchesEverything) SearchesEverything = false;  // sam przeładuje
+        else await LoadAsync(ct);
+    }
+
+    [RelayCommand]
+    private void ClearQuery() => Query = "";
 
     public TransactionsViewModel(
         ITransactionRepository transactions,
@@ -77,8 +133,10 @@ public partial class TransactionsViewModel : ObservableObject
     {
         CurrentMonth = _cursor.Refresh();
 
-        Transactions.Clear();
-        var txs = await _transactions.ListForMonthAsync(CurrentMonth, ct);
+        _loaded.Clear();
+        var txs = IsSearching && SearchesEverything
+            ? await _transactions.ListAllAsync(ct)
+            : await _transactions.ListForMonthAsync(CurrentMonth, ct);
         var cats = await _categories.GetManyAsync(txs.Select(t => t.CategoryId).Distinct(), ct);
         var catMap = cats.ToDictionary(c => c.Id);
         var fundMap = (await _funds.ListAsync(ct)).ToDictionary(f => f.Id, f => f.Name);
@@ -101,7 +159,7 @@ public partial class TransactionsViewModel : ObservableObject
                 && !tx.SupersededById.HasValue
                 && !tx.PaidFromFundId.HasValue;
             var local = tx.OccurredAt.ToLocalTime();
-            Transactions.Add(new TransactionRow(
+            _loaded.Add(new TransactionRow(
                 tx.Id,
                 tx.Amount.ToString(),
                 // Jawny podział wiersza — inaczej wąska kolumna łamie rok w środku
@@ -116,7 +174,39 @@ public partial class TransactionsViewModel : ObservableObject
                 tx.Kind == TransactionKind.Transfer,
                 isProposed));
         }
+
+        ApplyFilter();
+    }
+
+    /// <summary>
+    /// Przepisuje wczytane wiersze do widocznej listy przez filtr. Przeszukiwane są
+    /// dokładnie te pola, które w wierszu WIDAĆ — data, kategoria, notatka i kwota —
+    /// żeby każdy wynik dało się wzrokowo powiązać z wpisanym tekstem. Dopasowanie
+    /// opisuje <see cref="TransactionSearch"/>.
+    /// </summary>
+    private void ApplyFilter()
+    {
+        Transactions.Clear();
+
+        foreach (var row in _loaded)
+            if (TransactionSearch.Matches(Query, row.DateDisplay, row.CategoryName, row.Note, row.AmountDisplay))
+                Transactions.Add(row);
+
         IsEmpty = Transactions.Count == 0;
+
+        ResultSummary = !IsSearching || string.IsNullOrWhiteSpace(Query)
+            ? ""
+            : $"{Transactions.Count} {Wyniki(Transactions.Count)}"
+              + (SearchesEverything ? " w całej historii" : $" w {CurrentMonth.ToDisplayString()}");
+    }
+
+    // Polska odmiana: 1 wynik, 2-4 wyniki, 5+ wyników — z wyjątkiem nastek (12 wyników).
+    private static string Wyniki(int n)
+    {
+        if (n == 1) return "wynik";
+        var dziesiatki = n % 100;
+        var jednosci = n % 10;
+        return jednosci is >= 2 and <= 4 && dziesiatki is < 12 or > 14 ? "wyniki" : "wyników";
     }
 
     [RelayCommand]
@@ -289,6 +379,11 @@ public partial class TransactionsViewModel : ObservableObject
             {
                 var stale = Transactions.FirstOrDefault(t => t.Id == gone);
                 if (stale is not null) Transactions.Remove(stale);
+
+                // Bez tego usunięty wiersz wracałby na ekran przy zmianie tekstu
+                // w lupce — filtr przepisuje listę z wczytanego zestawu.
+                var stillLoaded = _loaded.FirstOrDefault(t => t.Id == gone);
+                if (stillLoaded is not null) _loaded.Remove(stillLoaded);
             }
 
             IsEmpty = Transactions.Count == 0;
