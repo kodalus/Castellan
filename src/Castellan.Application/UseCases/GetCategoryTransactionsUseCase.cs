@@ -13,7 +13,23 @@ public sealed record CategoryTransactionRow(
     string? Note,
     string AccountName,
     /// <summary>Zwrot kosztów — kwota dodatnia w kategorii wydatkowej, pomniejsza sumę.</summary>
-    bool IsRefund);
+    bool IsRefund)
+{
+    /// <summary>
+    /// Czym podpisać wiersz. Notatka wygrywa z nazwą sprzedawcy, bo ktoś ją NAPISAŁ,
+    /// a nazwa wzięła się sama z powiadomienia. Bank podaje tam nadawcę przelewu, nie
+    /// to, za co zapłacono: zwrot za wizytę u ortopedy przychodzi jako „Direct Rika",
+    /// czyli nazwa nic nie mówi dokładnie tam, gdzie notatka mówi wszystko.
+    ///
+    /// Przy zwykłym zakupie z powiadomienia obie są tym samym napisem („Lidl"), więc
+    /// kolejność nic tam nie zmienia. Zostaje też zgodność z listą Transakcji, która
+    /// od zawsze podpisuje wiersz notatką.
+    /// </summary>
+    public string Title =>
+        !string.IsNullOrWhiteSpace(Note) ? Note
+        : !string.IsNullOrWhiteSpace(Merchant) ? Merchant
+        : OccurredAt.ToLocalTime().ToString("dd.MM.yyyy");
+}
 
 public sealed record CategoryTransactions(
     string CategoryName,

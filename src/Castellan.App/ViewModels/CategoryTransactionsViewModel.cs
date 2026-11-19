@@ -95,20 +95,13 @@ public partial class CategoryTransactionsViewModel : ObservableObject
                 r.Id,
                 r.OccurredAt.ToLocalTime().ToString("dd.MM"),
                 r.Amount.Abs().ToString(),
-                // Nazwa sprzedawcy mówi najwięcej; notatka wtedy, gdy nazwy nie ma
-                // (wpis ręczny), a na końcu zostaje sama data w tytule wiersza.
-                Pick(r.Merchant, r.Note) ?? r.OccurredAt.ToLocalTime().ToString("dd.MM.yyyy"),
+                r.Title,
                 r.AccountName,
                 r.IsRefund,
                 new AsyncRelayCommand(() => OpenAsync(r.Id))));
 
         IsEmpty = Items.Count == 0;
     }
-
-    private static string? Pick(string? first, string? second) =>
-        !string.IsNullOrWhiteSpace(first) ? first
-        : !string.IsNullOrWhiteSpace(second) ? second
-        : null;
 
     [RelayCommand]
     private static async Task OpenAsync(TransactionId id)

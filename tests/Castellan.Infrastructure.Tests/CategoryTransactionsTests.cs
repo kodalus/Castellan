@@ -111,6 +111,46 @@ public class CategoryTransactionsTests
     }
 
     [Fact]
+    public async Task The_note_labels_the_row_even_when_the_bank_gave_a_name()
+    {
+        var dbPath = NewDbPath();
+        try
+        {
+            var (db, zakupy) = await SetupAsync(dbPath);
+
+            // Dokładnie przypadek z telefonu: ING podpisuje KAŻDY przychodzący przelew
+            // nadawcą („Direct Rika”), więc nazwa nie mówi nic o tym, za co to było.
+            await AddNamedAsync(db, zakupy, -8_900, merchant: "Direct Rika", note: "ortopeda");
+
+            var wiersz = (await Lista(db, zakupy)).Items.Single(i => i.Amount.Grosze == -8_900);
+
+            wiersz.Title.Should().Be("ortopeda");
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    [Fact]
+    public async Task Without_a_note_the_merchant_labels_the_row()
+    {
+        var dbPath = NewDbPath();
+        try
+        {
+            var (db, zakupy) = await SetupAsync(dbPath);
+            await AddNamedAsync(db, zakupy, -8_900, merchant: "Rossmann", note: null);
+
+            (await Lista(db, zakupy)).Items.Single(i => i.Amount.Grosze == -8_900)
+                .Title.Should().Be("Rossmann");
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    [Fact]
     public async Task Newest_first()
     {
         var dbPath = NewDbPath();
@@ -160,6 +200,24 @@ public class CategoryTransactionsTests
             tx.PayFromFund(fund.Id);
         }
 
+        db.Transactions.Add(tx);
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+    }
+
+    /// <summary>Transakcja z powiadomienia: ma nazwę od banku i — czasem — notatkę od użytkownika.</summary>
+    private static async Task AddNamedAsync(
+        CastellanDbContext db, CategoryId kategoria, long grosze, string merchant, string? note)
+    {
+        db.ChangeTracker.Clear();
+        var account = await db.Accounts.FirstAsync();
+        var tx = Transaction.CreateFromNotification(
+            account.Id, new Money(grosze), DateTimeOffset.Now,
+            new RawNotificationId(Guid.NewGuid()), merchant);
+        tx.AssignCategory(kategoria);
+        // Przy zapisie z powiadomienia notatka startuje jako kopia nazwy — dopiero
+        // użytkownik ją zmienia (albo czyści).
+        tx.SetNote(note);
         db.Transactions.Add(tx);
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
