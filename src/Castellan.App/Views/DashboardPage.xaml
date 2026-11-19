@@ -125,7 +125,10 @@
             </Grid>
         </Border>
 
-        <Label Grid.Row="5" Text="Koperty" Style="{StaticResource SectionHeader}" Margin="16,12,16,6" />
+        <VerticalStackLayout Grid.Row="5" Margin="16,12,16,6" Spacing="1">
+            <Label Text="Koperty" Style="{StaticResource SectionHeader}" />
+            <Label Text="Stuknij kopertę, by zobaczyć jej transakcje." Style="{StaticResource Caption}" />
+        </VerticalStackLayout>
 
         <CollectionView Grid.Row="6" ItemsSource="{Binding MonthData.EnvelopesWithUnplanned}" Margin="16,0,16,0">
             <CollectionView.EmptyView>
@@ -134,6 +137,12 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="usecases:EnvelopeOverview">
                     <Grid RowDefinitions="Auto,Auto" RowSpacing="6" Padding="0,9">
+                        <Grid.GestureRecognizers>
+                            <TapGestureRecognizer
+                                Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DashboardViewModel}}, Path=OpenEnvelopeCommand}"
+                                CommandParameter="{Binding CategoryId}" />
+                        </Grid.GestureRecognizers>
+
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                             <Label Grid.Column="0" Text="{Binding CategoryName}" Style="{StaticResource RowTitle}"
                                    VerticalOptions="Center" />

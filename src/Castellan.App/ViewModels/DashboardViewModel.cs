@@ -1,5 +1,6 @@
 using Castellan.Application.Services;
 using Castellan.Application.UseCases;
+using Castellan.Domain;
 using Castellan.Domain.ValueObjects;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -123,6 +124,19 @@ public partial class DashboardViewModel : ObservableObject
     [RelayCommand]
     private async Task OpenIncomeAsync()
         => await Shell.Current.GoToAsync($"income?month={CurrentMonth}");
+
+    /// <summary>
+    /// Koperta mówi, ile z niej ubyło. Następne pytanie brzmi zawsze „na co" — i dotąd
+    /// odpowiedź była dwa ekrany dalej, przez Statystyki. Ten sam ekran, ten sam sposób
+    /// liczenia, więc suma pod listą zgadza się z liczbą, w którą się przed chwilą
+    /// stuknęło; miesiąc bierzemy z paska nad kopertami, nie z dzisiejszej daty.
+    /// </summary>
+    [RelayCommand]
+    private async Task OpenEnvelopeAsync(CategoryId categoryId)
+    {
+        if (Shell.Current is not { } shell) return;
+        await shell.GoToAsync($"categoryTx?categoryId={categoryId.Value}&month={CurrentMonth}&months=1");
+    }
 
     [RelayCommand]
     private static async Task OpenDebtPlanAsync()
