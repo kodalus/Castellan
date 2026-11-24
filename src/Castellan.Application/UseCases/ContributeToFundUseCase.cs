@@ -14,14 +14,26 @@ namespace Castellan.Application.UseCases;
 /// zapisuje się przelewem (<see cref="CreateTransferUseCase"/> z IsReserve), który ma
 /// obie strony.
 /// </summary>
-public sealed class ContributeToFundUseCase(IFundRepository funds, IUnitOfWork uow)
+public sealed class ContributeToFundUseCase(
+    IFundRepository funds,
+    ITransactionRepository transactions,
+    IUnitOfWork uow)
 {
-    public async Task ExecuteAsync(FundId id, Money amount, CancellationToken ct = default)
+    /// <param name="causedBy">
+    /// Wydatek w „Rezerwach", który wywołał tę wpłatę. Saldo funduszu jest osobną
+    /// liczbą, więc bez tego powiązania skasowanie wydatku zostawiałoby je podniesione.
+    /// </param>
+    public async Task ExecuteAsync(
+        FundId id, Money amount, TransactionId? causedBy = null, CancellationToken ct = default)
     {
         var fund = await funds.GetAsync(id, ct)
             ?? throw new InvalidOperationException($"Fund {id} not found.");
 
         fund.Contribute(amount);
+
+        if (causedBy is { } txId && await transactions.GetAsync(txId, ct) is { } tx)
+            tx.SetReserveFund(id);
+
         await uow.SaveChangesAsync(ct);
     }
 }

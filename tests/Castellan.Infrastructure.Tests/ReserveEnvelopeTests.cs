@@ -66,7 +66,7 @@ public class ReserveEnvelopeTests
             new GetCushionOverviewUseCase(
                 new AssetRepository(db), catRepo, txRepo,
                 new GetAccountsWithBalancesUseCase(new AccountRepository(db), txRepo)),
-            new ContributeToFundUseCase(fundRepo, uow),
+            new ContributeToFundUseCase(fundRepo, txRepo, uow),
             checking, savings, reserve);
     }
 

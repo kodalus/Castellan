@@ -1,10 +1,12 @@
 using Castellan.Application.Repositories;
 using Castellan.Domain;
+using Castellan.Domain.ValueObjects;
 
 namespace Castellan.Application.UseCases;
 
 public sealed class DeleteTransactionUseCase(
     ITransactionRepository transactions,
+    IFundRepository funds,
     IUnitOfWork uow)
 {
     /// <summary>
@@ -32,13 +34,13 @@ public sealed class DeleteTransactionUseCase(
         // Przelew to para wpisów na dwóch kontach. Skasowanie jednej strony
         // zostawiłoby drugą jako sierotę: nadal wyłączoną z kopert, ale bez pary,
         // przez co saldo jednego konta zmieniłoby się bez odpowiednika na drugim.
-        var removed = new List<TransactionId>();
+        var removed = new List<Domain.Aggregates.Transaction>();
         if (tx.TransferGroupId is { } groupId)
         {
             foreach (var leg in await transactions.ListByTransferGroupAsync(groupId, ct))
             {
                 await transactions.RemoveAsync(leg, ct);
-                removed.Add(leg.Id);
+                removed.Add(leg);
             }
         }
         // Przelew wykryty, ale jeszcze niepotwierdzony, trzyma pare pod INNYM polem —
@@ -56,7 +58,7 @@ public sealed class DeleteTransactionUseCase(
                 if (removeProposedPair || leg.Id == tx.Id)
                 {
                     await transactions.RemoveAsync(leg, ct);
-                    removed.Add(leg.Id);
+                    removed.Add(leg);
                 }
                 else
                 {
@@ -70,10 +72,40 @@ public sealed class DeleteTransactionUseCase(
         else
         {
             await transactions.RemoveAsync(tx, ct);
-            removed.Add(tx.Id);
+            removed.Add(tx);
         }
 
+        foreach (var gone in removed)
+            await ReverseFundEffectAsync(gone, ct);
+
         await uow.SaveChangesAsync(ct);
-        return removed;
+        return [.. removed.Select(t => t.Id)];
+    }
+
+    /// <summary>
+    /// Saldo funduszu jest osobną, zapisaną liczbą — nie wynika z transakcji. Dopóki
+    /// kasowanie go nie dotykało, usunięty przelew zostawiał fundusz podniesiony o kwotę,
+    /// której już nigdzie nie było: po usunięciu zdublowanego przelewu na 7 000 zł
+    /// poduszka pokazywała o 7 000 zł za dużo, a jedynym ratunkiem była ręczna poprawka
+    /// salda funduszu.
+    /// </summary>
+    private async Task ReverseFundEffectAsync(Domain.Aggregates.Transaction gone, CancellationToken ct)
+    {
+        var magnitude = new Money(Math.Abs(gone.Amount.Grosze));
+
+        // Odkładanie i wyjmowanie dzielą jedno pole, bo kierunek mówi znak kwoty.
+        // Pieniądze wychodzące z konta do wydawania (ujemne) poszły DO funduszu, więc
+        // cofnięcie je stamtąd zabiera; przychodzące (dodatnie) z funduszu wyszły, więc
+        // cofnięcie je tam zwraca.
+        if (gone.ReserveFundId is { } reserveId && await funds.GetAsync(reserveId, ct) is { } reserveFund)
+        {
+            if (gone.Amount.IsNegative) reserveFund.Withdraw(magnitude);
+            else                        reserveFund.Contribute(magnitude);
+        }
+
+        // Wydatek pokryty z funduszu zdjął kwotę z jego salda. Skasowanie wydatku musi
+        // ją oddać — inaczej fundusz zostaje uszczuplony o zakup, którego już nie ma.
+        if (gone.PaidFromFundId is { } paidId && await funds.GetAsync(paidId, ct) is { } paidFund)
+            paidFund.Contribute(magnitude);
     }
 }

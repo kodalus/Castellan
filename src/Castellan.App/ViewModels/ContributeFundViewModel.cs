@@ -140,7 +140,7 @@ public partial class ContributeFundViewModel : ObservableObject
             }
             else
             {
-                await _contribute.ExecuteAsync(id, new Money(grosze), ct);
+                await _contribute.ExecuteAsync(id, new Money(grosze), ct: ct);
             }
 
             await Shell.Current.GoToAsync("..");

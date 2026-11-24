@@ -23,6 +23,19 @@ public class Transaction
     // miesiącach, więc sama zapłata nie może obciążać budżetu ponownie.
     public FundId? PaidFromFundId { get; private set; }
 
+    /// <summary>
+    /// Fundusz, którego saldo ruszyła ta transakcja przy odkładaniu albo wyjmowaniu.
+    ///
+    /// Saldo funduszu jest osobną, zapisaną liczbą — nie wynika z transakcji. Bez tego
+    /// powiązania nic nie wiedziało, że skasowanie wpisu ma je cofnąć: usunięty przelew
+    /// zostawiał podniesione saldo funduszu i jedynym ratunkiem była ręczna poprawka.
+    ///
+    /// Kierunek mówi znak kwoty samej transakcji, bo tak właśnie działa odkładanie:
+    /// pieniądze wychodzące z konta do wydawania (kwota ujemna) poszły DO funduszu,
+    /// a przychodzące (dodatnia) z niego wyszły.
+    /// </summary>
+    public FundId? ReserveFundId { get; private set; }
+
     // N-4: superseded or transfer excluded from calculations
     public bool IsExcludedFromCalculations =>
         Kind == TransactionKind.Transfer || SupersededById.HasValue || PaidFromFundId.HasValue;
@@ -126,14 +139,26 @@ public class Transaction
     /// wydawania, nogą w kategorii „Rezerwy” jest ta PRZYCHODZĄCA — z kwotą dodatnią,
     /// więc koperta Rezerwy maleje o tyle, ile zabrano. Operacja jest identyczna,
     /// kierunek rozstrzyga sam znak kwoty.
+    ///
+    /// <paramref name="transferGroupId"/> spina tę nogę z drugą, NIE zmieniając jej
+    /// rodzaju ani kategorii — na tym polega różnica wobec <see cref="SetTransferGroup"/>,
+    /// które zamieniłoby ją w zwykły przelew i wypchnęło z budżetu. Bez tego spięcia obie
+    /// nogi były dla aplikacji niezwiązanymi wpisami: skasowanie jednej zostawiało drugą
+    /// samą na swoim koncie, więc saldo jednego konta wracało do stanu sprzed przelewu,
+    /// a drugiego nie.
     /// </summary>
-    public void MarkAsReserveMove(CategoryId reserveCategory)
+    public void MarkAsReserveMove(CategoryId reserveCategory, Guid? transferGroupId = null)
     {
         ProposedTransferGroupId = null;
         CategoryId = reserveCategory;
+        if (transferGroupId is { } groupId) TransferGroupId = groupId;
     }
 
     public void PayFromFund(FundId fundId) => PaidFromFundId = fundId;
+
+    public void SetReserveFund(FundId fundId) => ReserveFundId = fundId;
+
+    public void ClearReserveFund() => ReserveFundId = null;
 
     public void ClearFundPayment() => PaidFromFundId = null;
 

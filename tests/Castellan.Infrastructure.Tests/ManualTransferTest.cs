@@ -90,7 +90,7 @@ public class ManualTransferTest
                 ing.Id, revolut.Id, new Money(200_000), DateTimeOffset.UtcNow));
 
             var oneLeg = await db.Transactions.FirstAsync();
-            var delete = new DeleteTransactionUseCase(txRepo, new UnitOfWork(db));
+            var delete = new DeleteTransactionUseCase(txRepo, new FundRepository(db), new UnitOfWork(db));
             await delete.ExecuteAsync(oneLeg.Id);
 
             (await db.Transactions.CountAsync()).Should().Be(0);

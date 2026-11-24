@@ -46,7 +46,7 @@ public class DeleteTransferTests
         await db.SaveChangesAsync();
         db.ChangeTracker.Clear();
 
-        return (db, new DeleteTransactionUseCase(new TransactionRepository(db), new UnitOfWork(db)), outgoing, incoming);
+        return (db, new DeleteTransactionUseCase(new TransactionRepository(db), new FundRepository(db), new UnitOfWork(db)), outgoing, incoming);
     }
 
     [Fact]

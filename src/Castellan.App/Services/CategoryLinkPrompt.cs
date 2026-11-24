@@ -56,11 +56,12 @@ public sealed class CategoryLinkPrompt(
     {
         if (Shell.Current?.CurrentPage is not Page page) return;
 
-        await OfferFundAsync(page, amount, ct);
+        await OfferFundAsync(page, amount, transactionId, ct);
         await OfferDestinationAsync(page, transactionId, ct);
     }
 
-    private async Task OfferFundAsync(Page page, Money amount, CancellationToken ct)
+    private async Task OfferFundAsync(
+        Page page, Money amount, TransactionId? transactionId, CancellationToken ct)
     {
         var active = (await funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
         if (active.Count == 0) return;
@@ -74,7 +75,7 @@ public sealed class CategoryLinkPrompt(
 
         // Sama zmiana salda funduszu: transakcja w kategorii „Rezerwy" już istnieje —
         // to ona wywołała to pytanie. Drugą stronę ruchu dopisuje pytanie o konto niżej.
-        await contributeToFund.ExecuteAsync(fund.Id, amount, ct);
+        await contributeToFund.ExecuteAsync(fund.Id, amount, transactionId, ct);
     }
 
     private async Task OfferDestinationAsync(Page page, TransactionId? transactionId, CancellationToken ct)

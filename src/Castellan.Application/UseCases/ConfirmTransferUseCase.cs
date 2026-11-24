@@ -47,13 +47,18 @@ public sealed class ConfirmTransferUseCase(
         }
 
         var (from, to) = pair.Value;
-        from.MarkAsReserveMove(reserve.Id);
-        to.SetTransferGroup(Guid.NewGuid());
+        var reserveGroupId = Guid.NewGuid();
+        from.MarkAsReserveMove(reserve.Id, reserveGroupId);
+        to.SetTransferGroup(reserveGroupId);
 
         if (contributeTo is { } fundId)
         {
             var fund = await funds.GetAsync(fundId, ct);
-            fund?.Contribute(new Money(Math.Abs(from.Amount.Grosze)));
+            if (fund is not null)
+            {
+                fund.Contribute(new Money(Math.Abs(from.Amount.Grosze)));
+                from.SetReserveFund(fundId);
+            }
         }
 
         await uow.SaveChangesAsync(ct);
@@ -98,14 +103,18 @@ public sealed class ConfirmTransferUseCase(
         // Bez kategorii „Rezerwy" nie ma czego uznawać — wtedy zwykły przelew jest
         // bezpieczniejszy niż wpis wrzucony do przypadkowej kategorii.
         if (reserve is not null)
-            pair.Value.To.MarkAsReserveMove(reserve.Id);
+            pair.Value.To.MarkAsReserveMove(reserve.Id, groupId);
         else
             pair.Value.To.SetTransferGroup(groupId);
 
         if (withdrawFrom is { } fundId)
         {
             var fund = await funds.GetAsync(fundId, ct);
-            fund?.Withdraw(kwota);
+            if (fund is not null)
+            {
+                fund.Withdraw(kwota);
+                pair.Value.To.SetReserveFund(fundId);
+            }
         }
 
         await uow.SaveChangesAsync(ct);

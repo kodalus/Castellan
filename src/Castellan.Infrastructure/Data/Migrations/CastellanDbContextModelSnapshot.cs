@@ -416,6 +416,9 @@ namespace Castellan.Infrastructure.Data.Migrations
                     b.Property<Guid?>("RawNotificationId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("ReserveFundId")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("Source")
                         .HasColumnType("INTEGER");
 

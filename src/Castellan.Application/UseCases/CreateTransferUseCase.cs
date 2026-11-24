@@ -83,19 +83,25 @@ public sealed class CreateTransferUseCase(
 
         if (reserve is not null && input.IsReserve)
         {
-            outgoing.MarkAsReserveMove(reserve.Id);
+            outgoing.MarkAsReserveMove(reserve.Id, groupId);
             incoming.SetTransferGroup(groupId);
 
             if (input.ContributeTo is { } fundId)
             {
                 var fund = await funds.GetAsync(fundId, ct);
-                fund?.Contribute(new Money(magnitude));
+                if (fund is not null)
+                {
+                    fund.Contribute(new Money(magnitude));
+                    // Bez tego powiązania skasowanie przelewu zostawiało podniesione
+                    // saldo funduszu — pieniądze „odłożone" na coś, czego już nie ma.
+                    outgoing.SetReserveFund(fundId);
+                }
             }
         }
         else if (reserve is not null && input.IsReserveReturn)
         {
             outgoing.SetTransferGroup(groupId);
-            incoming.MarkAsReserveMove(reserve.Id);
+            incoming.MarkAsReserveMove(reserve.Id, groupId);
         }
         else
         {
@@ -106,7 +112,13 @@ public sealed class CreateTransferUseCase(
         if (input.WithdrawFrom is { } withdrawId)
         {
             var fund = await funds.GetAsync(withdrawId, ct);
-            fund?.Withdraw(new Money(magnitude));
+            if (fund is not null)
+            {
+                fund.Withdraw(new Money(magnitude));
+                // Noga PRZYCHODZĄCA: to ona odpowiada wyjęciu z funduszu, więc jej
+                // skasowanie ma pieniądze funduszowi oddać.
+                incoming.SetReserveFund(withdrawId);
+            }
         }
 
         await transactions.AddAsync(outgoing, ct);

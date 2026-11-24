@@ -115,7 +115,7 @@ public class DeleteProposedTransferTests
     }
 
     private static DeleteTransactionUseCase Delete(CastellanDbContext db) =>
-        new(new TransactionRepository(db), new UnitOfWork(db));
+        new(new TransactionRepository(db), new FundRepository(db), new UnitOfWork(db));
 
     private static Task<IReadOnlyList<AccountWithBalance>> Balances(CastellanDbContext db) =>
         new GetAccountsWithBalancesUseCase(

@@ -21,7 +21,13 @@ public sealed record TransactionRow(
     bool IsEditable = true,
     bool IsIncome = false,
     bool IsTransfer = false,
-    bool IsProposedTransfer = false)
+    bool IsProposedTransfer = false,
+    /// <summary>
+    /// Wpis ma druga noge, ktora zniknie razem z nim. Nie to samo co IsTransfer: noga
+    /// odkladania na rezerwe zostaje zwyklym wydatkiem w kategorii „Rezerwy", zeby
+    /// obciazyc koperte, a mimo to ma pare na koncie oszczednosciowym.
+    /// </summary>
+    bool HasTransferPair = false)
 {
     public bool IsPaidFromFund => FundName is not null;
     public string FundLabel => FundName is not null ? $"⛃ z funduszu: {FundName}" : "";
@@ -172,7 +178,8 @@ public partial class TransactionsViewModel : ObservableObject
                 isEditable,
                 !tx.Amount.IsNegative,
                 tx.Kind == TransactionKind.Transfer,
-                isProposed));
+                isProposed,
+                tx.TransferGroupId.HasValue));
         }
 
         ApplyFilter();
@@ -339,7 +346,7 @@ public partial class TransactionsViewModel : ObservableObject
         {
             // Przelew ginie parami. Powiedz to przed, a nie przez zniknięcie drugiego
             // wiersza, którego użytkownik nie tykał.
-            if (row.IsTransfer && Shell.Current?.CurrentPage is Page confirmPage)
+            if (row.HasTransferPair && Shell.Current?.CurrentPage is Page confirmPage)
             {
                 var ok = await confirmPage.DisplayAlertAsync(
                     "Usunąć przelew?",

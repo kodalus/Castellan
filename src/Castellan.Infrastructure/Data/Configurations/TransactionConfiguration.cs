@@ -38,6 +38,10 @@ internal sealed class TransactionConfiguration : IEntityTypeConfiguration<Transa
             .HasConversion(new ValueConverter<FundId, Guid>(
                 id => id.Value,
                 v => new FundId(v)));
+        builder.Property(t => t.ReserveFundId)
+            .HasConversion(new ValueConverter<FundId, Guid>(
+                id => id.Value,
+                v => new FundId(v)));
 
         builder.Ignore(t => t.IsExcludedFromCalculations);
 
