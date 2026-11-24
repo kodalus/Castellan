@@ -105,6 +105,51 @@ public class TransferPairingTests
         }
     }
 
+    [Fact]
+    public async Task A_leg_that_already_belongs_to_a_transfer_is_not_adopted_by_another()
+    {
+        var dbPath = NewDbPath();
+        try
+        {
+            var (db, ingest) = await SetupAsync(dbPath);
+            var teraz = DateTimeOffset.UtcNow;
+
+            // Wpis nalezacy juz do przelewu — noga odkladania na rezerwe. Zostaje zwyklym
+            // wydatkiem w kategorii „Rezerwy", zeby obciazyc koperte, wiec sam rodzaj go
+            // nie chronil: dobieranie par widzialo go jako wolna kwote i przygarnialo do
+            // DRUGIEGO przelewu, ktory nie mial z nim nic wspolnego.
+            await AddPairedReserveLegAsync(db, "Revolut wspólny", Kwota, teraz.AddMinutes(-10));
+
+            await ingest.ExecuteAsync(new IngestRawNotificationUseCase.Input(
+                IngPackage, "Twój Asystent", "500 PLN mniej na Twoim koncie - Przelew własny", teraz));
+
+            db.ChangeTracker.Clear();
+            (await db.Transactions.ToListAsync())
+                .Should().OnlyContain(t => t.ProposedTransferGroupId == null,
+                    "zajeta noga nie moze stac sie para nowego przelewu");
+        }
+        finally
+        {
+            Cleanup(dbPath);
+        }
+    }
+
+    private static async Task AddPairedReserveLegAsync(
+        CastellanDbContext db, string konto, long grosze, DateTimeOffset kiedy)
+    {
+        db.ChangeTracker.Clear();
+        var account = await db.Accounts.FirstAsync(a => a.Name == konto);
+        var rezerwy = Category.Create("Rezerwy", CategoryKind.Expense);
+        db.Categories.Add(rezerwy);
+
+        var leg = Transaction.CreateManual(account.Id, new Money(grosze), kiedy, Category.UnsortedId);
+        leg.MarkAsReserveMove(rezerwy.Id, Guid.NewGuid());
+        db.Transactions.Add(leg);
+
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+    }
+
     private static async Task<string[]> PairedWithAsync(CastellanDbContext db)
     {
         db.ChangeTracker.Clear();

@@ -518,6 +518,10 @@ public sealed partial class IngestRawNotificationUseCase(
                 t.AccountId != ownAccountId &&
                 t.Amount.Grosze == -tx.Amount.Grosze &&
                 t.Kind != TransactionKind.Transfer &&
+                // Wpis nalezacy juz do przelewu ma swoja pare i nie moze zostac noga
+                // drugiego. Noga w kategorii „Rezerwy" zostaje zwyklym wydatkiem, wiec
+                // sam Kind jej nie chroni — dopiero to.
+                t.TransferGroupId is null &&
                 t.ProposedTransferGroupId is null &&
                 !t.SupersededById.HasValue &&
                 t.Id != tx.Id &&
