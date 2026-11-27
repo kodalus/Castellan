@@ -151,6 +151,10 @@ public class Transaction
     {
         ProposedTransferGroupId = null;
         CategoryId = reserveCategory;
+        // Zwykly wydatek, nie przelew — inaczej wypadlby z budzetu i koperta „Rezerwy"
+        // znow nie pokazywalaby ani grosza. Przy tworzeniu nogi to i tak jej stan,
+        // ale przy ZMIANIE rodzaju istniejacego przelewu trzeba go cofnac.
+        Kind = TransactionKind.Regular;
         if (transferGroupId is { } groupId) TransferGroupId = groupId;
     }
 

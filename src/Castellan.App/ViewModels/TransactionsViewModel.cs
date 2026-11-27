@@ -52,6 +52,7 @@ public partial class TransactionsViewModel : ObservableObject
     private readonly IFundRepository _funds;
     private readonly DeleteTransactionUseCase _delete;
     private readonly PayTransactionFromFundUseCase _payFromFund;
+    private readonly ReclassifyTransferUseCase _reclassify;
 
     public ObservableCollection<TransactionRow> Transactions { get; } = [];
 
@@ -124,13 +125,15 @@ public partial class TransactionsViewModel : ObservableObject
         ICategoryRepository categories,
         IFundRepository funds,
         DeleteTransactionUseCase delete,
-        PayTransactionFromFundUseCase payFromFund)
+        PayTransactionFromFundUseCase payFromFund,
+        ReclassifyTransferUseCase reclassify)
     {
         _transactions = transactions;
         _categories = categories;
         _funds = funds;
         _delete = delete;
         _payFromFund = payFromFund;
+        _reclassify = reclassify;
         CurrentMonth = _cursor.Month;
     }
 
@@ -300,6 +303,74 @@ public partial class TransactionsViewModel : ObservableObject
 
     private const string ActionEdit = "Edytuj";
     private const string ActionDelete = "Usuń";
+    private const string ActionReclassify = "Zmień rodzaj przelewu";
+
+    private const string KindPlain   = "Przekładanie między kontami";
+    private const string KindReserve = "Odkładanie na rezerwę";
+    private const string KindReturn  = "Wyjmowanie odłożonych";
+
+    /// <summary>
+    /// Pytanie „odkładasz czy przekładasz?" padało tylko raz, przy zapisie, i nie dało
+    /// się go odwołać. Jedna pomyłka wypadała z koperty „Rezerwy" na zawsze, a jedynym
+    /// ratunkiem było skasowanie przelewu i wpisanie go od nowa — czyli najbardziej
+    /// ryzykowna operacja w aplikacji po to, żeby poprawić jedno kliknięcie.
+    /// </summary>
+    [RelayCommand]
+    private async Task ReclassifyTransferAsync(TransactionRow row, CancellationToken ct = default)
+    {
+        if (Shell.Current?.CurrentPage is not Page page) return;
+
+        var choice = await page.DisplayActionSheetAsync(
+            "Czym był ten przelew?", "Anuluj", null, KindPlain, KindReserve, KindReturn);
+
+        var classification = choice switch
+        {
+            KindPlain   => TransferClassification.Plain,
+            KindReserve => TransferClassification.Reserve,
+            KindReturn  => TransferClassification.ReserveReturn,
+            _           => (TransferClassification?)null,
+        };
+        if (classification is not { } kind) return;
+
+        // Saldo funduszu idzie za zmianą tylko wtedy, gdy użytkownik wskaże fundusz.
+        // Wskazanie jest dobrowolne: część rezerw nie ma przypisanego celu, a przymus
+        // zamieniłby poprawkę w przeszkodę.
+        FundId? fund = kind == TransferClassification.Plain
+            ? null
+            : await AskFundAsync(page, kind, ct);
+
+        try
+        {
+            await _reclassify.ExecuteAsync(
+                new ReclassifyTransferUseCase.Input(row.Id, kind, fund), ct);
+            await LoadAsync(ct);
+        }
+        catch (Exception ex)
+        {
+            await page.DisplayAlertAsync("Nie udało się zmienić rodzaju", DescribeException(ex), "OK");
+        }
+    }
+
+    /// <summary>
+    /// Salda stoją przy nazwach, bo bez nich nie da się trafić w ten właściwy — nazwa
+    /// sama nie mówi, ile w funduszu jeszcze jest.
+    /// </summary>
+    private async Task<FundId?> AskFundAsync(Page page, TransferClassification kind, CancellationToken ct)
+    {
+        var active = (await _funds.ListAsync(ct)).Where(f => !f.IsArchived).ToList();
+        if (active.Count == 0) return null;
+
+        var labels = active.ToDictionary(f => $"{f.Name} ({f.Balance})", f => f);
+
+        var title = kind == TransferClassification.Reserve
+            ? "Na który fundusz zapisać te pieniądze?"
+            : "Z którego funduszu je wyjąć?";
+
+        var choice = await page.DisplayActionSheetAsync(title, "Bez funduszu", null, [.. labels.Keys]);
+        if (string.IsNullOrEmpty(choice) || choice == "Bez funduszu") return null;
+
+        return labels.TryGetValue(choice, out var fund) ? fund.Id : null;
+    }
 
     /// <summary>
     /// Te same działania, co pod przeciągnięciem wiersza, ale uruchamiane przyciskiem.
@@ -319,15 +390,21 @@ public partial class TransactionsViewModel : ObservableObject
 
         var fundAction = row.IsPaidFromFund ? "Cofnij pokrycie z funduszu" : "Pokryj z funduszu";
 
+        // „Zmień rodzaj" dotyczy obu nóg przelewu, a nie tylko tej oznaczonej jako
+        // przelew: noga odkładania na rezerwę zostaje zwykłym wydatkiem w „Rezerwach"
+        // i to w nią najczęściej się stuka, bo to ona widnieje w kopercie.
         string[] actions = row.IsTransfer
-            ? [ActionDelete]
-            : row.IsEditable
-                ? [ActionEdit, fundAction, ActionDelete]
-                : [fundAction, ActionDelete];
+            ? [ActionReclassify, ActionDelete]
+            : row.HasTransferPair
+                ? [ActionReclassify, fundAction, ActionDelete]
+                : row.IsEditable
+                    ? [ActionEdit, fundAction, ActionDelete]
+                    : [fundAction, ActionDelete];
 
         var choice = await page.DisplayActionSheetAsync("Transakcja", "Anuluj", null, actions);
 
-        if (choice == ActionEdit) await EditTransactionAsync(row);
+        if (choice == ActionReclassify) await ReclassifyTransferAsync(row, ct);
+        else if (choice == ActionEdit) await EditTransactionAsync(row);
         else if (choice == fundAction) await PayFromFundAsync(row, ct);
         else if (choice == ActionDelete) await DeleteTransactionAsync(row, ct);
     }

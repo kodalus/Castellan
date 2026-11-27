@@ -40,6 +40,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AddManualTransactionUseCase>();
         builder.Services.AddTransient<UpdateTransactionUseCase>();
         builder.Services.AddTransient<CreateTransferUseCase>();
+        builder.Services.AddTransient<ReclassifyTransferUseCase>();
         builder.Services.AddTransient<DeleteTransactionUseCase>();
         builder.Services.AddTransient<PlanMonthUseCase>();
         builder.Services.AddTransient<GetMonthOverviewUseCase>();
