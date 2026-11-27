@@ -136,7 +136,7 @@
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="usecases:EnvelopeOverview">
-                    <Grid RowDefinitions="Auto,Auto" RowSpacing="6" Padding="0,9">
+                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="6" Padding="0,9">
                         <Grid.GestureRecognizers>
                             <TapGestureRecognizer
                                 Command="{Binding Source={RelativeSource AncestorType={x:Type vm:DashboardViewModel}}, Path=OpenEnvelopeCommand}"
@@ -155,7 +155,13 @@
                                 </Label.FormattedText>
                             </Label>
                         </Grid>
-                        <ProgressBar Grid.Row="1" Progress="{Binding SpentRatio}" HeightRequest="4"
+                        <!-- Kwota koperty jest netto. Pokazujemy, z czego powstała, tylko gdy
+                             w tym miesiącu były ruchy w OBIE strony — inaczej ta linijka
+                             powtarzałaby liczbę stojącą obok. -->
+                        <Label Grid.Row="1" Text="{Binding BreakdownLabel}" Style="{StaticResource Caption}"
+                               IsVisible="{Binding HasBreakdown}" />
+
+                        <ProgressBar Grid.Row="2" Progress="{Binding SpentRatio}" HeightRequest="4"
                                      ProgressColor="{Binding SpentFraction, Converter={StaticResource SpentFractionToColor}}" />
                     </Grid>
                 </DataTemplate>

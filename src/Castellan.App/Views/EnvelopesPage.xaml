@@ -57,7 +57,7 @@
             </CollectionView.EmptyView>
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="usecases:EnvelopeOverview">
-                    <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="5" Padding="0,10">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="5" Padding="0,10">
 
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="10">
                             <Label Grid.Column="0" Text="{Binding CategoryName}"
@@ -76,6 +76,11 @@
                                      ProgressColor="{Binding SpentFraction, Converter={StaticResource SpentFractionToColor}}" />
 
                         <Label Grid.Row="2" Text="{Binding ProgressLabel}" Style="{StaticResource Caption}" />
+
+                        <!-- Kwota koperty jest netto. Na „Rezerwach" ruch idzie w obie strony
+                             co tydzień, więc sama liczba nie mówi, z czego powstała. -->
+                        <Label Grid.Row="3" Text="{Binding BreakdownLabel}" Style="{StaticResource Caption}"
+                               IsVisible="{Binding HasBreakdown}" />
 
                     </Grid>
                 </DataTemplate>

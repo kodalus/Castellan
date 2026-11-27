@@ -15,7 +15,16 @@ public sealed record EnvelopeOverview(
     /// Wydatek w kategorii, która nie ma koperty w tym miesiącu. Pieniądze wyszły
     /// tak samo jak każde inne, tylko plan o nich nie wiedział.
     /// </summary>
-    bool IsUnplanned = false)
+    bool IsUnplanned = false,
+
+    /// <summary>Suma kwot ujemnych — ile z tej koperty wyszło. Liczba dodatnia.</summary>
+    Money Outflow = default,
+
+    /// <summary>Suma kwot dodatnich — ile do niej wróciło. Liczba dodatnia.</summary>
+    Money Inflow = default,
+
+    /// <summary>Koperta „Rezerwy". Ruch w obie strony jest w niej normą, nie wyjątkiem.</summary>
+    bool IsReserve = false)
 {
     // 0.0–1.0 capped (for ProgressBar.Progress)
     public double SpentRatio => Planned.Grosze == 0 ? 0.0
@@ -45,6 +54,24 @@ public sealed record EnvelopeOverview(
 
     /// <summary>Druga połowa podpisu kwoty na pulpicie, dopisywana po kwocie wydanej.</summary>
     public string TrailingLabel => IsUnplanned ? " — poza planem" : $" / {PlannedDisplay}";
+
+    /// <summary>
+    /// Kwota koperty jest NETTO i jedna liczba nie mówi, z czego powstała. Na zwykłej
+    /// kategorii to bez znaczenia: zwrot zdarza się raz na kwartał. W „Rezerwach" ruch
+    /// idzie w obie strony co tydzień — „4 800,00 z 9 000,00" czyta się jak „odłożyłam
+    /// połowę planu", choć naprawdę poszło tam 7 200,00, a 2 400,00 wróciło.
+    ///
+    /// Rozbicie pokazuje się tylko wtedy, gdy były ruchy w OBIE strony. Inaczej
+    /// powtarzałoby kwotę, która stoi obok, i zaśmiecało ekran otwierany codziennie.
+    /// </summary>
+    public string BreakdownLabel =>
+        Outflow.Grosze == 0 || Inflow.Grosze == 0
+            ? ""
+            : IsReserve
+                ? $"odłożone {Outflow}, wyjęte {Inflow}"
+                : $"wydane {Outflow}, zwroty {Inflow}";
+
+    public bool HasBreakdown => BreakdownLabel.Length > 0;
 }
 
 /// <summary>Planowany kontra faktyczny przychód z jednego źródła.</summary>
@@ -143,18 +170,32 @@ public sealed class GetMonthOverviewUseCase(
         if (budget is null) return null;
 
         var monthTxs = await transactions.ListForMonthAsync(month, ct);
-        var spendingByCategory = monthTxs
-            .Where(t => !t.IsExcludedFromCalculations)
+        var counted = monthTxs.Where(t => !t.IsExcludedFromCalculations).ToList();
+
+        var spendingByCategory = counted
             .GroupBy(t => t.CategoryId)
             .ToDictionary(g => g.Key, g => new Money(g.Sum(t => t.Amount.Grosze)));
 
+        // Te same transakcje, tylko rozdzielone na kierunki — z czego powstała kwota netto.
+        var flowsByCategory = counted
+            .GroupBy(t => t.CategoryId)
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    Out: new Money(-g.Where(t => t.Amount.IsNegative).Sum(t => t.Amount.Grosze)),
+                    In:  new Money(g.Where(t => !t.Amount.IsNegative).Sum(t => t.Amount.Grosze))));
+
         var cats = await categories.ListAsync(ct);
         var catMap = cats.ToDictionary(c => c.Id);
+
+        var reserveId = cats.FirstOrDefault(c =>
+            c.Name.Equals(ConfirmTransferUseCase.ReserveCategoryName, StringComparison.OrdinalIgnoreCase))?.Id;
 
         var envelopes = budget.Envelopes
             .Select(e =>
             {
                 var actual = spendingByCategory.GetValueOrDefault(e.CategoryId, Money.Zero);
+                var flows = flowsByCategory.GetValueOrDefault(e.CategoryId);
                 catMap.TryGetValue(e.CategoryId, out var cat);
                 return new EnvelopeOverview(
                     e.CategoryId,
@@ -162,7 +203,10 @@ public sealed class GetMonthOverviewUseCase(
                     cat?.Kind ?? CategoryKind.Expense,
                     e.PlannedAmount,
                     actual,
-                    e.PlannedAmount + actual);
+                    e.PlannedAmount + actual,
+                    Outflow: flows.Out,
+                    Inflow: flows.In,
+                    IsReserve: e.CategoryId == reserveId);
             })
             .ToList();
 
@@ -178,9 +222,6 @@ public sealed class GetMonthOverviewUseCase(
         // pieniądze przestają być do wydania w tym miesiącu, lecz nie zniknęły —
         // leżą na koncie oszczędnościowym. Nazywanie tego wydatkiem każe się bać
         // czegoś, co jest dokładnie odwrotnością szkody.
-        var reserveId = cats.FirstOrDefault(c =>
-            c.Name.Equals(ConfirmTransferUseCase.ReserveCategoryName, StringComparison.OrdinalIgnoreCase))?.Id;
-
         var reserve = reserveId is null
             ? null
             : envelopes.FirstOrDefault(e => e.CategoryId == reserveId);
@@ -203,6 +244,7 @@ public sealed class GetMonthOverviewUseCase(
             .Select(kv =>
             {
                 catMap.TryGetValue(kv.Key, out var cat);
+                var flows = flowsByCategory.GetValueOrDefault(kv.Key);
                 return new EnvelopeOverview(
                     kv.Key,
                     cat?.Name ?? kv.Key.ToString(),
@@ -210,7 +252,10 @@ public sealed class GetMonthOverviewUseCase(
                     Money.Zero,
                     kv.Value,
                     kv.Value,
-                    IsUnplanned: true);
+                    IsUnplanned: true,
+                    Outflow: flows.Out,
+                    Inflow: flows.In,
+                    IsReserve: kv.Key == reserveId);
             })
             // Przychód to nie wydatek, nawet gdy w danym miesiącu wyszedł na minus
             // (korekta, oddana nadpłata) — taka kwota należy do zestawienia przychodów.
