@@ -249,6 +249,7 @@ Kategorie systemowe, tworzone przez migrację, nie są usuwane ani zmieniane:
 | `SupersededById` | `TransactionId?` | autoryzacja scalona z obciążeniem |
 | `RawNotificationId` | `Guid?` | odniesienie do źródłowego powiadomienia |
 | `PaidFromFundId` | `FundId?` | wydatek pokryty z funduszu |
+| `ReserveFundId` | `FundId?` | fundusz, którego saldo ruszyła ta transakcja przy odkładaniu lub wyjmowaniu |
 
 **Odejście od pierwotnego założenia.** Spec zakładał transakcję niemodyfikowalną poza
 kategorią i notatką: błędny wpis miał być usuwany i wprowadzany ponownie, żeby historia
@@ -262,7 +263,20 @@ przepisuje przeszłych rozliczeń.
 **Wykluczone z obliczeń** (`IsExcludedFromCalculations`): `Kind == Transfer`,
 `SupersededById != null`, `PaidFromFundId != null`. Trzeci przypadek doszedł wraz
 z funduszami: odpisy obciążyły koperty w poprzednich miesiącach, więc sama zapłata
-nie może obciążyć budżetu drugi raz.
+nie może obciążyć budżetu drugi raz. `ReserveFundId` świadomie NIE wyklucza: noga
+odkładania ma obciążyć kopertę „Rezerwy", bo właśnie o to w niej chodzi.
+
+**`ReserveFundId` istnieje po to, żeby dało się cofnąć.** Saldo funduszu jest osobną,
+zapisaną liczbą — nie wynika z transakcji (5.9). Dopóki nic nie łączyło wpłaty z
+przelewem, który ją spowodował, skasowanie przelewu zabierało transakcje i zostawiało
+podniesione saldo: po usunięciu zdublowanego przelewu na 7 000 zł poduszka pokazywała
+o 7 000 zł za dużo, a jedynym ratunkiem było ręczne `SetBalance`.
+
+Kierunek mówi znak kwoty samej transakcji, bez drugiego pola: pieniądze wychodzące
+z konta do wydawania (kwota ujemna) poszły DO funduszu, przychodzące (dodatnia) z niego
+wyszły. `DeleteTransactionUseCase` cofa dziś oba kierunki, a także `PaidFromFundId` —
+skasowany wydatek pokryty z funduszu oddaje mu kwotę, inaczej fundusz zostawał
+uszczuplony o zakup, którego już nie było.
 
 ### 5.5 MonthBudget (agregat)
 
@@ -353,6 +367,12 @@ z funduszem (`PaidFromFundId`), nie przez metodę `Spend`.
 `Update` celowo nie rusza `Balance` ani `StartMonth`: saldo zmienia się wyłącznie
 wpłatami, a `StartMonth` jest kotwicą wyliczenia „ile powinno być odłożone do teraz" —
 przesunięcie go zafałszowałoby historię opóźnień.
+
+**Saldo jest liczbą zapisaną, nie wyliczaną z transakcji.** To świadomy wybór: część
+wpłat nie ma transakcji za sobą (odsetki, pieniądze odłożone przed założeniem funduszu,
+przeniesienie reszty z funduszu zamykanego), więc wyliczanie salda z historii gubiłoby
+je wszystkie. Ceną jest ryzyko rozjazdu, dlatego każda wpłata wywołana transakcją
+zostawia w niej `ReserveFundId` (5.4) i da się ją cofnąć razem z tą transakcją.
 
 `SetBalance` stoi obok, jako osobna operacja, właśnie dlatego: wyrównanie zebranej kwoty
 z rzeczywistością (odsetki, wpłata sprzed założenia funduszu, wpłata policzona dwa razy)
@@ -653,10 +673,10 @@ trzema kropkami — stąd kolejność jest decyzją, nie przypadkiem.
 
 | Zakładka | Zawartość |
 |---|---|
-| Główna | „pozostało do wydania" jako jedyna wielka liczba; środki i do przydzielenia jako kafelki; pasek długu; lista kopert; ostrzeżenie o kondycji przechwytywania |
+| Główna | „pozostało do wydania" jako jedyna wielka liczba; środki i do przydzielenia jako kafelki; pasek długu; lista kopert (stuknięcie otwiera transakcje tej koperty); ostrzeżenie o kondycji przechwytywania |
 | Konta | lista kont z obliczonym saldem, „ustaw domyślne", „uzgodnij" |
-| Transakcje | lista miesiąca; przeciągnięcie odsłania „z funduszu" i „usuń"; pod trzema kropkami przelew, reguły, kategorie |
-| Koperty | trzy kafelki miesiąca plus lista kopert z paskami; „Planuj" |
+| Transakcje | lista miesiąca; lupka z wyszukiwaniem; przeciągnięcie odsłania „z funduszu" i „usuń"; menu wiersza ma też „zmień rodzaj przelewu"; pod trzema kropkami przelew, reguły, kategorie |
+| Koperty | trzy kafelki miesiąca plus lista WSZYSTKICH kategorii wydatkowych z paskami; „Planuj" |
 | Skrzynka | wybór trybu przechwytywania; propozycje przelewów; transakcje `Unsorted` |
 | Fundusze | dzień wypłaty; suma odpisów; cel, termin, zgromadzone, rata, wskaźnik opóźnienia |
 | Majątek | poduszka w miesiącach; wartość netto; aktywa wg płynności; zobowiązania |
@@ -677,6 +697,20 @@ w Kopii: każde ustawienie tam, gdzie widać jego skutek.
 - Przekroczenie koperty — jedyne miejsce, gdzie dopuszczalny jest kolor alarmowy.
 - „Nierozpoznane" pokazywane na równi z innymi kategoriami, bez wyróżnienia i bez sformułowań winy.
 - Żadnego ekranu wymagającego przypominania sobie przeszłości.
+- Kwota koperty jest NETTO i jedna liczba nie mówi, z czego powstała. Gdy w miesiącu
+  były ruchy w OBIE strony, pod kwotą staje rozbicie: „odłożone …, wyjęte …" na
+  „Rezerwach", „wydane …, zwroty …" na pozostałych. Przy ruchu w jedną stronę rozbicia
+  nie ma — powtarzałoby liczbę stojącą obok. Powód: na zwykłej kategorii zwrot zdarza
+  się raz na kwartał, ale w „Rezerwach" ruch idzie w obie strony co tydzień i samo
+  „4 800,00 z 9 000,00" czyta się jak „odłożyłam połowę planu", choć naprawdę poszło
+  tam 7 200,00, a 2 400,00 wróciło.
+- Wiersz transakcji podpisuje NOTATKA, a nazwa od banku dopiero w jej braku. Notatkę
+  ktoś napisał, nazwa wzięła się sama — a ING podpisuje każdy przychodzący przelew
+  nadawcą, więc zwrot za wizytę u ortopedy wyglądał na liście jak „Direct Rika".
+- Lista kopert jest dłuższa na zakładce Koperty niż na Głównej. Koperty odpowiadają na
+  pytanie „co mam w tym miesiącu", więc wymieniają wszystkie kategorie wydatkowe, także
+  te bez koperty i bez wydatków; Główna odpowiada na „gdzie poszły pieniądze", a
+  kategoria bez kwoty nie ma na to odpowiedzi.
 
 ### 10.3 Język i lokalizacja
 
@@ -857,6 +891,32 @@ Bez tego koperta „Rezerwy" była planem, którego nie dało się z niczym por�
 odkładanie odbywa się właśnie przelewem, a przelewy wypadały z budżetu w całości,
 więc koperta pokazywała zero wydanych niezależnie od tego, ile realnie poszło.
 
+**Obie nogi przelewu rezerwowego dzielą `TransferGroupId`.** Noga w „Rezerwach" zostaje
+zwykłym wydatkiem (`Kind = Regular`), więc przez jedną wersję nie miała grupy i dla
+aplikacji była wpisem bez pary: skasowanie jednej strony zostawiało drugą samą na swoim
+koncie, saldo jednego konta wracało do stanu sprzed przelewu, a drugiego nie.
+`MarkAsReserveMove` przyjmuje dziś identyfikator grupy i ustawia go BEZ zmiany rodzaju
+ani kategorii — na tym polega różnica wobec `SetTransferGroup`, które zamieniłoby nogę
+w zwykły przelew i wypchnęło z budżetu.
+
+Stąd też dodatkowy warunek przy dobieraniu par (11.2): kandydat musi mieć
+`TransferGroupId == null`. Sam `Kind != Transfer` nie wystarcza, bo noga rezerwowa
+go spełnia — wpis należący już do przelewu mógł zostać przygarnięty jako strona
+DRUGIEGO przelewu.
+
+**Rodzaj zapisanego przelewu da się zmienić** (`ReclassifyTransferUseCase`:
+`Plain` / `Reserve` / `ReserveReturn`). Pytanie „odkładasz czy przekładasz?" padało raz,
+w momencie zapisu, i nie dało się go odwołać. Jedna pomyłka — 600 zł wyjęte
+z oszczędności zapisane jako zwykłe przełożenie — wypadała z koperty „Rezerwy" na
+zawsze, a jedynym ratunkiem było skasowanie przelewu i wpisanie go od nowa, czyli
+najbardziej ryzykowna operacja w aplikacji w celu poprawienia jednego kliknięcia.
+
+Zmiana obejmuje obie nogi i saldo funduszu: najpierw cofa to, co zrobił poprzedni
+rodzaj, potem stosuje nowy — dzięki temu przełączanie tam i z powrotem nie zostawia
+śladu. Gdy drugiej nogi nie da się znaleźć, operacja jest odrzucana: zmiana rodzaju
+jednej strony rozjechałaby salda kont. Dla wpisów sprzed spięcia nóg para jest szukana
+po śladzie z momentu zapisu — ta sama co do taktu chwila i kwota dokładnie przeciwna.
+
 ### 11.3 Normalizacja nazwy sprzedawcy
 
 1. Wielkie litery, zastąpienie znaków niealfanumerycznych spacją, scalenie spacji.
@@ -865,6 +925,24 @@ więc koperta pokazywała zero wydanych niezależnie od tego, ile realnie poszł
 4. Obcięcie do 40 znaków.
 
 Płatności online przez agregatora często pozostawiają tylko nazwę agregatora. To ograniczenie metody: takie transakcje zostają w skrzynce i wymagają ręcznej decyzji. Oczekiwany udział — ocenić na rzeczywistych danych, to jedna ze sprawdzanych hipotez projektu.
+
+### 11.3a Zwrot kosztów
+
+Wpływ kryje dwa różne zdarzenia. Przychód to nowe pieniądze; zwrot kosztów to pieniądze
+wracające za coś już kupionego i ma POMNIEJSZYĆ kategorię, z której poszła pierwotna
+płatność, a nie zawyżać przychody.
+
+Rozpoznawany jest po samej transakcji, bez dodatkowego pola (`RefundAccounting`): kwota
+dodatnia w kategorii wydatkowej nie ma innego sensownego znaczenia. Wybór kategorii jest
+więc jednocześnie odpowiedzią na pytanie „z czego ten zwrot". Kategorie systemowe są
+wyłączone — „Nieprzypisane" to brak decyzji, a nie decyzja, więc niesortowana wpłata
+(choćby wypłata) nie może przez to przepaść z przychodów.
+
+Ekrany wpisu mają trzy tryby: wydatek, przychód, zwrot. Przy zwrocie lista pokazuje
+kategorie WYDATKOWE, mimo dodatniej kwoty. Dotyczy to także ekranu przypisywania
+kategorii do wychwyconego powiadomienia — dopóki pokazywał on jedną wymieszaną listę,
+zwrot za lekarza naturalnie lądował w przychodowej kategorii „Zwrot kosztów" i zawyżał
+przychody zamiast pomniejszyć „Zdrowie i aptekę".
 
 ### 11.4 Autokategoryzacja (etap 3)
 
@@ -885,6 +963,16 @@ Discrepancy = (ObservedBalance − PreviousBalance) − RecordedDelta
 - `Discrepancy < 0` — niezapisane wydatki. Utworzyć transakcję `Kind = Unidentified`, `CategoryId = Unidentified`, `Amount = Discrepancy`.
 - `Discrepancy > 0` — niezapisany przychód **lub** zduplikowane wydatki. Zgodnie z N-5 nie tworzyć automatycznie: pokazać listę transakcji okresu i zapytać, co zrobić.
 - `Discrepancy == 0` — zaktualizować `LastReconciledBalance` i `LastReconciledAt`.
+
+**Zapis z datą sprzed uzgodnienia nie rusza salda — i musi to powiedzieć.** Saldo konta
+liczy się od ostatniego uzgodnienia, więc wcześniejsza transakcja jest już w tej kwocie
+zawarta i doliczenie jej drugi raz zepsułoby saldo. Reguła jest słuszna, jej milczenie
+nie było: wpis zapisywał się poprawnie, wchodził do kopert, a saldo nie drgało i nic
+tego nie tłumaczyło. Przy przelewie jest gorzej, bo to jedno zdarzenie na dwóch kontach
+z osobnymi uzgodnieniami — gdy data wypadnie po uzgodnieniu jednego, a przed uzgodnieniem
+drugiego, jedna noga rusza saldo, a druga nie, i w sumie kont pieniądze powstają albo
+znikają. `CheckBalanceImpactUseCase` odpowiada na pytanie „czy ten zapis ruszy saldo",
+a ekran pyta przed zapisem. Pytanie, nie blokada: data wsteczna bywa poprawna.
 
 ### 11.6 Kondycja przechwytywania (etap 3)
 

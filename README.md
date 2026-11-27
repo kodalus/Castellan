@@ -22,14 +22,14 @@ Pełny przewodnik po działaniu aplikacji jest **w niej samej** — zakładka **
 | Obszar | Co robi |
 |--------|---------|
 | Konta | Konta rozliczeniowe i oszczędnościowe, uzgadnianie salda z bankiem |
-| Transakcje | Ręczne, z powiadomień i z uzgodnienia; kategorie, reguły, przelewy wewnętrzne |
-| Koperty | Plan miesiąca — podział dostępnych środków na kategorie |
+| Transakcje | Ręczne, z powiadomień i z uzgodnienia; kategorie, reguły, przelewy wewnętrzne; wyszukiwanie po całej historii |
+| Koperty | Plan miesiąca — podział dostępnych środków na kategorie; stuknięcie koperty otwiera jej transakcje |
 | Przychody | Plan kontra faktyczne wpływy z każdego źródła |
 | Skrzynka | Nieprzypisane transakcje i propozycje przelewów do rozstrzygnięcia |
 | Fundusze | Cel i termin, rata liczona na wypłaty, pokrywanie wydatków z odłożonych pieniędzy; fundusz otwarty (bez terminu) dla poduszki bezpieczeństwa |
 | Zobowiązania | Salda kredytów, raty, plan spłaty metodą kuli śnieżnej |
 | Majątek | Poduszka finansowa w miesiącach wg czterech poziomów płynności, wartość netto |
-| Statystyki | Sześć miesięcy wydatków, przychodów i największych kategorii |
+| Statystyki | Wybrany miesiąc albo sześć miesięcy: wydatki, przychody, odłożone na rezerwę i największe kategorie; stuknięcie kategorii otwiera jej transakcje |
 | Kopia | Eksport i import JSON |
 | Pomoc | Przewodnik po wszystkich ścieżkach, w aplikacji |
 
@@ -55,7 +55,13 @@ Zakładka **Skrzynka** przełącza tryb pracy. W trybie ręcznym nasłuch odrzuc
 
 Blokada autoryzacyjna zastąpiona późniejszym właściwym obciążeniem zostaje w historii jako `Superseded` i wypada z budżetu.
 
-**Wykrywanie przelewów wewnętrznych**: przeciwna kwota na innym koncie w oknie 48 h daje propozycję do potwierdzenia w Skrzynce. Potwierdzone przelewy są wykluczone z kopert i z przychodów.
+**Wykrywanie przelewów wewnętrznych**: przeciwna kwota na innym koncie w oknie 48 h daje propozycję do potwierdzenia w Skrzynce. Potwierdzone przelewy są wykluczone z kopert i z przychodów. Kandydatem nie może być wpis należący już do innego przelewu.
+
+**Przelew na konto oszczędnościowe jest wyjątkiem** — kryje dwa różne zdarzenia, których aplikacja nie rozróżni: przekładanie pieniędzy (budżet bez zmian) albo odkładanie na rezerwę (pieniądze przestają być do wydania, dokładnie jak zakup). Rozstrzyga użytkownik. Noga obciążająca kopertę „Rezerwy" zostaje zwykłym wydatkiem, druga jest wykluczana jak każdy przelew, ale obie dzielą `TransferGroupId` i giną razem.
+
+Rodzaj zapisanego przelewu da się zmienić później — przekładanie / odkładanie / wyjmowanie odłożonych — razem z saldem wskazanego funduszu. Bez tego jedyną drogą do poprawienia jednego kliknięcia było skasowanie przelewu i wpisanie go od nowa.
+
+**Saldo funduszu jest liczbą zapisaną**, nie wyliczaną z transakcji: część wpłat nie ma za sobą transakcji (odsetki, pieniądze odłożone przed założeniem funduszu). Dlatego każda wpłata wywołana transakcją zostawia w niej `ReserveFundId` i cofa się razem z nią — skasowanie przelewu, zmiana jego rodzaju i usunięcie wydatku pokrytego z funduszu poprawiają saldo funduszu.
 
 ## Architektura
 
@@ -71,6 +77,10 @@ Czysta architektura, zależności wyłącznie do wewnątrz: Domain ← Applicati
 Kwoty trzymane są jako `Money` (grosze w `long`) — nigdy jako `decimal` ani `double`. Identyfikatory to typowane struktury (`AccountId`, `TransactionId`, …) generowane przez `Guid.CreateVersion7()`.
 
 Trzy rzeczy wypadają z budżetu miesiąca (`Transaction.IsExcludedFromCalculations`): przelewy wewnętrzne, transakcje pokryte z funduszu i zastąpione autoryzacje.
+
+Saldo konta liczy się od ostatniego uzgodnienia — zaobserwowana kwota plus wszystko, co wydarzyło się później. Transakcja z wcześniejszą datą zapisuje się poprawnie i wchodzi do kopert, ale salda nie ruszy; aplikacja uprzedza o tym przed zapisem, zamiast zostawić liczbę, która nie chce się zmienić.
+
+Wpływ w kategorii wydatkowej to **zwrot kosztów**: pomniejsza tę kategorię zamiast zawyżać przychody. Rozpoznawany po samej transakcji, bez dodatkowego pola — kwota dodatnia w kategorii wydatkowej nie ma innego sensownego znaczenia.
 
 ## Stos technologiczny
 
